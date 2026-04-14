@@ -20,6 +20,7 @@ public enum ErrorCode {
     INVALID_CREDENTIALS(1011, "Invalid username or password", HttpStatus.BAD_REQUEST),
     INVALID_DATA(1008, "Dữ liệu không hợp lệ", HttpStatus.BAD_REQUEST),
 
+
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {
