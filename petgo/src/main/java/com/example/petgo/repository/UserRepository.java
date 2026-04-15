@@ -11,9 +11,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
-    Optional<User> findByPhone(String phone);
+    // Sửa từ findByPhone thành findByPhoneNumber
+    Optional<User> findByPhoneNumber(String phoneNumber);
 
     Boolean existsByEmail(String email);
 
-    Boolean existsByPhone(String phone);
+    // Sửa từ existsByPhone thành existsByPhoneNumber
+    Boolean existsByPhoneNumber(String phoneNumber);
 }

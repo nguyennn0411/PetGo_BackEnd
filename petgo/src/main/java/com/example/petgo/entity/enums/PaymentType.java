@@ -1,6 +1,0 @@
-package com.example.petgo.entity.enums;
-
-public enum PaymentType {
-    BOOKING,
-    MEMBERSHIP
-}
