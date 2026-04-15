@@ -1,100 +1,116 @@
-    package com.example.petgo.entity;
+package com.example.petgo.entity;
 
-    import com.example.petgo.entity.enums.Gender;
-    import jakarta.persistence.*;
-    import lombok.*;
-    import org.hibernate.annotations.CreationTimestamp;
-    import org.hibernate.annotations.UpdateTimestamp;
+import com.example.petgo.entity.enums.Gender;
+import com.example.petgo.entity.enums.UserStatus;
+import jakarta.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Set;
 
-    import java.math.BigDecimal;
-    import java.time.LocalDate;
-    import java.time.LocalDateTime;
-    import java.util.Set;
+@Entity
+@Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class User {
 
-    @Entity
-    @Table(name = "users")
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
+    @Column(name = "user_code", nullable = false, unique = true, length = 32)
+    private String userCode;
 
-        @Column(name = "full_name", nullable = false, length = 150)
-        private String fullName;
+    @Column(nullable = false, unique = true, length = 190)
+    private String email;
 
-        @Column(nullable = false, unique = true, length = 150)
-        private String email;
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
 
-        @Column(name = "password_hash", nullable = false, length = 255)
-        private String passwordHash;
+    @Column(name = "full_name", nullable = false, length = 150)
+    private String fullName;
 
-        @Column(nullable = false, unique = true, length = 30)
-        private String phone;
+    @Column(name = "phone_number", unique = true, length = 30)
+    private String phoneNumber;
 
-        @Column(name = "avatar_url", length = 500)
-        private String avatarUrl;
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
 
-        @Column(name = "date_of_birth")
-        private LocalDate dateOfBirth;
+    @Column(name = "cover_url", length = 500)
+    private String coverUrl;
 
-        @Enumerated(EnumType.STRING)
-        @Column(nullable = false)
-        private Gender gender;
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "ENUM('MALE','FEMALE','OTHER','PREFER_NOT_TO_SAY')")
+    private Gender gender;
 
-        @Column(length = 255)
-        private String street;
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
 
-        @Column(length = 120)
-        private String ward;
+    // --- PHẦN ĐỊA CHỈ THIẾU ---
+    @Column(name = "address_line1")
+    private String addressLine1;
 
-        @Column(length = 120)
-        private String district;
+    @Column(name = "address_line2")
+    private String addressLine2;
 
-        @Column(length = 120)
-        private String city;
+    private String ward;
+    private String district;
+    private String city;
+    private String province;
 
-        @Column(length = 120)
-        private String country;
+    @Builder.Default
+    @Column(name = "country_code", nullable = false, length = 2)
+    private String countryCode = "VN";
 
-        @Column(precision = 10, scale = 7)
-        private BigDecimal latitude;
+    private BigDecimal latitude;
+    private BigDecimal longitude;
 
-        @Column(precision = 10, scale = 7)
-        private BigDecimal longitude;
+    // --- METADATA THIẾU ---
+    @Column(name = "email_verified_at")
+    private LocalDateTime emailVerifiedAt;
 
-        @Column(name = "is_active", nullable = false)
-        private Boolean isActive;
+    @Column(name = "phone_verified_at")
+    private LocalDateTime phoneVerifiedAt;
 
-        @Column(name = "email_verified_at")
-        private LocalDateTime emailVerifiedAt;
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "ENUM('ACTIVE','INACTIVE','SUSPENDED','PENDING_VERIFICATION') DEFAULT 'ACTIVE'")
+    private UserStatus status = UserStatus.ACTIVE;
 
-        @Column(name = "phone_verified_at")
-        private LocalDateTime phoneVerifiedAt;
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
 
-        @Column(name = "last_login_at")
-        private LocalDateTime lastLoginAt;
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
-        @CreationTimestamp
-        @Column(name = "created_at", nullable = false, updatable = false)
-        private LocalDateTime createdAt;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-        @UpdateTimestamp
-        @Column(name = "updated_at", nullable = false)
-        private LocalDateTime updatedAt;
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 
-        @Column(name = "deleted_at")
-        private LocalDateTime deletedAt;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles;
 
-        @ManyToMany(fetch = FetchType.EAGER)
-        @JoinTable(
-                name = "user_roles",
-                joinColumns = @JoinColumn(name = "user_id"),
-                inverseJoinColumns = @JoinColumn(name = "role_id")
-        )
-        private Set<Role> roles;
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+        if (this.status == null) this.status = UserStatus.ACTIVE;
+        if (this.countryCode == null) this.countryCode = "VN";
     }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+}
