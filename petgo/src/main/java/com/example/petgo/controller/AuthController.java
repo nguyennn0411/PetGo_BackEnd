@@ -1,45 +1,58 @@
 package com.example.petgo.controller;
 
-import com.example.petgo.dto.request.LoginRequest;
-import com.example.petgo.dto.request.RegisterRequest;
-import com.example.petgo.dto.response.ApiResponse;
-import com.example.petgo.dto.response.AuthResponse;
-import com.example.petgo.dto.response.UserResponse;
-import com.example.petgo.repository.UserRepository;
+import com.example.petgo.dto.AuthLoginRequest;
+import com.example.petgo.dto.AuthRegisterRequest;
 import com.example.petgo.service.AuthService;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import io.swagger.v3.oas.annotations.Operation;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Tag(name = "Authentication")
 public class AuthController {
-    AuthService authService;
-    UserRepository  userRepository;
 
-    @PostMapping("/login")
-    @Operation(summary = "Đăng nhập")
-    public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        var result = authService.login(request);
-        return ApiResponse.<AuthResponse>builder()
-                .result(result)
-                .build();
-    }
+    private final AuthService authService;
 
     @PostMapping("/register")
-    @Operation(summary = "Đăng ký tài khoản mới")
-    public ApiResponse<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
-        var result = authService.register(request);
-        return ApiResponse.<UserResponse>builder()
-                .result(result)
-                .message("Đăng ký tài khoản thành công")
-                .build();
+    public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody AuthRegisterRequest request) {
+        return ResponseEntity.ok(Map.of(
+                "message", "Đăng ký thành công.",
+                "result", Map.of("user", authService.register(request))
+        ));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody AuthLoginRequest request) {
+        return ResponseEntity.ok(Map.of(
+                "message", "Đăng nhập thành công.",
+                "result", authService.login(request)
+        ));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<Map<String, Object>> refresh(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        return ResponseEntity.ok(Map.of(
+                "message", "Làm mới token thành công.",
+                "result", authService.refresh(authorizationHeader)
+        ));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<Map<String, Object>> me(HttpServletRequest request) {
+        return ResponseEntity.ok(Map.of(
+                "message", "Lấy thông tin tài khoản thành công.",
+                "result", Map.of("user", authService.getCurrentUserProfile(request))
+        ));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, Object>> logout(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        authService.logout(authorizationHeader);
+        return ResponseEntity.ok(Map.of("message", "Đăng xuất thành công."));
     }
 }

@@ -1,112 +1,292 @@
 package com.example.petgo.service.impl;
 
-import com.example.petgo.dto.request.LoginRequest;
-import com.example.petgo.dto.request.RegisterRequest;
-import com.example.petgo.dto.response.AuthResponse;
-import com.example.petgo.dto.response.UserResponse;
-import com.example.petgo.entity.Role;
+import com.example.petgo.config.AuthenticatedUser;
+import com.example.petgo.config.JwtTokenService;
+import com.example.petgo.dto.AuthLoginRequest;
+import com.example.petgo.dto.AuthRegisterRequest;
+import com.example.petgo.dto.AuthTokenBundleResponse;
+import com.example.petgo.dto.AuthUserResponse;
+import com.example.petgo.entity.RefreshToken;
 import com.example.petgo.entity.User;
-import com.example.petgo.entity.enums.UserStatus;
-import com.example.petgo.exception.AppException;
-import com.example.petgo.exception.ErrorCode;
-import com.example.petgo.mapper.UserMapper;
+import com.example.petgo.entity.UserRole;
+import com.example.petgo.entity.UserRoleId;
+import com.example.petgo.exception.BadRequestException;
+import com.example.petgo.exception.ResourceNotFoundException;
+import com.example.petgo.exception.UnauthorizedException;
+import com.example.petgo.repository.RefreshTokenRepository;
 import com.example.petgo.repository.RoleRepository;
 import com.example.petgo.repository.UserRepository;
+import com.example.petgo.repository.UserRoleRepository;
 import com.example.petgo.service.AuthService;
-import com.example.petgo.service.JwtService;
-import lombok.AccessLevel;
+import io.jsonwebtoken.JwtException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
-import lombok.experimental.NonFinal;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
-import java.util.Collections;
+import java.time.format.DateTimeFormatter;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthServiceImpl implements AuthService {
-    UserRepository userRepository;
-    UserMapper userMapper;
-    PasswordEncoder passwordEncoder;
-    JwtService jwtService;
-    RoleRepository roleRepository;
 
-    @NonFinal
-    @Value("${jwt.valid-duration}")
-    protected long VALID_DURATION;
-
-    @NonFinal
-    @Value("${jwt.refreshable-duration}")
-    protected long REFRESHABLE_DURATION;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final UserRoleRepository userRoleRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final JwtTokenService jwtTokenService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
-    public AuthResponse login(LoginRequest request) {
-        String input = request.getUserName();
+    public AuthUserResponse register(AuthRegisterRequest request) {
+        String normalizedEmail = normalizeEmail(request.email());
+        String normalizedPhone = normalizePhone(request.phoneNumber());
 
-        User user = (input.contains("@")
-                ? userRepository.findByEmail(input)
-                : userRepository.findByPhoneNumber(input))
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED, "userName"));
-
-        if (user.getStatus() != UserStatus.ACTIVE) {
-            log.warn("Truy cập bị từ chối: User {} có trạng thái {}", input, user.getStatus());
-            if (user.getStatus() == UserStatus.PENDING_VERIFICATION) {
-                throw new AppException(ErrorCode.EMAIL_NOT_VERIFIED, "userName");
-            }
-            throw new AppException(ErrorCode.INVALID_CREDENTIALS, "account_locked_or_inactive");
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+            throw new BadRequestException("Email đã tồn tại.");
+        }
+        if (normalizedPhone != null && !normalizedPhone.isBlank() && userRepository.existsByPhoneNumber(normalizedPhone)) {
+            throw new BadRequestException("Số điện thoại đã tồn tại.");
         }
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            log.warn("Mật khẩu không khớp cho user: {}", input);
-            throw new AppException(ErrorCode.INVALID_CREDENTIALS, "password");
+        User user = new User();
+        user.setUserCode(generateUserCode());
+        user.setEmail(normalizedEmail);
+        user.setPasswordHash(passwordEncoder.encode(request.password()));
+        user.setFullName(request.fullName().trim());
+        user.setPhoneNumber(normalizedPhone);
+        user.setStatus("ACTIVE");
+        user.setCountryCode("VN");
+        user.setAvatarUrl(defaultAvatarUrl());
+        user.setCoverUrl(defaultCoverUrl());
+        userRepository.save(user);
+
+        roleRepository.findByCode("CUSTOMER").ifPresent(role -> {
+            UserRole userRole = new UserRole();
+            userRole.setId(new UserRoleId(user.getId(), role.getId()));
+            userRole.setUser(user);
+            userRole.setRole(role);
+            userRoleRepository.save(userRole);
+        });
+
+        return mapUser(user, resolveRoles(user.getId()));
+    }
+
+    @Override
+    @Transactional
+    public AuthTokenBundleResponse login(AuthLoginRequest request) {
+        String principal = request.userName() == null ? "" : request.userName().trim();
+        User user = findUserForLogin(principal)
+                .filter(candidate -> candidate.getDeletedAt() == null)
+                .orElseThrow(() -> new UnauthorizedException("Thông tin đăng nhập không chính xác."));
+
+        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            throw new UnauthorizedException("Thông tin đăng nhập không chính xác.");
+        }
+
+        if ("SUSPENDED".equalsIgnoreCase(user.getStatus()) || "INACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new UnauthorizedException("Tài khoản hiện không thể đăng nhập.");
         }
 
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
-        String accessToken = jwtService.generateToken(user, VALID_DURATION);
-        String refreshToken = jwtService.generateToken(user, REFRESHABLE_DURATION);
-
-        UserResponse userResponse = userMapper.toUserResponse(user);
-
-        log.info("User {} đăng nhập thành công", user.getEmail());
-
-        return AuthResponse.builder()
-                .token(accessToken)
-                .refreshToken(refreshToken)
-                .user(userResponse)
-                .build();
+        return generateTokenBundle(user);
     }
 
     @Override
     @Transactional
-    public UserResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new AppException(ErrorCode.USER_EXISTED, "email");
+    public AuthTokenBundleResponse refresh(String authorizationHeader) {
+        String rawToken = extractBearerToken(authorizationHeader);
+        AuthenticatedUser authenticatedUser = parseTokenOrThrow(rawToken);
+        if (!"REFRESH".equalsIgnoreCase(authenticatedUser.tokenType())) {
+            throw new UnauthorizedException("Refresh token không hợp lệ.");
         }
 
-        Role defaultRole = roleRepository.findById(1L)
-                .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND, "Mặc định Role 1 không tồn tại"));
+        RefreshToken stored = refreshTokenRepository.findByTokenHash(hashToken(rawToken))
+                .orElseThrow(() -> new UnauthorizedException("Refresh token không tồn tại hoặc đã bị thu hồi."));
 
-        User user = User.builder()
-                .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .fullName(request.getFullName())
-                .phoneNumber(request.getPhoneNumber())
-                .userCode("USR-" + System.currentTimeMillis())
-                .status(UserStatus.ACTIVE)
-                .countryCode("VN")
-                .roles(Collections.singleton(defaultRole)) // Tạo Set chứa 1 phần tử
+        if (stored.getRevokedAt() != null) {
+            throw new UnauthorizedException("Refresh token đã bị thu hồi.");
+        }
+        if (stored.getExpiresAt() != null && stored.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new UnauthorizedException("Refresh token đã hết hạn.");
+        }
+        if (!stored.getUser().getId().equals(authenticatedUser.userId())) {
+            throw new UnauthorizedException("Refresh token không khớp người dùng.");
+        }
+
+        stored.setRevokedAt(LocalDateTime.now());
+        refreshTokenRepository.save(stored);
+
+        User user = userRepository.findById(authenticatedUser.userId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng."));
+
+        return generateTokenBundle(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AuthUserResponse getCurrentUserProfile(HttpServletRequest request) {
+        AuthenticatedUser authenticatedUser = requireAccessUser(request);
+        User user = userRepository.findById(authenticatedUser.userId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng."));
+        return mapUser(user, resolveRoles(user.getId()));
+    }
+
+    @Override
+    @Transactional
+    public void logout(String authorizationHeader) {
+        String rawToken = extractBearerToken(authorizationHeader);
+        String tokenHash = hashToken(rawToken);
+        refreshTokenRepository.findByTokenHash(tokenHash).ifPresent(token -> {
+            token.setRevokedAt(LocalDateTime.now());
+            refreshTokenRepository.save(token);
+        });
+    }
+
+    @Override
+    public AuthenticatedUser requireAccessUser(HttpServletRequest request) {
+        String rawToken = extractBearerToken(request.getHeader("Authorization"));
+        AuthenticatedUser user = parseTokenOrThrow(rawToken);
+        if (!"ACCESS".equalsIgnoreCase(user.tokenType())) {
+            throw new UnauthorizedException("Access token không hợp lệ.");
+        }
+        return user;
+    }
+
+    private AuthTokenBundleResponse generateTokenBundle(User user) {
+        List<String> roles = resolveRoles(user.getId());
+        String accessToken = jwtTokenService.generateAccessToken(user, roles);
+        String refreshToken = jwtTokenService.generateRefreshToken(user, roles);
+
+        RefreshToken refreshTokenEntity = new RefreshToken();
+        refreshTokenEntity.setUser(user);
+        refreshTokenEntity.setTokenHash(hashToken(refreshToken));
+        refreshTokenEntity.setExpiresAt(jwtTokenService.getRefreshTokenExpiry(refreshToken));
+        refreshTokenRepository.save(refreshTokenEntity);
+
+        return AuthTokenBundleResponse.builder()
+                .token(accessToken)
+                .refreshToken(refreshToken)
+                .user(mapUser(user, roles))
                 .build();
+    }
 
-        return userMapper.toUserResponse(userRepository.save(user));
+    private Optional<User> findUserForLogin(String principal) {
+        if (principal.contains("@")) {
+            return userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(normalizeEmail(principal));
+        }
+        return userRepository.findByPhoneNumberAndDeletedAtIsNull(normalizePhone(principal))
+                .or(() -> userRepository.findByUserCodeAndDeletedAtIsNull(principal));
+    }
+
+    private List<String> resolveRoles(Long userId) {
+        List<String> roles = userRoleRepository.findByUser_Id(userId).stream()
+                .map(userRole -> userRole.getRole().getCode())
+                .filter(code -> code != null && !code.isBlank())
+                .distinct()
+                .toList();
+        return roles.isEmpty() ? List.of("CUSTOMER") : roles;
+    }
+
+    private AuthUserResponse mapUser(User user, List<String> roles) {
+        String address = buildAddress(user);
+        return AuthUserResponse.builder()
+                .id(user.getId())
+                .userId(user.getId())
+                .ownerUserId(user.getId())
+                .userCode(user.getUserCode())
+                .fullName(user.getFullName())
+                .name(user.getFullName())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .avatarUrl(blankToNull(user.getAvatarUrl()) != null ? user.getAvatarUrl() : defaultAvatarUrl())
+                .coverUrl(blankToNull(user.getCoverUrl()) != null ? user.getCoverUrl() : defaultCoverUrl())
+                .addressLine1(user.getAddressLine1())
+                .addressLine2(user.getAddressLine2())
+                .ward(user.getWard())
+                .district(user.getDistrict())
+                .city(user.getCity())
+                .province(user.getProvince())
+                .countryCode(user.getCountryCode())
+                .address(address)
+                .status(user.getStatus())
+                .createdAt(user.getCreatedAt() != null ? user.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null)
+                .roles(roles)
+                .build();
+    }
+
+    private String buildAddress(User user) {
+        List<String> parts = java.util.stream.Stream.of(
+                        user.getAddressLine1(),
+                        user.getAddressLine2(),
+                        user.getWard(),
+                        user.getDistrict(),
+                        user.getCity(),
+                        user.getProvince()
+                )
+                .filter(value -> value != null && !value.isBlank())
+                .toList();
+        return parts.isEmpty() ? null : String.join(", ", parts);
+    }
+
+    private String generateUserCode() {
+        return "USR-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
+    }
+
+    private String normalizePhone(String phone) {
+        return phone == null ? null : phone.trim();
+    }
+
+    private String defaultAvatarUrl() {
+        return "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=300";
+    }
+
+    private String defaultCoverUrl() {
+        return "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=1600";
+    }
+
+    private String extractBearerToken(String authorizationHeader) {
+        if (authorizationHeader == null || authorizationHeader.isBlank() || !authorizationHeader.startsWith("Bearer ")) {
+            throw new UnauthorizedException("Thiếu token xác thực.");
+        }
+        return authorizationHeader.substring(7).trim();
+    }
+
+    private AuthenticatedUser parseTokenOrThrow(String rawToken) {
+        try {
+            return jwtTokenService.parseToken(rawToken);
+        } catch (JwtException | IllegalArgumentException ex) {
+            throw new UnauthorizedException("Token không hợp lệ hoặc đã hết hạn.");
+        }
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("Không hỗ trợ SHA-256", e);
+        }
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 }
