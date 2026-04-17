@@ -1,11 +1,17 @@
 package com.example.petgo.service;
 
-import com.example.petgo.dto.request.LoginRequest;
-import com.example.petgo.dto.request.RegisterRequest;
-import com.example.petgo.dto.response.AuthResponse;
-import com.example.petgo.dto.response.UserResponse;
+import com.example.petgo.config.AuthenticatedUser;
+import com.example.petgo.dto.AuthLoginRequest;
+import com.example.petgo.dto.AuthRegisterRequest;
+import com.example.petgo.dto.AuthTokenBundleResponse;
+import com.example.petgo.dto.AuthUserResponse;
+import jakarta.servlet.http.HttpServletRequest;
 
 public interface AuthService {
-    AuthResponse login(LoginRequest request);
-    UserResponse register(RegisterRequest request);
+    AuthUserResponse register(AuthRegisterRequest request);
+    AuthTokenBundleResponse login(AuthLoginRequest request);
+    AuthTokenBundleResponse refresh(String authorizationHeader);
+    AuthUserResponse getCurrentUserProfile(HttpServletRequest request);
+    void logout(String authorizationHeader);
+    AuthenticatedUser requireAccessUser(HttpServletRequest request);
 }

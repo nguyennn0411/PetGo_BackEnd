@@ -1,103 +1,81 @@
 package com.example.petgo.exception;
 
-import com.example.petgo.dto.response.ApiResponse;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Arrays;
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-@ControllerAdvice
-@Slf4j
+@RestControllerAdvice
 public class GlobalExceptionHandler {
-
-    private static final String MIN_ATTRIBUTE = "min";
-
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("message", ex.getMessage());
+        body.put("status", 404);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse> handleGenericException(Exception exception) {
-        exception.printStackTrace();
-        log.error("Unhandled Exception: ", exception);
-        ApiResponse apiResponse = ApiResponse.builder()
-                .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
-                .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage())
-                .build();
-        return ResponseEntity.badRequest().body(apiResponse);
+    public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("message", "Đã xảy ra lỗi nội bộ");
+        body.put("status", 500);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<Map<String, Object>> handleBadRequest(BadRequestException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("message", ex.getMessage());
+        body.put("status", 400);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+//    @ExceptionHandler(ResourceNotFoundException.class)
+//    public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex) {
+//        return build(HttpStatus.NOT_FOUND, ex.getMessage());
+//    }
+//
+//    @ExceptionHandler(BadRequestException.class)
+//    public ResponseEntity<Map<String, Object>> handleBadRequest(BadRequestException ex) {
+//        return build(HttpStatus.BAD_REQUEST, ex.getMessage());
+//    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedException ex) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
-    @ExceptionHandler(AppException.class)
-    public ResponseEntity<ApiResponse> handleAppException(AppException exception) {
-        ErrorCode errorCode = exception.getErrorCode();
 
-        Map<String, String> result = null;
-
-        if (exception.getFieldName() != null && !exception.getFieldName().isEmpty()) {
-            result = Arrays.stream(exception.getFieldName().split(","))
-                    .collect(Collectors.toMap(f -> f, f -> errorCode.getMessage()));
-        }
-
-        ApiResponse apiResponse = ApiResponse.builder()
-                .code(errorCode.getCode())
-                .message(result != null ? "Dữ liệu không hợp lệ" : errorCode.getMessage())
-                .result(result)
-                .build();
-
-        return ResponseEntity.status(errorCode.getStatusCode()).body(apiResponse);
-    }
-
-    @ExceptionHandler(AuthenticationCredentialsNotFoundException.class)
-    public ResponseEntity<ApiResponse> handleAuthenticationException(AuthenticationCredentialsNotFoundException ex) {
-        ApiResponse apiResponse = ApiResponse.builder()
-                .code(ErrorCode.UNAUTHENTICATED.getCode())
-                .message(ErrorCode.UNAUTHENTICATED.getMessage())
-                .build();
-        return ResponseEntity.status(ErrorCode.UNAUTHENTICATED.getStatusCode()).body(apiResponse);
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiResponse> handleAccessDeniedException(AccessDeniedException ex) {
-        ApiResponse apiResponse = ApiResponse.builder()
-                .code(ErrorCode.UNAUTHORIZED.getCode())
-                .message(ErrorCode.UNAUTHORIZED.getMessage())
-                .build();
-        return ResponseEntity.status(ErrorCode.UNAUTHORIZED.getStatusCode()).body(apiResponse);
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleResponseStatus(ResponseStatusException ex) {
+        return build(HttpStatus.valueOf(ex.getStatusCode().value()), ex.getReason() != null ? ex.getReason() : "Yêu cầu không hợp lệ");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse> handleValidation(MethodArgumentNotValidException ex) {
-        log.warn("Validation failed: {}", ex.getMessage());
-
-        Map<String, String> errors = ex.getBindingResult().getFieldErrors()
-                .stream()
-                .collect(Collectors.toMap(
-                        fieldError -> fieldError.getField(),
-                        fieldError -> {
-                            try {
-                                ErrorCode code = ErrorCode.valueOf(fieldError.getDefaultMessage());
-                                return code.getMessage();
-                            } catch (IllegalArgumentException e) {
-                                return fieldError.getDefaultMessage();
-                            }
-                        },
-                        (existing, replacement) -> existing
-                ));
-
-        ApiResponse apiResponse = ApiResponse.builder()
-                .code(ErrorCode.INVALID_DATA.getCode())
-                .message(ErrorCode.INVALID_DATA.getMessage())
-                .result(errors)
-                .build();
-
-        return ResponseEntity.badRequest().body(apiResponse);
+    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(FieldError::getDefaultMessage)
+                .orElse("Dữ liệu không hợp lệ");
+        return build(HttpStatus.BAD_REQUEST, message);
     }
 
-    private String mapAttribute(String message, Map<String, Object> attributes) {
-        String minValue = String.valueOf(attributes.get(MIN_ATTRIBUTE));
-        return message.replace("{" + MIN_ATTRIBUTE + "}", minValue);
+//    @ExceptionHandler(Exception.class)
+//    public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+//        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Đã xảy ra lỗi nội bộ");
+//    }
+
+    private ResponseEntity<Map<String, Object>> build(HttpStatus status, String message) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", status.value());
+        body.put("error", status.getReasonPhrase());
+        body.put("message", message);
+        return ResponseEntity.status(status).body(body);
     }
 }

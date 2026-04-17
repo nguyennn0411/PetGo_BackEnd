@@ -1,0 +1,5 @@
+-- Function 5 notes
+-- Use provider-function3-sample-seed.sql and pet-function4-sample-seed.sql first.
+-- Then call:
+-- GET /api/v1/bookings/create-context?ownerUserId=1&providerId=1
+-- to inspect available pets, services and upcoming slots.
