@@ -12,10 +12,13 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class ProviderProfile extends BaseEntity {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @OneToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(name = "provider_code", nullable = false, length = 32)
     private String providerCode;
