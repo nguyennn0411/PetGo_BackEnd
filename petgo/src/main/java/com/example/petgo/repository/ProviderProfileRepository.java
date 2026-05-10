@@ -57,4 +57,6 @@ public interface ProviderProfileRepository extends JpaRepository<ProviderProfile
               and p.deletedAt is null
             """)
     Optional<ProviderProfile> findActiveById(@Param("providerId") Long providerId);
+
+    List<ProviderProfile> findByVerificationStatus(String status);
 }

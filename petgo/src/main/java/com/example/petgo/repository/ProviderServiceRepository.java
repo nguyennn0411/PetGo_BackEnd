@@ -54,4 +54,5 @@ public interface ProviderServiceRepository extends JpaRepository<ProviderService
             """)
     Optional<ProviderService> findActiveDetailById(@Param("providerServiceId") Long providerServiceId);
 
+    List<ProviderService> findByProvider_Id(Long providerId);
 }
