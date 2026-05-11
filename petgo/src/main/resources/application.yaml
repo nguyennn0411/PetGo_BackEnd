@@ -16,6 +16,19 @@ spring:
         format_sql: true
     show-sql: false
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: nvna2705@gmail.com
+    password: ylrr ckeb pbky qspg
+
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 app:
   homepage:
     featured-limit: 3

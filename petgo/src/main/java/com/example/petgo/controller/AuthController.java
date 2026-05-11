@@ -21,9 +21,15 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody AuthRegisterRequest request) {
         return ResponseEntity.ok(Map.of(
-                "message", "Đăng ký thành công.",
+                "message", "Đăng ký thành công. Vui lòng kiểm tra email để nhận mã OTP.",
                 "result", Map.of("user", authService.register(request))
         ));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<Map<String, Object>> verifyOtp(@Valid @RequestBody com.example.petgo.dto.VerifyOtpRequest request) {
+        authService.verifyOtp(request);
+        return ResponseEntity.ok(Map.of("message", "Xác thực email thành công. Bạn có thể đăng nhập ngay bây giờ."));
     }
 
     @PostMapping("/login")
