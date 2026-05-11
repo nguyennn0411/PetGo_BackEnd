@@ -18,6 +18,8 @@ import com.example.petgo.repository.RoleRepository;
 import com.example.petgo.repository.UserRepository;
 import com.example.petgo.repository.UserRoleRepository;
 import com.example.petgo.service.AuthService;
+import com.example.petgo.service.MailService;
+import com.example.petgo.dto.VerifyOtpRequest;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +47,7 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtTokenService jwtTokenService;
     private final PasswordEncoder passwordEncoder;
+    private final MailService mailService;
 
     @Override
     @Transactional
@@ -65,11 +68,20 @@ public class AuthServiceImpl implements AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setFullName(request.fullName().trim());
         user.setPhoneNumber(normalizedPhone);
-        user.setStatus("ACTIVE");
+        user.setStatus("INACTIVE");
         user.setCountryCode("VN");
         user.setAvatarUrl(defaultAvatarUrl());
         user.setCoverUrl(defaultCoverUrl());
+
+        // Generate OTP
+        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
+        user.setOtpCode(otp);
+        user.setOtpExpiryTime(LocalDateTime.now().plusMinutes(10));
+
         userRepository.save(user);
+
+        // Send OTP Email
+        mailService.sendOtpEmail(user.getEmail(), otp);
 
         roleRepository.findByCode("CUSTOMER").ifPresent(role -> {
             UserRole userRole = new UserRole();
@@ -84,6 +96,31 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public void verifyOtp(VerifyOtpRequest request) {
+        User user = userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(normalizeEmail(request.email()))
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng."));
+
+        if (user.getEmailVerifiedAt() != null) {
+            throw new BadRequestException("Email đã được xác thực trước đó.");
+        }
+
+        if (user.getOtpCode() == null || !user.getOtpCode().equals(request.otpCode())) {
+            throw new BadRequestException("Mã OTP không chính xác.");
+        }
+
+        if (user.getOtpExpiryTime() == null || user.getOtpExpiryTime().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Mã OTP đã hết hạn.");
+        }
+
+        user.setEmailVerifiedAt(LocalDateTime.now());
+        user.setStatus("ACTIVE");
+        user.setOtpCode(null);
+        user.setOtpExpiryTime(null);
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
     public AuthTokenBundleResponse login(AuthLoginRequest request) {
         String principal = request.userName() == null ? "" : request.userName().trim();
         User user = findUserForLogin(principal)
@@ -94,8 +131,12 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("Thông tin đăng nhập không chính xác.");
         }
 
-        if ("SUSPENDED".equalsIgnoreCase(user.getStatus()) || "INACTIVE".equalsIgnoreCase(user.getStatus())) {
-            throw new UnauthorizedException("Tài khoản hiện không thể đăng nhập.");
+        if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
+            throw new UnauthorizedException("Tài khoản của bạn đã bị khóa.");
+        }
+
+        if (user.getEmailVerifiedAt() == null) {
+            throw new UnauthorizedException("Tài khoản chưa được xác thực email.");
         }
 
         user.setLastLoginAt(LocalDateTime.now());
