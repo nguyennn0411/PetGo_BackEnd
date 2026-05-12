@@ -15,7 +15,11 @@ spring:
       hibernate:
         format_sql: true
     show-sql: false
-
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB
+      max-request-size: 10MB
 app:
   homepage:
     featured-limit: 3
@@ -43,3 +47,15 @@ app:
     refresh-token-expiration-days: 30
     issuer: petgo-backend
     jwt-secret: change-this-secret-key-change-this-secret-key-2026
+
+  upload:
+    root-dir: uploads
+    pet-avatar-dir: uploads/pets
+    pet-avatar-public-path: /uploads/pets
+
+cloudinary:
+    cloud-name: dxaok6qzg
+    api-key: 754418163343834
+    api-secret: QmNTv-DNsMrC6D6NKmXVse_4i04
+
+
