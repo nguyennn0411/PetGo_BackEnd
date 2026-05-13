@@ -8,8 +8,10 @@ import com.example.petgo.service.PetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/users/{ownerUserId}/pets")
@@ -31,21 +33,25 @@ public class PetController {
         return ResponseEntity.ok(petService.getPetDetail(ownerUserId, petId));
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PetResponse> createPet(
             @PathVariable Long ownerUserId,
-            @Valid @RequestBody PetUpsertRequest request
+            @Valid @RequestPart("data") PetUpsertRequest request,
+            @RequestPart(value = "avatarFile", required = false) MultipartFile avatarFile
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(petService.createPet(ownerUserId, request));
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(petService.createPet(ownerUserId, request, avatarFile));
     }
 
-    @PutMapping("/{petId}")
+    @PutMapping(value = "/{petId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PetResponse> updatePet(
             @PathVariable Long ownerUserId,
             @PathVariable Long petId,
-            @Valid @RequestBody PetUpsertRequest request
+            @Valid @RequestPart("data") PetUpsertRequest request,
+            @RequestPart(value = "avatarFile", required = false) MultipartFile avatarFile
     ) {
-        return ResponseEntity.ok(petService.updatePet(ownerUserId, petId, request));
+        return ResponseEntity.ok(petService.updatePet(ownerUserId, petId, request, avatarFile));
     }
 
     @DeleteMapping("/{petId}")
@@ -54,6 +60,11 @@ public class PetController {
             @PathVariable Long petId
     ) {
         petService.deletePet(ownerUserId, petId);
-        return ResponseEntity.ok(ApiMessageResponse.builder().message("Đã xóa thú cưng thành công").build());
+
+        return ResponseEntity.ok(
+                ApiMessageResponse.builder()
+                        .message("Đã xóa thú cưng thành công")
+                        .build()
+        );
     }
 }
