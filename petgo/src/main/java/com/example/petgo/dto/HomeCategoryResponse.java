@@ -2,12 +2,14 @@ package com.example.petgo.dto;
 
 import lombok.Builder;
 
+import java.util.List;
+
 @Builder
 public record HomeCategoryResponse(
         Long id,
+        Long parentId,
         String name,
-        String slug,
-        String iconKey,
-        String description
+        String description,
+        List<HomeCategoryResponse> children
 ) {
 }

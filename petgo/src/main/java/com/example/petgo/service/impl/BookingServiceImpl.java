@@ -47,10 +47,10 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public BookingCreateContextResponse getCreateContext(Long ownerUserId,
-                                                         Long providerId,
-                                                         Long providerServiceId,
-                                                         String slotDate,
-                                                         String time) {
+            Long providerId,
+            Long providerServiceId,
+            String slotDate,
+            String time) {
         User owner = userRepository.findById(ownerUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng đặt lịch"));
 
@@ -68,11 +68,11 @@ public class BookingServiceImpl implements BookingService {
         LocalTime resolvedTime = parseFlexibleTime(time);
 
         LocalDate today = LocalDate.now(APP_ZONE);
-        List<ProviderAvailabilitySlot> upcomingSlots = providerAvailabilitySlotRepository.findUpcomingAvailableSlotsForProvider(
-                providerId,
-                today,
-                today.plusDays(Math.max(slotLookaheadDays, 1))
-        );
+        List<ProviderAvailabilitySlot> upcomingSlots = providerAvailabilitySlotRepository
+                .findUpcomingAvailableSlotsForProvider(
+                        providerId,
+                        today,
+                        today.plusDays(Math.max(slotLookaheadDays, 1)));
 
         final Long initialResolvedServiceId = resolvedServiceId;
         if (initialResolvedServiceId != null) {
@@ -171,16 +171,17 @@ public class BookingServiceImpl implements BookingService {
         LocalTime startTime = slot != null ? slot.getStartTime() : request.startTime();
         LocalTime endTime = slot != null
                 ? slot.getEndTime()
-                : Optional.ofNullable(request.endTime()).orElse(startTime.plusMinutes(Optional.ofNullable(providerService.getDurationMinutes()).orElse(30)));
+                : Optional.ofNullable(request.endTime()).orElse(
+                        startTime.plusMinutes(Optional.ofNullable(providerService.getDurationMinutes()).orElse(30)));
 
         String providerAddress = buildProviderAddress(provider);
-        String serviceName = firstNonBlank(providerService.getCustomName(), providerService.getService().getName(), "Dịch vụ PetGo");
+        String serviceName = firstNonBlank(providerService.getCustomName(), providerService.getService().getName(),
+                "Dịch vụ PetGo");
         String serviceDescription = abbreviate(firstNonBlank(
                 providerService.getShortDescription(),
                 providerService.getDescription(),
                 providerService.getService().getShortDescription(),
-                providerService.getService().getDescription()
-        ), 255);
+                providerService.getService().getDescription()), 255);
 
         BigDecimal subtotal = defaultMoney(providerService.getPriceAmount());
         BigDecimal total = subtotal;
@@ -245,8 +246,8 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private ProviderAvailabilitySlot resolveSlot(BookingCreateRequest request,
-                                                 ProviderProfile provider,
-                                                 ProviderService providerService) {
+            ProviderProfile provider,
+            ProviderService providerService) {
         if (request.slotId() != null) {
             ProviderAvailabilitySlot slot = providerAvailabilitySlotRepository.findDetailedById(request.slotId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy slot đã chọn"));
@@ -258,10 +259,10 @@ public class BookingServiceImpl implements BookingService {
         List<ProviderAvailabilitySlot> slots = providerAvailabilitySlotRepository.findUpcomingAvailableSlotsForProvider(
                 provider.getId(),
                 today,
-                today.plusDays(Math.max(slotLookaheadDays, 1))
-        );
+                today.plusDays(Math.max(slotLookaheadDays, 1)));
         return slots.stream()
-                .filter(slot -> slot.getProviderService() != null && Objects.equals(slot.getProviderService().getId(), providerService.getId()))
+                .filter(slot -> slot.getProviderService() != null
+                        && Objects.equals(slot.getProviderService().getId(), providerService.getId()))
                 .filter(slot -> Objects.equals(slot.getSlotDate(), request.appointmentDate()))
                 .filter(slot -> Objects.equals(slot.getStartTime(), request.startTime()))
                 .findFirst()
@@ -273,20 +274,22 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void validateSlot(ProviderAvailabilitySlot slot,
-                              ProviderProfile provider,
-                              ProviderService providerService,
-                              LocalDate appointmentDate,
-                              LocalTime startTime) {
+            ProviderProfile provider,
+            ProviderService providerService,
+            LocalDate appointmentDate,
+            LocalTime startTime) {
         if (!Objects.equals(slot.getProvider().getId(), provider.getId())) {
             throw new BadRequestException("Slot không thuộc nhà cung cấp đã chọn");
         }
-        if (slot.getProviderService() == null || !Objects.equals(slot.getProviderService().getId(), providerService.getId())) {
+        if (slot.getProviderService() == null
+                || !Objects.equals(slot.getProviderService().getId(), providerService.getId())) {
             throw new BadRequestException("Slot không thuộc dịch vụ đã chọn");
         }
         if (!"AVAILABLE".equalsIgnoreCase(Optional.ofNullable(slot.getSlotStatus()).orElse(""))) {
             throw new BadRequestException("Slot không còn khả dụng");
         }
-        if (Optional.ofNullable(slot.getCapacityBooked()).orElse(0) >= Optional.ofNullable(slot.getCapacityTotal()).orElse(1)) {
+        if (Optional.ofNullable(slot.getCapacityBooked()).orElse(0) >= Optional.ofNullable(slot.getCapacityTotal())
+                .orElse(1)) {
             throw new BadRequestException("Slot đã đầy");
         }
         if (appointmentDate != null && !Objects.equals(slot.getSlotDate(), appointmentDate)) {
@@ -298,7 +301,8 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private BookingProviderOptionResponse mapProvider(ProviderProfile provider) {
-        String image = firstNonBlank(provider.getMainImageUrl(), provider.getCoverImageUrl(), firstProviderPhoto(provider.getId()));
+        String image = firstNonBlank(provider.getMainImageUrl(), provider.getCoverImageUrl(),
+                firstProviderPhoto(provider.getId()));
         return BookingProviderOptionResponse.builder()
                 .id(provider.getId())
                 .name(provider.getBusinessName())
@@ -328,24 +332,35 @@ public class BookingServiceImpl implements BookingService {
         return BookingServiceOptionResponse.builder()
                 .id(service.getId())
                 .serviceId(service.getService() != null ? service.getService().getId() : null)
-                .name(firstNonBlank(service.getCustomName(), service.getService() != null ? service.getService().getName() : null, "Dịch vụ"))
-                .description(firstNonBlank(service.getShortDescription(), service.getDescription(), service.getService() != null ? service.getService().getShortDescription() : null))
+                .name(firstNonBlank(service.getCustomName(),
+                        service.getService() != null ? service.getService().getName() : null, "Dịch vụ"))
+                .description(firstNonBlank(service.getShortDescription(), service.getDescription(),
+                        service.getService() != null ? service.getService().getShortDescription() : null))
                 .durationMinutes(service.getDurationMinutes())
                 .durationLabel(formatDuration(service.getDurationMinutes()))
                 .priceAmount(service.getPriceAmount())
                 .priceDisplay(formatMoney(service.getPriceAmount()))
-                .currencyCode(firstNonBlank(service.getCurrencyCode(), service.getService() != null ? service.getService().getCurrencyCode() : null, "VND"))
+                .currencyCode(firstNonBlank(service.getCurrencyCode(),
+                        service.getService() != null ? service.getService().getCurrencyCode() : null, "VND"))
                 .priceUnit(service.getPriceUnit())
                 .featured(Boolean.TRUE.equals(service.getFeatured()))
-                .categoryName(service.getService() != null && service.getService().getCategory() != null ? service.getService().getCategory().getName() : null)
-                .categorySlug(service.getService() != null && service.getService().getCategory() != null ? service.getService().getCategory().getSlug() : null)
+                .categoryId(service.getService() != null && service.getService().getCategory() != null
+                        ? service.getService().getCategory().getId()
+                        : null)
+                .categoryName(service.getService() != null && service.getService().getCategory() != null
+                        ? service.getService().getCategory().getName()
+                        : null)
                 .build();
     }
 
     private BookingSlotOptionResponse mapSlot(ProviderAvailabilitySlot slot, Long selectedSlotId) {
-        int capacityRemaining = Math.max(0, Optional.ofNullable(slot.getCapacityTotal()).orElse(0) - Optional.ofNullable(slot.getCapacityBooked()).orElse(0));
+        int capacityRemaining = Math.max(0, Optional.ofNullable(slot.getCapacityTotal()).orElse(0)
+                - Optional.ofNullable(slot.getCapacityBooked()).orElse(0));
         String serviceName = slot.getProviderService() != null
-                ? firstNonBlank(slot.getProviderService().getCustomName(), slot.getProviderService().getService() != null ? slot.getProviderService().getService().getName() : null)
+                ? firstNonBlank(slot.getProviderService().getCustomName(),
+                        slot.getProviderService().getService() != null
+                                ? slot.getProviderService().getService().getName()
+                                : null)
                 : null;
         return BookingSlotOptionResponse.builder()
                 .slotId(slot.getId())
@@ -377,7 +392,8 @@ public class BookingServiceImpl implements BookingService {
                 .serviceDurationMinutes(booking.getServiceDurationMinutesSnapshot())
                 .petName(booking.getPetNameSnapshot())
                 .petBreed(booking.getPetBreedSnapshot())
-                .appointmentDate(booking.getAppointmentDate() != null ? booking.getAppointmentDate().format(VIEW_DATE) : null)
+                .appointmentDate(
+                        booking.getAppointmentDate() != null ? booking.getAppointmentDate().format(VIEW_DATE) : null)
                 .startTime(formatTime(booking.getStartTime()))
                 .endTime(formatTime(booking.getEndTime()))
                 .subtotalAmount(booking.getSubtotalAmount())
@@ -385,13 +401,19 @@ public class BookingServiceImpl implements BookingService {
                 .totalAmountDisplay(formatMoney(booking.getTotalAmount()))
                 .currencyCode(booking.getCurrencyCode())
                 .customerNote(booking.getCustomerNote())
-                .createdAt(booking.getCreatedAt() != null ? booking.getCreatedAt().atZone(APP_ZONE).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null)
+                .createdAt(
+                        booking.getCreatedAt() != null
+                                ? booking.getCreatedAt().atZone(APP_ZONE)
+                                        .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                                : null)
                 .build();
     }
 
     private Long resolveProviderServiceId(Long providerServiceId, List<ProviderService> services) {
-        if (providerServiceId != null) return providerServiceId;
-        return services.stream().filter(ps -> Boolean.TRUE.equals(ps.getFeatured())).map(ProviderService::getId).findFirst().orElse(null);
+        if (providerServiceId != null)
+            return providerServiceId;
+        return services.stream().filter(ps -> Boolean.TRUE.equals(ps.getFeatured())).map(ProviderService::getId)
+                .findFirst().orElse(null);
     }
 
     private String buildProviderAddress(ProviderProfile provider) {
@@ -414,15 +436,18 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private String formatDuration(Integer minutes) {
-        if (minutes == null || minutes <= 0) return "Chưa rõ";
-        if (minutes < 60) return minutes + " phút";
+        if (minutes == null || minutes <= 0)
+            return "Chưa rõ";
+        if (minutes < 60)
+            return minutes + " phút";
         int hours = minutes / 60;
         int remain = minutes % 60;
         return remain == 0 ? hours + " giờ" : hours + " giờ " + remain + " phút";
     }
 
     private String formatMoney(BigDecimal amount) {
-        if (amount == null) return "0";
+        if (amount == null)
+            return "0";
         return String.format(Locale.forLanguageTag("vi-VN"), "%,.0f đ", amount);
     }
 
@@ -431,9 +456,11 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private String firstNonBlank(String... values) {
-        if (values == null) return null;
+        if (values == null)
+            return null;
         for (String value : values) {
-            if (value != null && !value.isBlank()) return value.trim();
+            if (value != null && !value.isBlank())
+                return value.trim();
         }
         return null;
     }
@@ -449,7 +476,8 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private String abbreviate(String value, int max) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         String trimmed = value.trim();
         return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
     }
@@ -459,7 +487,8 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private LocalDate parseFlexibleDate(String value) {
-        if (value == null || value.isBlank()) return null;
+        if (value == null || value.isBlank())
+            return null;
         for (DateTimeFormatter formatter : List.of(ISO_DATE, VIEW_DATE)) {
             try {
                 return LocalDate.parse(value.trim(), formatter);
@@ -470,14 +499,14 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private LocalTime parseFlexibleTime(String value) {
-        if (value == null || value.isBlank()) return null;
+        if (value == null || value.isBlank())
+            return null;
         String normalized = value.trim().toUpperCase(Locale.ROOT);
         List<DateTimeFormatter> formatters = List.of(
                 TIME_FORMATTER,
                 DateTimeFormatter.ofPattern("H:mm"),
                 DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH),
-                DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH)
-        );
+                DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH));
         for (DateTimeFormatter formatter : formatters) {
             try {
                 return LocalTime.parse(normalized, formatter);
@@ -488,7 +517,8 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private String translateSpecies(String species) {
-        if (species == null) return null;
+        if (species == null)
+            return null;
         String normalized = Normalizer.normalize(species, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .toUpperCase(Locale.ROOT);
@@ -506,7 +536,8 @@ public class BookingServiceImpl implements BookingService {
     private String generateBookingCode(ProviderProfile provider, User owner) {
         String prefix = "BK";
         String providerCode = provider.getProviderCode() != null && provider.getProviderCode().length() >= 4
-                ? provider.getProviderCode().substring(Math.max(0, provider.getProviderCode().length() - 4)).toUpperCase(Locale.ROOT)
+                ? provider.getProviderCode().substring(Math.max(0, provider.getProviderCode().length() - 4))
+                        .toUpperCase(Locale.ROOT)
                 : String.format(Locale.ROOT, "%04d", provider.getId());
         String userCode = String.format(Locale.ROOT, "%04d", owner.getId());
         String random = UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase(Locale.ROOT);
