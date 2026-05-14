@@ -44,6 +44,8 @@ CREATE TABLE users (
                        latitude DECIMAL(10,7) NULL,
                        longitude DECIMAL(10,7) NULL,
                        email_verified_at DATETIME NULL,
+                        otp_code VARCHAR(10) NULL,
+                        otp_expiry_time DATETIME NULL,
                        phone_verified_at DATETIME NULL,
                        status ENUM('ACTIVE','INACTIVE','SUSPENDED','PENDING_VERIFICATION') NOT NULL DEFAULT 'ACTIVE',
                        last_login_at DATETIME NULL,
@@ -234,16 +236,13 @@ CREATE TABLE service_categories (
                                     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
                                     parent_id BIGINT UNSIGNED NULL,
                                     name VARCHAR(120) NOT NULL,
-                                    slug VARCHAR(120) NOT NULL,
-                                    icon_key VARCHAR(80) NULL,
                                     description VARCHAR(255) NULL,
-                                    sort_order INT NOT NULL DEFAULT 0,
                                     is_active BOOLEAN NOT NULL DEFAULT TRUE,
                                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                                     PRIMARY KEY (id),
-                                    UNIQUE KEY uk_service_categories_slug (slug),
                                     KEY idx_service_categories_parent (parent_id),
+                                    KEY idx_service_categories_active (is_active),
                                     CONSTRAINT fk_service_categories_parent FOREIGN KEY (parent_id) REFERENCES service_categories(id)
 ) ENGINE=InnoDB;
 
@@ -706,30 +705,82 @@ CREATE TABLE user_notification_settings (
 ) ENGINE=InnoDB;
 
 -- =========================
--- 11) SEED DATA (minimal)
+-- 11) REGISTRATION APPLICATIONS
+-- =========================
+
+CREATE TABLE registration_applications (
+                                           id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                                           user_id BIGINT UNSIGNED NOT NULL,
+                                           type ENUM('PARTNER','AFFILIATE') NOT NULL,
+                                           status ENUM('DRAFT','AWAITING_APPROVAL','NEEDS_MORE_INFO','APPROVED','REJECTED') NOT NULL DEFAULT 'DRAFT',
+                                           business_name VARCHAR(255) NOT NULL,
+                                           business_phone VARCHAR(50) NOT NULL,
+                                           business_email VARCHAR(255) NOT NULL,
+                                           business_address VARCHAR(500) NOT NULL,
+                                           tax_code VARCHAR(100) NULL,
+                                           representative_name VARCHAR(255) NOT NULL,
+                                           representative_phone VARCHAR(50) NOT NULL,
+                                           representative_email VARCHAR(255) NOT NULL,
+                                           service_category_ids VARCHAR(500) NULL,
+                                           location_image_urls TEXT NULL,
+                                           description TEXT NULL,
+                                           additional_information TEXT NULL,
+                                           admin_message TEXT NULL,
+                                           rejection_reason TEXT NULL,
+                                           submitted_at DATETIME NULL,
+                                           reviewed_at DATETIME NULL,
+                                           reviewer_id BIGINT UNSIGNED NULL,
+                                           created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                           updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                           PRIMARY KEY (id),
+                                           UNIQUE KEY uk_registration_user_type (user_id, type),
+                                           KEY idx_registration_type_status (type, status),
+                                           KEY idx_registration_submitted_at (submitted_at),
+                                           KEY idx_registration_reviewer (reviewer_id),
+                                           CONSTRAINT fk_registration_user FOREIGN KEY (user_id) REFERENCES users(id),
+                                           CONSTRAINT fk_registration_reviewer FOREIGN KEY (reviewer_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+-- =========================
+-- 12) SEED DATA (minimal)
 -- =========================
 
 INSERT INTO roles (code, name, description) VALUES
-                                                ('CUSTOMER', 'Customer / Pet Owner', 'Người dùng đặt dịch vụ cho thú cưng'),
-                                                ('PROVIDER', 'Caregiver / Provider', 'Người cung cấp dịch vụ chăm sóc thú cưng'),
+                                                ('USER', 'User', 'Người dùng hệ thống'),
+                                                ('SHOP', 'Shop', 'Shop/đối tác cung cấp dịch vụ'),
                                                 ('ADMIN', 'Administrator', 'Quản trị hệ thống');
 
-INSERT INTO service_categories (name, slug, icon_key, description, sort_order) VALUES
-                                                                                   ('Pet Spa', 'spa', 'paw-print', 'Dịch vụ spa cho thú cưng', 1),
-                                                                                   ('Grooming', 'grooming', 'scissors', 'Tắm, cắt tỉa, vệ sinh', 2),
-                                                                                   ('Veterinary', 'clinic', 'stethoscope', 'Khám, tư vấn, tiêm phòng', 3),
-                                                                                   ('Pet Boarding', 'boarding', 'hotel', 'Lưu trú và chăm sóc theo ngày', 4),
-                                                                                   ('Pet Training', 'training', 'award', 'Huấn luyện cơ bản và nâng cao', 5),
-                                                                                   ('Pet Walking', 'walking', 'navigation', 'Dắt đi dạo và vận động', 6);
+INSERT INTO service_categories (name, description) VALUES
+                                                       ('Làm đẹp & vệ sinh', 'Nhóm dịch vụ spa, tắm và grooming cho thú cưng'),
+                                                       ('Sức khỏe thú cưng', 'Nhóm dịch vụ khám, tư vấn và chăm sóc sức khỏe'),
+                                                       ('Chăm sóc hằng ngày', 'Nhóm dịch vụ lưu trú, dắt đi dạo và huấn luyện');
+
+INSERT INTO service_categories (parent_id, name, description)
+SELECT id, 'Pet Spa', 'Dịch vụ spa cho thú cưng' FROM service_categories WHERE name = 'Làm đẹp & vệ sinh';
+
+INSERT INTO service_categories (parent_id, name, description)
+SELECT id, 'Grooming', 'Tắm, cắt tỉa, vệ sinh' FROM service_categories WHERE name = 'Làm đẹp & vệ sinh';
+
+INSERT INTO service_categories (parent_id, name, description)
+SELECT id, 'Veterinary', 'Khám, tư vấn, tiêm phòng' FROM service_categories WHERE name = 'Sức khỏe thú cưng';
+
+INSERT INTO service_categories (parent_id, name, description)
+SELECT id, 'Pet Boarding', 'Lưu trú và chăm sóc theo ngày' FROM service_categories WHERE name = 'Chăm sóc hằng ngày';
+
+INSERT INTO service_categories (parent_id, name, description)
+SELECT id, 'Pet Training', 'Huấn luyện cơ bản và nâng cao' FROM service_categories WHERE name = 'Chăm sóc hằng ngày';
+
+INSERT INTO service_categories (parent_id, name, description)
+SELECT id, 'Pet Walking', 'Dắt đi dạo và vận động' FROM service_categories WHERE name = 'Chăm sóc hằng ngày';
 
 INSERT INTO services (service_code, category_id, name, slug, short_description, description, default_duration_minutes, base_price_amount, currency_code, price_unit)
-SELECT 'SVC-SPA-BATH', id, 'Gói Tắm Thư Giãn', 'relax-bath', 'Tắm bằng nước ấm, sấy và chải lông', 'Gói spa cơ bản cho thú cưng', 45, 200000, 'VND', 'PER_SESSION' FROM service_categories WHERE slug='spa';
+SELECT 'SVC-SPA-BATH', id, 'Gói Tắm Thư Giãn', 'relax-bath', 'Tắm bằng nước ấm, sấy và chải lông', 'Gói spa cơ bản cho thú cưng', 45, 200000, 'VND', 'PER_SESSION' FROM service_categories WHERE name='Pet Spa';
 
 INSERT INTO services (service_code, category_id, name, slug, short_description, description, default_duration_minutes, base_price_amount, currency_code, price_unit)
-SELECT 'SVC-GROOM-STYLE', id, 'Cắt Tỉa Tạo Kiểu', 'groom-style', 'Cắt tỉa và tạo kiểu lông', 'Dịch vụ grooming nâng cao', 90, 350000, 'VND', 'PER_SESSION' FROM service_categories WHERE slug='grooming';
+SELECT 'SVC-GROOM-STYLE', id, 'Cắt Tỉa Tạo Kiểu', 'groom-style', 'Cắt tỉa và tạo kiểu lông', 'Dịch vụ grooming nâng cao', 90, 350000, 'VND', 'PER_SESSION' FROM service_categories WHERE name='Grooming';
 
 INSERT INTO services (service_code, category_id, name, slug, short_description, description, default_duration_minutes, base_price_amount, currency_code, price_unit)
-SELECT 'SVC-VET-CHECKUP', id, 'Khám Tổng Quát', 'general-checkup', 'Khám cơ bản cho thú cưng', 'Khám sức khỏe tổng quát', 30, 150000, 'VND', 'PER_VISIT' FROM service_categories WHERE slug='clinic';
+SELECT 'SVC-VET-CHECKUP', id, 'Khám Tổng Quát', 'general-checkup', 'Khám cơ bản cho thú cưng', 'Khám sức khỏe tổng quát', 30, 150000, 'VND', 'PER_VISIT' FROM service_categories WHERE name='Veterinary';
 
 INSERT INTO membership_plans (plan_code, name, slug, description, billing_cycle, price_amount, currency_code, discount_percent, monthly_voucher_amount, priority_booking, priority_support, is_popular, sort_order)
 VALUES
