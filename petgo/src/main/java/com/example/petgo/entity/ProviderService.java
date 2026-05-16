@@ -59,4 +59,13 @@ public class ProviderService extends BaseEntity {
 
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;
+
+    @Column(name = "category_ids", length = 500)
+    private String categoryIds;
+
+    @Column(name = "photo_urls", columnDefinition = "TEXT")
+    private String photoUrls;
+
+    @Column(name = "approval_status", length = 20)
+    private String approvalStatus;
 }

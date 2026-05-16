@@ -36,6 +36,7 @@ public class RegistrationServiceImpl implements RegistrationService {
     private final RegistrationApplicationRepository registrationApplicationRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final RegistrationMapperSupport mapper;
+    private final RegistrationNotificationService registrationNotificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -98,8 +99,9 @@ public class RegistrationServiceImpl implements RegistrationService {
         application.setAdminMessage(null);
         application.setRejectionReason(null);
 
-        registrationApplicationRepository.save(application);
-        return mapper.toResponse(application);
+        RegistrationApplication savedApplication = registrationApplicationRepository.save(application);
+        registrationNotificationService.notifyAdminsPartnerSubmitted(savedApplication);
+        return mapper.toResponse(savedApplication);
     }
 
     @Override
@@ -115,11 +117,12 @@ public class RegistrationServiceImpl implements RegistrationService {
             throw new BadRequestException("Chỉ có thể bổ sung thông tin khi admin yêu cầu.");
         }
 
-        if (requestBody.application() != null) {
+        if (requestBody != null && requestBody.application() != null) {
             applyBusinessFields(application, requestBody.application());
         }
         application.setAdditionalInformation(
-                normalizeRequired(requestBody.additionalInformation(), "Thông tin bổ sung không được để trống."));
+                normalizeRequired(requestBody != null ? requestBody.additionalInformation() : null,
+                        "Thông tin bổ sung không được để trống."));
         validateReadyToSubmit(application);
         application.setStatus(RegistrationStatus.AWAITING_APPROVAL);
         application.setSubmittedAt(LocalDateTime.now());
@@ -127,8 +130,9 @@ public class RegistrationServiceImpl implements RegistrationService {
         application.setReviewer(null);
         application.setRejectionReason(null);
 
-        registrationApplicationRepository.save(application);
-        return mapper.toResponse(application);
+        RegistrationApplication savedApplication = registrationApplicationRepository.save(application);
+        registrationNotificationService.notifyAdminsPartnerAdditionalInfoSubmitted(savedApplication);
+        return mapper.toResponse(savedApplication);
     }
 
     @Override
@@ -169,6 +173,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         application.setReviewer(null);
         application.setAdminMessage(null);
         application.setRejectionReason(null);
+        application.setAdditionalInformation(null);
     }
 
     private void applyBusinessFields(RegistrationApplication application, RegistrationUpsertRequest requestBody) {
