@@ -11,7 +11,7 @@ import java.util.List;
 @Table(name = "service_categories")
 @Getter
 @Setter
-public class ServiceCategory extends BaseEntity {
+public class ServiceCategory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -45,6 +45,9 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
         String normalizedStatus = normalizeStatusFilter(status);
         LocalDate fromDate = parseOptionalDate(from);
         LocalDate toDate = parseOptionalDate(to);
+        if (fromDate != null && toDate != null && toDate.isBefore(fromDate)) {
+            throw new BadRequestException("Khoảng ngày lọc booking không hợp lệ.");
+        }
 
         List<Booking> allBookings = bookingRepository.findDetailedByProviderId(provider.getId());
         Map<String, Long> counts = new LinkedHashMap<>();
@@ -133,6 +136,9 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
         String reasonCode = mapper.firstNonBlank(requestBody != null ? requestBody.reasonCode() : null,
                 "PARTNER_CANCELLED");
         String reasonText = mapper.normalizeBlank(requestBody != null ? requestBody.reasonText() : null);
+        if (reasonText == null || reasonText.length() < 5) {
+            throw new BadRequestException("Vui lòng nhập lý do hủy booking tối thiểu 5 ký tự.");
+        }
         String previousStatus = booking.getStatus();
         if (booking.getAvailabilitySlot() != null) {
             releaseSlot(booking.getAvailabilitySlot());

@@ -20,6 +20,26 @@ public class PromoCode extends BaseEntity {
     @Column(nullable = false, length = 50)
     private String code;
 
+    @Column(length = 120)
+    private String name;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "owner_type", length = 20)
+    private String ownerType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "provider_id")
+    private ProviderProfile provider;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_user_id")
+    private User createdByUser;
+
+    @Column(name = "promotion_type", length = 30)
+    private String promotionType;
+
     @Column(name = "target_type", nullable = false, length = 20)
     private String targetType;
 
@@ -40,6 +60,51 @@ public class PromoCode extends BaseEntity {
 
     @Column(name = "usage_limit_per_user")
     private Integer usageLimitPerUser;
+
+    @Column(name = "usage_count")
+    private Integer usageCount;
+
+    @Column(name = "is_stackable")
+    private Boolean stackable;
+
+    @Column(name = "is_auto_apply")
+    private Boolean autoApply;
+
+    @Column
+    private Integer priority;
+
+    @Column(name = "user_segment", length = 30)
+    private String userSegment;
+
+    @Column(name = "min_completed_bookings")
+    private Integer minCompletedBookings;
+
+    @Column(name = "applicable_days_of_week", length = 100)
+    private String applicableDaysOfWeek;
+
+    @Column(name = "provider_ids", length = 1000)
+    private String providerIds;
+
+    @Column(name = "provider_service_ids", length = 1000)
+    private String providerServiceIds;
+
+    @Column(name = "service_category_ids", length = 1000)
+    private String serviceCategoryIds;
+
+    @Column(name = "membership_plan_ids", length = 1000)
+    private String membershipPlanIds;
+
+    @Column(name = "badge_text", length = 80)
+    private String badgeText;
+
+    @Column(name = "landing_page_url", length = 500)
+    private String landingPageUrl;
+
+    @Column(name = "terms_and_conditions", columnDefinition = "TEXT")
+    private String termsAndConditions;
+
+    @Column(name = "internal_note", columnDefinition = "TEXT")
+    private String internalNote;
 
     @Column(name = "starts_at")
     private LocalDateTime startsAt;

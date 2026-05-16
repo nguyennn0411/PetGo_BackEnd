@@ -38,6 +38,15 @@ public class CloudinaryStorageServiceImpl implements CloudinaryStorageService {
         return uploadImage(file, "petgo/registrations/partner/locations", "File địa điểm shop phải là ảnh");
     }
 
+    @Override
+    public String uploadPartnerServiceImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Vui lòng chọn ảnh mô tả dịch vụ.");
+        }
+
+        return uploadImage(file, "petgo/partner/services", "File mô tả dịch vụ phải là ảnh");
+    }
+
     private String uploadImage(MultipartFile file, String folder, String invalidTypeMessage) {
         validateImage(file, invalidTypeMessage);
 

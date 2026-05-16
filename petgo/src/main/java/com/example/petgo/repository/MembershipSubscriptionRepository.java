@@ -21,4 +21,8 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
 
     @EntityGraph(attributePaths = {"membershipPlan", "membershipPlan.features", "user"})
     List<MembershipSubscription> findByUser_IdOrderByCreatedAtDescIdDesc(Long userId);
+
+    long countByUser_Id(Long userId);
+
+    long countByUser_IdAndStatusIn(Long userId, Collection<String> statuses);
 }
