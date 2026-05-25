@@ -28,6 +28,9 @@ public class Invoice extends BaseEntity {
     @JoinColumn(name = "booking_id")
     private Booking booking;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shop_order_id")
+    private ShopOrder shopOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "membership_subscription_id")
