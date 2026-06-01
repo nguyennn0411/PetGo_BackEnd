@@ -12,11 +12,13 @@ import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.repository.PetPhotoRepository;
 import com.example.petgo.repository.PetRepository;
 import com.example.petgo.repository.UserRepository;
+import com.example.petgo.service.CloudinaryStorageService;
 import com.example.petgo.service.PetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -29,6 +31,7 @@ public class PetServiceImpl implements PetService {
     private final PetRepository petRepository;
     private final PetPhotoRepository petPhotoRepository;
     private final UserRepository userRepository;
+    private final CloudinaryStorageService cloudinaryStorageService;
 
     @Value("${app.pets.max-photo-limit:5}")
     private int maxPhotoLimit;
@@ -52,28 +55,46 @@ public class PetServiceImpl implements PetService {
     @Override
     @Transactional
     public PetResponse createPet(Long ownerUserId, PetUpsertRequest request) {
+        return createPet(ownerUserId, request, null);
+    }
+
+    @Override
+    @Transactional
+    public PetResponse createPet(Long ownerUserId, PetUpsertRequest request, MultipartFile avatarFile) {
         User owner = ensureOwnerExists(ownerUserId);
         validateRequest(request);
+        String uploadedAvatarUrl = cloudinaryStorageService.uploadPetAvatar(avatarFile);
+        String avatarUrl = firstNonBlank(uploadedAvatarUrl, request.avatarUrl());
 
         Pet pet = new Pet();
         pet.setPetCode(generatePetCode());
         pet.setOwner(owner);
         pet.setStatus("ACTIVE");
         applyRequest(pet, request);
+        pet.setAvatarUrl(trimToNull(avatarUrl));
         pet = petRepository.save(pet);
-        savePhotos(pet, request.photoUrls(), request.avatarUrl());
+        savePhotos(pet, request.photoUrls(), avatarUrl);
         return mapPet(pet);
     }
 
     @Override
     @Transactional
     public PetResponse updatePet(Long ownerUserId, Long petId, PetUpsertRequest request) {
+        return updatePet(ownerUserId, petId, request, null);
+    }
+
+    @Override
+    @Transactional
+    public PetResponse updatePet(Long ownerUserId, Long petId, PetUpsertRequest request, MultipartFile avatarFile) {
         validateRequest(request);
         Pet pet = getOwnedPet(ownerUserId, petId);
+        String uploadedAvatarUrl = cloudinaryStorageService.uploadPetAvatar(avatarFile);
+        String avatarUrl = firstNonBlank(uploadedAvatarUrl, request.avatarUrl());
         applyRequest(pet, request);
+        pet.setAvatarUrl(trimToNull(avatarUrl));
         pet = petRepository.save(pet);
         petPhotoRepository.deleteByPet_Id(pet.getId());
-        savePhotos(pet, request.photoUrls(), request.avatarUrl());
+        savePhotos(pet, request.photoUrls(), avatarUrl);
         return mapPet(pet);
     }
 
