@@ -56,3 +56,20 @@ app:
     refresh-token-expiration-days: 30
     issuer: petgo-backend
     jwt-secret: change-this-secret-key-change-this-secret-key-2026
+
+  upload:
+    root-dir: uploads
+    pet-avatar-dir: uploads/pets
+    pet-avatar-public-path: /uploads/pets
+
+payos:
+  client-id: e2918732-3fa1-4d7e-8be9-a4e3b42eb6a4
+  api-key: 556763fe-64ba-4b75-aa80-904aee2b396e
+  checksum-key: e5607adc68354292c0e7e4bd79ea9e9e1c29c8fb4160def81921582743861d21
+  return-url: ${PAYOS_RETURN_URL:http://localhost:5173/payment/success}
+  cancel-url: ${PAYOS_CANCEL_URL:http://localhost:5173/payment/cancel}
+
+cloudinary:
+  cloud-name: dxaok6qzg
+  api-key: 754418163343834
+  api-secret: QmNTv-DNsMrC6D6NKmXVse_4i04

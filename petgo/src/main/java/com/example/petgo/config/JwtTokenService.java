@@ -63,7 +63,8 @@ public class JwtTokenService {
                 .claims(Map.of(
                         "email", user.getEmail(),
                         "roles", roles,
-                        "type", "REFRESH"
+                        "type", "REFRESH",
+                        "jti", java.util.UUID.randomUUID().toString() // 🔥 THÊM DÒNG NÀY
                 ))
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))
