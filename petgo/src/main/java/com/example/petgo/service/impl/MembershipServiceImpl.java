@@ -27,7 +27,7 @@ public class MembershipServiceImpl implements MembershipService {
 
     private static final ZoneId APP_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final DateTimeFormatter DATE_TIME_VIEW = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    private static final List<String> CHECKOUT_PAYMENT_METHODS = List.of("MOMO", "VNPAY", "CARD", "BANK_TRANSFER");
+    private static final List<String> CHECKOUT_PAYMENT_METHODS = List.of("MOMO", "VNPAY", "CARD", "BANK_TRANSFER", "PAYOS");
     private static final List<String> CURRENT_MEMBERSHIP_STATUSES = List.of("ACTIVE", "PENDING_PAYMENT", "PAST_DUE");
 
     private final MembershipPlanRepository membershipPlanRepository;
@@ -113,6 +113,13 @@ public class MembershipServiceImpl implements MembershipService {
         BigDecimal total = promotionPolicyService.calculateTotal(subtotal, discount, tax);
 
         MembershipSubscription subscription = upsertSubscriptionForCheckout(user, plan, autoRenew);
+        if ("PAYOS".equals(paymentMethod)) {
+            subscription.setStatus("PENDING_PAYMENT");
+            subscription.setStartedAt(null);
+            subscription.setExpiresAt(null);
+            subscription.setNextBillingAt(null);
+            membershipSubscriptionRepository.save(subscription);
+        }
 
         Invoice invoice = new Invoice();
         invoice.setInvoiceNumber(generateCode("INV"));
@@ -120,7 +127,7 @@ public class MembershipServiceImpl implements MembershipService {
         invoice.setBooking(null);
         invoice.setMembershipSubscription(subscription);
         invoice.setInvoiceType("MEMBERSHIP");
-        invoice.setStatus("PAID");
+        invoice.setStatus("PAYOS".equals(paymentMethod) ? "ISSUED" : "PAID");
         invoice.setBillingName(firstNonBlank(user.getFullName(), "Khách hàng PetGo"));
         invoice.setBillingEmail(user.getEmail());
         invoice.setBillingPhone(user.getPhoneNumber());
@@ -132,7 +139,7 @@ public class MembershipServiceImpl implements MembershipService {
         invoice.setCurrencyCode(firstNonBlank(plan.getCurrencyCode(), "VND"));
         invoice.setIssuedAt(LocalDateTime.now(APP_ZONE));
         invoice.setDueAt(LocalDateTime.now(APP_ZONE));
-        invoice.setPaidAt(LocalDateTime.now(APP_ZONE));
+        invoice.setPaidAt("PAYOS".equals(paymentMethod) ? null : LocalDateTime.now(APP_ZONE));
         invoice.setNote("Thanh toán membership plan " + plan.getPlanCode());
         invoiceRepository.save(invoice);
 
@@ -147,9 +154,9 @@ public class MembershipServiceImpl implements MembershipService {
         payment.setPaymentMethod(paymentMethod);
         payment.setGatewayName(resolveGatewayName(paymentMethod));
         payment.setGatewayTransactionId(generateCode("TXN"));
-        payment.setStatus("SUCCEEDED");
-        payment.setPaidAt(LocalDateTime.now(APP_ZONE));
-        payment.setMetadataJson("{\"source\":\"petgo-membership-checkout\"}");
+        payment.setStatus("PAYOS".equals(paymentMethod) ? "PENDING" : "SUCCEEDED");
+        payment.setPaidAt("PAYOS".equals(paymentMethod) ? null : LocalDateTime.now(APP_ZONE));
+        payment.setMetadataJson("PAYOS".equals(paymentMethod) ? "{\"source\":\"petgo-membership-payos\"}" : "{\"source\":\"petgo-membership-checkout\"}");
         paymentRepository.save(payment);
 
         promotionPolicyService.recordMembershipRedemption(promoPreview, user, subscription, invoice);
@@ -418,6 +425,7 @@ public class MembershipServiceImpl implements MembershipService {
             case "VNPAY" -> "VNPay";
             case "CARD" -> "Card";
             case "BANK_TRANSFER" -> "Bank Transfer";
+            case "PAYOS" -> "PayOS";
             default -> "PetGo Gateway";
         };
     }
