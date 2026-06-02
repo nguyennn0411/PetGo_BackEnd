@@ -1,6 +1,411 @@
--- PetGo MySQL schema v1
--- Target: MySQL 8+, Spring Boot + JPA + Flyway friendly
--- Purpose: marketplace platform connecting pet owners and providers/caregivers
+-- MySQL dump 10.13  Distrib 8.0.45, for Win64 (x86_64)
+--
+-- Host: 127.0.0.1    Database: petgo_db
+-- ------------------------------------------------------
+-- Server version	8.0.45
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `booking_cancellations`
+--
+
+DROP TABLE IF EXISTS `booking_cancellations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `booking_cancellations` (
+                                         `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                                         `booking_id` bigint unsigned NOT NULL,
+                                         `cancelled_by_user_id` bigint unsigned NOT NULL,
+                                         `reason_code` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+                                         `reason_text` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                                         `refund_status` enum('NOT_REQUIRED','PENDING','PARTIAL','FULL','REJECTED') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'NOT_REQUIRED',
+                                         `refund_amount` decimal(12,2) NOT NULL DEFAULT '0.00',
+                                         `cancelled_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                         PRIMARY KEY (`id`),
+                                         UNIQUE KEY `uk_booking_cancellations_booking` (`booking_id`),
+                                         KEY `idx_booking_cancellations_user` (`cancelled_by_user_id`),
+                                         CONSTRAINT `fk_booking_cancellations_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`),
+                                         CONSTRAINT `fk_booking_cancellations_user` FOREIGN KEY (`cancelled_by_user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `booking_cancellations`
+--
+
+LOCK TABLES `booking_cancellations` WRITE;
+/*!40000 ALTER TABLE `booking_cancellations` DISABLE KEYS */;
+INSERT INTO `booking_cancellations` VALUES (1,1,3,'SICK_OR_EMERGENCY',NULL,'NOT_REQUIRED',0.00,'2026-05-20 01:39:54'),(2,2,3,'CHANGE_OF_PLANS',NULL,'NOT_REQUIRED',0.00,'2026-05-20 01:44:02');
+/*!40000 ALTER TABLE `booking_cancellations` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `booking_reschedules`
+--
+
+DROP TABLE IF EXISTS `booking_reschedules`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `booking_reschedules` (
+                                       `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                                       `booking_id` bigint unsigned NOT NULL,
+                                       `requested_by_user_id` bigint unsigned NOT NULL,
+                                       `old_appointment_date` date NOT NULL,
+                                       `old_start_time` time NOT NULL,
+                                       `old_end_time` time NOT NULL,
+                                       `new_appointment_date` date NOT NULL,
+                                       `new_start_time` time NOT NULL,
+                                       `new_end_time` time NOT NULL,
+                                       `fee_amount` decimal(12,2) NOT NULL DEFAULT '0.00',
+                                       `status` enum('REQUESTED','APPROVED','REJECTED','APPLIED') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'APPLIED',
+                                       `note` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                                       `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                       `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                       PRIMARY KEY (`id`),
+                                       KEY `idx_booking_reschedules_booking` (`booking_id`),
+                                       KEY `idx_booking_reschedules_requester` (`requested_by_user_id`),
+                                       CONSTRAINT `fk_booking_reschedules_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`),
+                                       CONSTRAINT `fk_booking_reschedules_requester` FOREIGN KEY (`requested_by_user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `booking_reschedules`
+--
+
+LOCK TABLES `booking_reschedules` WRITE;
+/*!40000 ALTER TABLE `booking_reschedules` DISABLE KEYS */;
+/*!40000 ALTER TABLE `booking_reschedules` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `booking_status_history`
+--
+
+DROP TABLE IF EXISTS `booking_status_history`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `booking_status_history` (
+                                          `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                                          `booking_id` bigint unsigned NOT NULL,
+                                          `from_status` enum('PENDING_PAYMENT','PENDING_CONFIRMATION','CONFIRMED','IN_PROGRESS','COMPLETED','CANCELLED','NO_SHOW') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                                          `to_status` enum('PENDING_PAYMENT','PENDING_CONFIRMATION','CONFIRMED','IN_PROGRESS','COMPLETED','CANCELLED','NO_SHOW') COLLATE utf8mb4_unicode_ci NOT NULL,
+                                          `changed_by_user_id` bigint unsigned DEFAULT NULL,
+                                          `note` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                                          `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                          `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                          PRIMARY KEY (`id`),
+                                          KEY `idx_booking_status_history_booking` (`booking_id`,`created_at`),
+                                          KEY `idx_booking_status_history_user` (`changed_by_user_id`),
+                                          CONSTRAINT `fk_booking_status_history_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`),
+                                          CONSTRAINT `fk_booking_status_history_user` FOREIGN KEY (`changed_by_user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `booking_status_history`
+--
+
+LOCK TABLES `booking_status_history` WRITE;
+/*!40000 ALTER TABLE `booking_status_history` DISABLE KEYS */;
+INSERT INTO `booking_status_history` VALUES (1,1,NULL,'PENDING_PAYMENT',3,'Tạo booking mới từ BookingPage','2026-05-20 01:38:52','2026-05-20 01:38:52'),(2,1,'PENDING_PAYMENT','PENDING_CONFIRMATION',3,'Thanh toán checkout bằng COD','2026-05-20 01:38:54','2026-05-20 01:38:54'),(3,1,'PENDING_CONFIRMATION','CANCELLED',3,'Hủy booking. Lý do: SICK_OR_EMERGENCY','2026-05-20 01:39:54','2026-05-20 01:39:54'),(4,2,NULL,'PENDING_PAYMENT',3,'Tạo booking mới từ BookingPage','2026-05-20 01:43:15','2026-05-20 01:43:15'),(5,2,'PENDING_PAYMENT','PENDING_CONFIRMATION',3,'Thanh toán checkout bằng COD','2026-05-20 01:43:21','2026-05-20 01:43:21'),(6,2,'PENDING_CONFIRMATION','CANCELLED',3,'Hủy booking. Lý do: CHANGE_OF_PLANS','2026-05-20 01:44:02','2026-05-20 01:44:02');
+/*!40000 ALTER TABLE `booking_status_history` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `bookings`
+--
+
+DROP TABLE IF EXISTS `bookings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `bookings` (
+                            `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                            `booking_code` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+                            `customer_user_id` bigint unsigned NOT NULL,
+                            `provider_id` bigint unsigned NOT NULL,
+                            `pet_id` bigint unsigned NOT NULL,
+                            `provider_service_id` bigint unsigned NOT NULL,
+                            `availability_slot_id` bigint unsigned DEFAULT NULL,
+                            `appointment_date` date NOT NULL,
+                            `start_time` time NOT NULL,
+                            `end_time` time NOT NULL,
+                            `timezone` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Asia/Ho_Chi_Minh',
+                            `status` enum('PENDING_PAYMENT','PENDING_CONFIRMATION','CONFIRMED','IN_PROGRESS','COMPLETED','CANCELLED','NO_SHOW') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PENDING_PAYMENT',
+                            `cancellation_reason_code` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                            `customer_note` text COLLATE utf8mb4_unicode_ci,
+                            `internal_note` text COLLATE utf8mb4_unicode_ci,
+                            `reschedule_count` int NOT NULL DEFAULT '0',
+                            `provider_name_snapshot` varchar(180) COLLATE utf8mb4_unicode_ci NOT NULL,
+                            `provider_phone_snapshot` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                            `provider_address_snapshot` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                            `service_name_snapshot` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+                            `service_description_snapshot` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                            `service_duration_minutes_snapshot` int NOT NULL,
+                            `pet_name_snapshot` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+                            `pet_breed_snapshot` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                            `subtotal_amount` decimal(12,2) NOT NULL,
+                            `membership_discount_amount` decimal(12,2) NOT NULL DEFAULT '0.00',
+                            `promo_discount_amount` decimal(12,2) NOT NULL DEFAULT '0.00',
+                            `tax_amount` decimal(12,2) NOT NULL DEFAULT '0.00',
+                            `total_amount` decimal(12,2) NOT NULL,
+                            `currency_code` char(3) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'VND',
+                            `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            PRIMARY KEY (`id`),
+                            UNIQUE KEY `uk_bookings_booking_code` (`booking_code`),
+                            KEY `idx_bookings_customer` (`customer_user_id`,`status`),
+                            KEY `idx_bookings_provider` (`provider_id`,`status`),
+                            KEY `idx_bookings_pet` (`pet_id`),
+                            KEY `idx_bookings_schedule` (`appointment_date`,`start_time`),
+                            KEY `idx_bookings_service` (`provider_service_id`),
+                            KEY `fk_bookings_slot` (`availability_slot_id`),
+                            CONSTRAINT `fk_bookings_customer` FOREIGN KEY (`customer_user_id`) REFERENCES `users` (`id`),
+                            CONSTRAINT `fk_bookings_pet` FOREIGN KEY (`pet_id`) REFERENCES `pets` (`id`),
+                            CONSTRAINT `fk_bookings_provider` FOREIGN KEY (`provider_id`) REFERENCES `provider_profiles` (`id`),
+                            CONSTRAINT `fk_bookings_provider_service` FOREIGN KEY (`provider_service_id`) REFERENCES `provider_services` (`id`),
+                            CONSTRAINT `fk_bookings_slot` FOREIGN KEY (`availability_slot_id`) REFERENCES `provider_availability_slots` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `bookings`
+--
+
+LOCK TABLES `bookings` WRITE;
+/*!40000 ALTER TABLE `bookings` DISABLE KEYS */;
+INSERT INTO `bookings` VALUES (1,'BKP0010003F34A7D',3,1,3,1,1,'2026-05-20','09:00:00','10:00:00','Asia/Ho_Chi_Minh','CANCELLED','SICK_OR_EMERGENCY',NULL,NULL,0,'Happy Pets Spa',NULL,'','Gói Tắm Thư Giãn','Tắm bằng nước ấm, sấy và chải lông',60,'sâdsas','adsđ',200000.00,0.00,0.00,0.00,200000.00,'VND','2026-05-20 01:38:52','2026-05-20 01:39:54'),(2,'BKP001000394F401',3,1,4,1,1,'2026-05-20','09:00:00','10:00:00','Asia/Ho_Chi_Minh','CANCELLED','CHANGE_OF_PLANS','jbhj',NULL,0,'Happy Pets Spa',NULL,'','Gói Tắm Thư Giãn','Tắm bằng nước ấm, sấy và chải lông',60,'ygyuguy','iuguyg',200000.00,0.00,0.00,0.00,200000.00,'VND','2026-05-20 01:43:15','2026-05-20 01:44:02');
+/*!40000 ALTER TABLE `bookings` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `cart_items`
+--
+
+DROP TABLE IF EXISTS `cart_items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `cart_items` (
+                              `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                              `user_id` bigint unsigned NOT NULL,
+                              `product_id` bigint unsigned NOT NULL,
+                              `quantity` int NOT NULL DEFAULT '1',
+                              `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                              `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                              PRIMARY KEY (`id`),
+                              UNIQUE KEY `uk_cart_user_product` (`user_id`,`product_id`),
+                              KEY `idx_cart_items_user` (`user_id`),
+                              KEY `idx_cart_items_product` (`product_id`),
+                              CONSTRAINT `fk_cart_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`),
+                              CONSTRAINT `fk_cart_items_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cart_items`
+--
+
+LOCK TABLES `cart_items` WRITE;
+/*!40000 ALTER TABLE `cart_items` DISABLE KEYS */;
+INSERT INTO `cart_items` VALUES (4,1,4,1,'2026-05-25 11:19:08','2026-05-25 11:19:08'),(5,4,4,7,'2026-05-25 11:20:01','2026-05-25 11:21:53'),(6,3,4,3,'2026-05-25 18:54:06','2026-05-25 19:28:44'),(7,3,1,1,'2026-05-25 19:44:34','2026-05-25 19:44:34');
+/*!40000 ALTER TABLE `cart_items` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `favorites`
+--
+
+DROP TABLE IF EXISTS `favorites`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `favorites` (
+                             `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                             `user_id` bigint unsigned NOT NULL,
+                             `provider_id` bigint unsigned NOT NULL,
+                             `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                             PRIMARY KEY (`id`),
+                             UNIQUE KEY `uk_favorites_user_provider` (`user_id`,`provider_id`),
+                             KEY `idx_favorites_provider` (`provider_id`),
+                             CONSTRAINT `fk_favorites_provider` FOREIGN KEY (`provider_id`) REFERENCES `provider_profiles` (`id`),
+                             CONSTRAINT `fk_favorites_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4405 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `favorites`
+--
+
+LOCK TABLES `favorites` WRITE;
+/*!40000 ALTER TABLE `favorites` DISABLE KEYS */;
+INSERT INTO `favorites` VALUES (4401,1001,2001,'2026-04-17 13:47:58'),(4402,1001,2002,'2026-04-17 13:47:58'),(4403,1001,2004,'2026-04-17 13:47:58'),(4404,1002,2002,'2026-04-17 13:47:58');
+/*!40000 ALTER TABLE `favorites` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `flyway_schema_history`
+--
+
+DROP TABLE IF EXISTS `flyway_schema_history`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `flyway_schema_history` (
+                                         `installed_rank` int NOT NULL,
+                                         `version` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                                         `description` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+                                         `type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+                                         `script` varchar(1000) COLLATE utf8mb4_unicode_ci NOT NULL,
+                                         `checksum` int DEFAULT NULL,
+                                         `installed_by` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+                                         `installed_on` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                         `execution_time` int NOT NULL,
+                                         `success` tinyint(1) NOT NULL,
+                                         PRIMARY KEY (`installed_rank`),
+                                         KEY `flyway_schema_history_s_idx` (`success`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `flyway_schema_history`
+--
+
+LOCK TABLES `flyway_schema_history` WRITE;
+/*!40000 ALTER TABLE `flyway_schema_history` DISABLE KEYS */;
+INSERT INTO `flyway_schema_history` VALUES (1,'1','<< Flyway Baseline >>','BASELINE','<< Flyway Baseline >>',NULL,'root','2026-05-24 15:50:38',0,1),(2,'2','add petgo shop module','SQL','V2__add_petgo_shop_module.sql',-216326823,'root','2026-05-24 15:50:38',613,1);
+/*!40000 ALTER TABLE `flyway_schema_history` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `invoice_items`
+--
+
+DROP TABLE IF EXISTS `invoice_items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `invoice_items` (
+                                 `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                                 `invoice_id` bigint unsigned NOT NULL,
+                                 `item_type` enum('BOOKING_SERVICE','MEMBERSHIP_PLAN','SHOP_PRODUCT','SHIPPING_FEE','DISCOUNT','FEE','TAX') COLLATE utf8mb4_unicode_ci NOT NULL,
+                                 `item_name` varchar(180) COLLATE utf8mb4_unicode_ci NOT NULL,
+                                 `description` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                                 `quantity` int NOT NULL DEFAULT '1',
+                                 `unit_price` decimal(12,2) NOT NULL,
+                                 `line_total` decimal(12,2) NOT NULL,
+                                 `sort_order` int NOT NULL DEFAULT '0',
+                                 `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                 `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                 PRIMARY KEY (`id`),
+                                 KEY `idx_invoice_items_invoice` (`invoice_id`),
+                                 CONSTRAINT `fk_invoice_items_invoice` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5228 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `invoice_items`
+--
+
+LOCK TABLES `invoice_items` WRITE;
+/*!40000 ALTER TABLE `invoice_items` DISABLE KEYS */;
+INSERT INTO `invoice_items` VALUES (5201,5001,'BOOKING_SERVICE','Grooming Chuẩn Spa','Dịch vụ grooming cho Mochi',1,350000.00,350000.00,1,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(5202,5001,'DISCOUNT','Membership Discount','Ưu đãi hội viên PRO',1,-35000.00,-35000.00,2,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(5203,5002,'BOOKING_SERVICE','Khám Tổng Quát Tại Phòng Khám','Dịch vụ khám cho Bơ',1,150000.00,150000.00,1,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(5204,5002,'DISCOUNT','Membership Discount','Ưu đãi hội viên PRO',1,-15000.00,-15000.00,2,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(5205,5002,'DISCOUNT','Promo WELCOME10','Giảm giá mã WELCOME10',1,-15000.00,-15000.00,3,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(5206,5003,'BOOKING_SERVICE','Khám Tổng Quát Tại Phòng Khám','Dịch vụ khám cho Cà Phê',1,150000.00,150000.00,1,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(5207,5004,'BOOKING_SERVICE','Walk 30 Phút Quanh Trung Tâm','Dịch vụ walk cho Mochi',1,90000.00,90000.00,1,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(5208,5004,'DISCOUNT','Membership Discount','Ưu đãi hội viên PRO',1,-9000.00,-9000.00,2,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(5209,5005,'BOOKING_SERVICE','Khám Tổng Quát Tại Phòng Khám','Dịch vụ khám cho Cà Phê',1,150000.00,150000.00,1,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(5210,5006,'MEMBERSHIP_PLAN','Gói hội viên PRO','Thanh toán gói PRO tháng 04/2026',1,99000.00,99000.00,1,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(5211,5006,'DISCOUNT','Promo MEMBER15','Giảm giá mã MEMBER15',1,-14850.00,-14850.00,2,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(5212,5007,'BOOKING_SERVICE','Grooming Chuẩn Spa','20/04/2026 • 09:00 - 10:30',1,350000.00,350000.00,1,'2026-04-17 13:52:17','2026-04-17 13:52:17'),(5213,5008,'MEMBERSHIP_PLAN','Pro Membership','Gói phù hợp người dùng thường xuyên',1,99000.00,99000.00,1,'2026-04-17 13:53:54','2026-04-17 13:53:54'),(5214,5009,'MEMBERSHIP_PLAN','Basic Membership','Gói cơ bản cho nhu cầu nhẹ',1,49000.00,49000.00,1,'2026-04-17 13:54:07','2026-04-17 13:54:07'),(5215,5010,'MEMBERSHIP_PLAN','Premium Membership','Gói cao cấp với nhiều ưu đãi',1,199000.00,199000.00,1,'2026-04-17 13:54:22','2026-04-17 13:54:22'),(5216,5011,'BOOKING_SERVICE','Grooming Chuẩn Spa','22/04/2026 • 10:00 - 11:30',1,350000.00,350000.00,1,'2026-04-17 14:21:31','2026-04-17 14:21:31'),(5217,5012,'BOOKING_SERVICE','Grooming Chuẩn Spa','22/04/2026 • 10:00 - 11:30',1,350000.00,350000.00,1,'2026-04-17 19:39:58','2026-04-17 19:39:58'),(5218,5013,'MEMBERSHIP_PLAN','Pro Membership','Gói phù hợp người dùng thường xuyên',1,99000.00,99000.00,1,'2026-05-11 15:48:49','2026-05-11 15:48:49'),(5219,5014,'MEMBERSHIP_PLAN','Pro Membership','Gói phù hợp người dùng thường xuyên',1,99000.00,99000.00,1,'2026-05-11 15:49:00','2026-05-11 15:49:00'),(5220,5015,'MEMBERSHIP_PLAN','Pro Membership','Gói phù hợp người dùng thường xuyên',1,99000.00,99000.00,1,'2026-05-20 00:40:18','2026-05-20 00:40:18'),(5221,5016,'BOOKING_SERVICE','Gói Tắm Thư Giãn','20/05/2026 • 09:00 - 10:00',1,200000.00,200000.00,1,'2026-05-20 01:38:54','2026-05-20 01:38:54'),(5222,5017,'BOOKING_SERVICE','Gói Tắm Thư Giãn','20/05/2026 • 09:00 - 10:00',1,200000.00,200000.00,1,'2026-05-20 01:43:21','2026-05-20 01:43:21'),(5223,5018,'SHOP_PRODUCT','Hạt Royal Canin Mini Puppy Cho Chó Con',NULL,2,235000.00,470000.00,0,'2026-05-25 10:43:26','2026-05-25 10:43:26'),(5224,5019,'SHOP_PRODUCT','Pate Cho Mèo Trưởng Thành Whiskas Vị Cá Thu',NULL,1,45000.00,45000.00,0,'2026-05-25 10:50:16','2026-05-25 10:50:16'),(5225,5019,'SHIPPING_FEE','Phí giao hàng',NULL,1,30000.00,30000.00,1,'2026-05-25 10:50:16','2026-05-25 10:50:16'),(5226,5020,'SHOP_PRODUCT','Balo Phi Hành Gia Vận Chuyển Thú Cưng',NULL,1,290000.00,290000.00,0,'2026-05-25 10:53:55','2026-05-25 10:53:55'),(5227,5020,'SHIPPING_FEE','Phí giao hàng',NULL,1,30000.00,30000.00,1,'2026-05-25 10:53:55','2026-05-25 10:53:55');
+/*!40000 ALTER TABLE `invoice_items` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `invoices`
+--
+
+DROP TABLE IF EXISTS `invoices`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `invoices` (
+                            `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                            `invoice_number` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+                            `user_id` bigint unsigned NOT NULL,
+                            `booking_id` bigint unsigned DEFAULT NULL,
+                            `membership_subscription_id` bigint unsigned DEFAULT NULL,
+                            `shop_order_id` bigint unsigned DEFAULT NULL,
+                            `invoice_type` enum('BOOKING','MEMBERSHIP','SHOP_ORDER') COLLATE utf8mb4_unicode_ci NOT NULL,
+                            `status` enum('DRAFT','ISSUED','PAID','VOID') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ISSUED',
+                            `billing_name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+                            `billing_email` varchar(190) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                            `billing_phone` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                            `billing_address` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                            `subtotal_amount` decimal(12,2) NOT NULL,
+                            `discount_amount` decimal(12,2) NOT NULL DEFAULT '0.00',
+                            `tax_amount` decimal(12,2) NOT NULL DEFAULT '0.00',
+                            `total_amount` decimal(12,2) NOT NULL,
+                            `currency_code` char(3) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'VND',
+                            `issued_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            `due_at` datetime DEFAULT NULL,
+                            `paid_at` datetime DEFAULT NULL,
+                            `note` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                            `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            PRIMARY KEY (`id`),
+                            UNIQUE KEY `uk_invoices_invoice_number` (`invoice_number`),
+                            UNIQUE KEY `uk_invoices_booking` (`booking_id`),
+                            UNIQUE KEY `uk_invoices_shop_order` (`shop_order_id`),
+                            KEY `idx_invoices_user` (`user_id`,`status`),
+                            KEY `idx_invoices_membership` (`membership_subscription_id`),
+                            CONSTRAINT `fk_invoices_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`),
+                            CONSTRAINT `fk_invoices_membership` FOREIGN KEY (`membership_subscription_id`) REFERENCES `membership_subscriptions` (`id`),
+                            CONSTRAINT `fk_invoices_shop_order` FOREIGN KEY (`shop_order_id`) REFERENCES `shop_orders` (`id`),
+                            CONSTRAINT `fk_invoices_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5021 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `invoices`
+--
+
+LOCK TABLES `invoices` WRITE;
+/*!40000 ALTER TABLE `invoices` DISABLE KEYS */;
+INSERT INTO `invoices` VALUES (5001,'INV-DEMO-001',1001,4001,NULL,NULL,'BOOKING','PAID','Nguyễn Thu Lan','customer1@demo.petgo.local','0901000001','12 Nguyễn Huệ, Quận 1, Hồ Chí Minh',350000.00,35000.00,0.00,315000.00,'VND','2026-03-24 20:05:00','2026-03-25 20:05:00','2026-03-24 20:05:00','Thanh toán booking grooming','2026-04-17 13:47:58','2026-04-17 13:47:58'),(5002,'INV-DEMO-002',1001,4002,NULL,NULL,'BOOKING','PAID','Nguyễn Thu Lan','customer1@demo.petgo.local','0901000001','12 Nguyễn Huệ, Quận 1, Hồ Chí Minh',150000.00,30000.00,0.00,120000.00,'VND','2026-04-17 09:03:00','2026-04-22 09:03:00','2026-04-17 09:03:00','Thanh toán booking khám','2026-04-17 13:47:58','2026-04-17 13:47:58'),(5003,'INV-DEMO-003',1002,4003,NULL,NULL,'BOOKING','PAID','Trần Minh Khôi','customer2@demo.petgo.local','0901000002','28 Pasteur, Quận 1, Hồ Chí Minh',150000.00,0.00,0.00,150000.00,'VND','2026-04-15 10:05:00','2026-04-26 10:05:00','2026-04-15 10:05:00','Thanh toán booking khám','2026-04-17 13:47:58','2026-04-17 13:47:58'),(5004,'INV-DEMO-004',1001,4004,NULL,NULL,'BOOKING','VOID','Nguyễn Thu Lan','customer1@demo.petgo.local','0901000001','12 Nguyễn Huệ, Quận 1, Hồ Chí Minh',90000.00,9000.00,0.00,81000.00,'VND','2026-04-16 14:02:00','2026-04-19 14:02:00','2026-04-16 14:02:00','Booking đã hủy và hoàn tiền','2026-04-17 13:47:58','2026-04-17 13:47:58'),(5005,'INV-DEMO-005',1002,4005,NULL,NULL,'BOOKING','PAID','Trần Minh Khôi','customer2@demo.petgo.local','0901000002','28 Pasteur, Quận 1, Hồ Chí Minh',150000.00,0.00,0.00,150000.00,'VND','2026-03-27 09:05:00','2026-03-28 09:05:00','2026-03-27 09:05:00','Thanh toán booking khám','2026-04-17 13:47:58','2026-04-17 13:47:58'),(5006,'INV-DEMO-006',1001,NULL,6001,NULL,'MEMBERSHIP','PAID','Nguyễn Thu Lan','customer1@demo.petgo.local','0901000001','12 Nguyễn Huệ, Quận 1, Hồ Chí Minh',99000.00,14850.00,0.00,84150.00,'VND','2026-04-01 00:00:00','2026-04-01 00:00:00','2026-04-01 00:00:00','Thanh toán gói hội viên PRO','2026-04-17 13:47:58','2026-04-17 13:47:58'),(5007,'INV7BB44C4C1756',1007,4006,NULL,NULL,'BOOKING','ISSUED','PetGo Admin','admin@demo.petgo.local','0909000001','1 Admin Street, Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh',350000.00,0.00,0.00,350000.00,'VND','2026-04-17 13:52:18','2026-04-18 13:52:18',NULL,'Tạo từ checkout booking BK-0011007E51F79','2026-04-17 13:52:17','2026-04-17 13:52:17'),(5008,'INV-8728778874',1007,NULL,6003,NULL,'MEMBERSHIP','PAID','PetGo Admin','admin@demo.petgo.local','0909000001','1 Admin Street, Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh',99000.00,0.00,0.00,99000.00,'VND','2026-04-17 13:53:54','2026-04-17 13:53:54','2026-04-17 13:53:54','Thanh toán membership plan PRO','2026-04-17 13:53:54','2026-04-17 13:53:54'),(5009,'INV-F911A7C7A9',1007,NULL,6004,NULL,'MEMBERSHIP','PAID','PetGo Admin','admin@demo.petgo.local','0909000001','1 Admin Street, Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh',49000.00,0.00,0.00,49000.00,'VND','2026-04-17 13:54:08','2026-04-17 13:54:08','2026-04-17 13:54:08','Thanh toán membership plan BASIC','2026-04-17 13:54:07','2026-04-17 13:54:07'),(5010,'INV-5D26869B4E',1007,NULL,6005,NULL,'MEMBERSHIP','PAID','PetGo Admin','admin@demo.petgo.local','0909000001','1 Admin Street, Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh',199000.00,0.00,0.00,199000.00,'VND','2026-04-17 13:54:22','2026-04-17 13:54:22','2026-04-17 13:54:22','Thanh toán membership plan PREMIUM','2026-04-17 13:54:22','2026-04-17 13:54:22'),(5011,'INV84362BC558C8',1008,4007,NULL,NULL,'BOOKING','ISSUED','Nguyên Cao Phúc','phucnguyenxt2004@gmail.com','123456789',NULL,350000.00,0.00,0.00,350000.00,'VND','2026-04-17 14:21:31','2026-04-18 14:21:31',NULL,'Tạo từ checkout booking BK-00110083EEA82','2026-04-17 14:21:31','2026-04-17 14:21:31'),(5012,'INV8F236B818CBA',1008,4008,NULL,NULL,'BOOKING','PAID','Nguyên Cao Phúc','phucnguyenxt2004@gmail.com','123456789',NULL,350000.00,0.00,0.00,350000.00,'VND','2026-04-17 19:39:59','2026-04-18 19:39:59','2026-04-17 19:39:59','Tạo từ checkout booking BK-00110086359EB','2026-04-17 19:39:58','2026-04-17 19:39:58'),(5013,'INV-125319AF62',1008,NULL,6006,NULL,'MEMBERSHIP','PAID','Nguyên Cao Phúc','phucnguyenxt2004@gmail.com','12345','chó nghĩa, 36, thanh hoá',99000.00,0.00,0.00,99000.00,'VND','2026-05-11 15:48:49','2026-05-11 15:48:49','2026-05-11 15:48:49','Thanh toán membership plan PRO','2026-05-11 15:48:49','2026-05-11 15:48:49'),(5014,'INV-E1945E75B6',1008,NULL,6006,NULL,'MEMBERSHIP','PAID','Nguyên Cao Phúc','phucnguyenxt2004@gmail.com','12345','chó nghĩa, 36, thanh hoá',99000.00,0.00,0.00,99000.00,'VND','2026-05-11 15:49:01','2026-05-11 15:49:01','2026-05-11 15:49:01','Thanh toán membership plan PRO','2026-05-11 15:49:00','2026-05-11 15:49:00'),(5015,'INV-EFC4AB5686',1010,NULL,6007,NULL,'MEMBERSHIP','PAID','Nguyên Cao Phúc','nguyencphe181659@fpt.edu.vn','12345678',NULL,99000.00,0.00,0.00,99000.00,'VND','2026-05-20 00:40:18','2026-05-20 00:40:18','2026-05-20 00:40:18','Thanh toán membership plan PRO','2026-05-20 00:40:18','2026-05-20 00:40:18'),(5016,'INVB23437489752',3,1,NULL,NULL,'BOOKING','ISSUED','Nguyên Cao Phúc','phucnguyenxt2004@gmail.com','12345678',NULL,200000.00,0.00,0.00,200000.00,'VND','2026-05-20 01:38:54','2026-05-21 01:38:54',NULL,'Tạo từ checkout booking BKP0010003F34A7D','2026-05-20 01:38:54','2026-05-20 01:38:54'),(5017,'INV8A35EE91923F',3,2,NULL,NULL,'BOOKING','ISSUED','Nguyên Cao Phúc','phucnguyenxt2004@gmail.com','12345678',NULL,200000.00,0.00,0.00,200000.00,'VND','2026-05-20 01:43:21','2026-05-21 01:43:21',NULL,'Tạo từ checkout booking BKP001000394F401','2026-05-20 01:43:21','2026-05-20 01:43:21'),(5018,'INV-26052510432635',1,NULL,NULL,1,'SHOP_ORDER','PAID','Nguyễn Văn Anh','customer1@example.com','0912345678','Số 123 Đường Nguyễn Trãi',470000.00,0.00,0.00,470000.00,'VND','2026-05-25 10:43:26',NULL,'2026-05-25 10:43:26',NULL,'2026-05-25 10:43:26','2026-05-25 10:43:26'),(5019,'INV-26052510501668',1,NULL,NULL,2,'SHOP_ORDER','PAID','Nguyễn Văn Anh','customer1@example.com','0912345678','Số 123 Đường Nguyễn Trãi',45000.00,0.00,0.00,75000.00,'VND','2026-05-25 10:50:16',NULL,'2026-05-25 10:50:16',NULL,'2026-05-25 10:50:16','2026-05-25 10:50:16'),(5020,'INV-26052510535496',1,NULL,NULL,3,'SHOP_ORDER','PAID','Nguyễn Văn Anh','customer1@example.com','0912345678','Số 123 Đường Nguyễn Trãi',290000.00,0.00,0.00,320000.00,'VND','2026-05-25 10:53:55',NULL,'2026-05-25 10:53:55',NULL,'2026-05-25 10:53:55','2026-05-25 10:53:55');
+/*!40000 ALTER TABLE `invoices` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `membership_plan_features`
+--
+
+DROP TABLE IF EXISTS `membership_plan_features`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `membership_plan_features` (
+                                            `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                                            `membership_plan_id` bigint unsigned NOT NULL,
+                                            `feature_text` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                                            `sort_order` int NOT NULL DEFAULT '0',
+                                            `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                            `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                            PRIMARY KEY (`id`),
+                                            KEY `idx_membership_plan_features_plan` (`membership_plan_id`),
+                                            CONSTRAINT `fk_membership_plan_features_plan` FOREIGN KEY (`membership_plan_id`) REFERENCES `membership_plans` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `membership_plan_features`
+--
+
+LOCK TABLES `membership_plan_features` WRITE;
+/*!40000 ALTER TABLE `membership_plan_features` DISABLE KEYS */;
+INSERT INTO `membership_plan_features` VALUES (1,2,'Giảm 10% cho mọi dịch vụ thú cưng',1,'2026-04-15 23:28:24','2026-04-15 23:28:24'),(2,2,'Bộ voucher 200k mỗi tháng',2,'2026-04-15 23:28:24','2026-04-15 23:28:24'),(3,2,'Ưu tiên slot đặt lịch cao điểm',3,'2026-04-15 23:28:24','2026-04-15 23:28:24'),(4,2,'Nhắc lịch grooming và tiêm phòng',4,'2026-04-15 23:28:24','2026-04-15 23:28:24'),(5,2,'Hỗ trợ ưu tiên 24/7',5,'2026-04-15 23:28:24','2026-04-15 23:28:24'),(6,1,'Giảm 5% cho mọi dịch vụ thú cưng',1,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(7,2,'Voucher 200k mỗi tháng',2,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(8,3,'Giảm 15% cho mọi dịch vụ thú cưng',1,'2026-04-17 13:47:58','2026-04-17 13:47:58'),(9,3,'Voucher 500k mỗi tháng',2,'2026-04-17 13:47:58','2026-04-17 13:47:58');
+/*!40000 ALTER TABLE `membership_plan_features` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `membership_plans`
+--
 
 CREATE DATABASE IF NOT EXISTS petgo_db
   CHARACTER SET utf8mb4

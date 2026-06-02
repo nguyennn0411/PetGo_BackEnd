@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public final class ShopDtos {
-    private ShopDtos() {}
 
     public record CategoryResponse(Long id, String name, String slug, String iconKey, String description, Integer sortOrder, Boolean active) {}
 
