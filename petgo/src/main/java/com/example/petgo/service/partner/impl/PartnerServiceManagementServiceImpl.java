@@ -104,12 +104,14 @@ public class PartnerServiceManagementServiceImpl implements PartnerServiceManage
 
     private void validateCatalogServiceAllowed(ProviderProfile provider, CatalogService catalogService) {
         Set<Long> registeredCategoryIds = resolveRegisteredCategoryIds(provider);
-        if (!registeredCategoryIds.isEmpty() && !isCategoryAllowed(catalogService.getCategory(), registeredCategoryIds)) {
+        if (!registeredCategoryIds.isEmpty()
+                && !isCategoryAllowed(catalogService.getCategory(), registeredCategoryIds)) {
             throw new BadRequestException("Dịch vụ không thuộc nhóm dịch vụ shop đã đăng ký.");
         }
     }
 
-    private void ensureNoDuplicateCatalogService(Long providerId, Long catalogServiceId, Long currentProviderServiceId) {
+    private void ensureNoDuplicateCatalogService(Long providerId, Long catalogServiceId,
+            Long currentProviderServiceId) {
         boolean duplicated = currentProviderServiceId == null
                 ? providerServiceRepository.existsByProvider_IdAndService_Id(providerId, catalogServiceId)
                 : providerServiceRepository.existsByProvider_IdAndService_IdAndIdNot(providerId, catalogServiceId,
@@ -186,6 +188,7 @@ public class PartnerServiceManagementServiceImpl implements PartnerServiceManage
         providerService.setActive(requestBody.active() == null || Boolean.TRUE.equals(requestBody.active()));
         providerService.setCapacityPerSlot(Optional.ofNullable(requestBody.capacityPerSlot()).orElse(1));
         providerService.setBookingBufferMinutes(Optional.ofNullable(requestBody.bookingBufferMinutes()).orElse(0));
+        providerService.setBufferAfterMinutes(Optional.ofNullable(requestBody.bookingBufferMinutes()).orElse(0));
         providerService.setDisplayOrder(Optional.ofNullable(requestBody.displayOrder()).orElse(0));
     }
 }

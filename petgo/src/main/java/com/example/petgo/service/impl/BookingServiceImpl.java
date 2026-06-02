@@ -37,6 +37,7 @@ public class BookingServiceImpl implements BookingService {
     private final ProviderPhotoRepository providerPhotoRepository;
     private final BookingRepository bookingRepository;
     private final BookingStatusHistoryRepository bookingStatusHistoryRepository;
+    private final BookingNotificationService bookingNotificationService;
 
     @Value("${app.providers.slot-lookahead-days:7}")
     private int slotLookaheadDays;
@@ -197,7 +198,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setStartTime(startTime);
         booking.setEndTime(endTime);
         booking.setTimezone(firstNonBlank(bookingTimezone, "Asia/Ho_Chi_Minh"));
-        booking.setStatus("PENDING_PAYMENT");
+        booking.setStatus("PENDING_CONFIRMATION");
         booking.setCustomerNote(normalizeBlank(request.customerNote()));
         booking.setInternalNote(null);
         booking.setRescheduleCount(0);
@@ -231,8 +232,10 @@ public class BookingServiceImpl implements BookingService {
         history.setFromStatus(null);
         history.setToStatus(saved.getStatus());
         history.setChangedByUser(owner);
-        history.setNote("Tạo booking mới từ BookingPage");
+        history.setNote("Owner gửi yêu cầu đặt lịch từ BookingPage, chờ shop duyệt/xếp lịch");
         bookingStatusHistoryRepository.save(history);
+
+        bookingNotificationService.notifyProviderBookingCreated(saved);
 
         return mapSummary(saved);
     }

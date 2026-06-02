@@ -9,6 +9,7 @@ import com.example.petgo.entity.*;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.repository.*;
+import com.example.petgo.service.impl.BookingNotificationService;
 import com.example.petgo.service.partner.PartnerAccessService;
 import com.example.petgo.service.partner.PartnerBookingManagementService;
 import com.example.petgo.service.partner.PartnerMappingSupport;
@@ -36,6 +37,7 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
     private final BookingStatusHistoryRepository bookingStatusHistoryRepository;
     private final BookingCancellationRepository bookingCancellationRepository;
     private final ProviderAvailabilitySlotRepository providerAvailabilitySlotRepository;
+    private final BookingNotificationService bookingNotificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -90,8 +92,10 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
         if (!mapper.canConfirm(booking)) {
             throw new BadRequestException("Booking hiện không thể xác nhận.");
         }
-        return transitionBooking(booking, provider.getUser(), "CONFIRMED",
+        BookingMutationResponse response = transitionBooking(booking, provider.getUser(), "CONFIRMED",
                 noteOrDefault(requestBody, "Partner xác nhận booking"));
+        bookingNotificationService.notifyOwnerBookingConfirmed(booking);
+        return response;
     }
 
     @Override

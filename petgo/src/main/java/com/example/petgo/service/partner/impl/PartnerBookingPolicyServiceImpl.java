@@ -86,7 +86,7 @@ public class PartnerBookingPolicyServiceImpl implements PartnerBookingPolicyServ
     }
 
     private PartnerBookingPolicyResponse defaultPolicy(ProviderProfile provider) {
-        String timezone = firstNonBlank(provider.getTimezone(), DEFAULT_TIMEZONE);
+        String timezone = DEFAULT_TIMEZONE;
         return PartnerBookingPolicyResponse.builder()
                 .policyId(null)
                 .providerId(provider.getId())

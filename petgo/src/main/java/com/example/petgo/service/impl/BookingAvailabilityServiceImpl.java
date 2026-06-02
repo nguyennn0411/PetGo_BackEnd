@@ -229,32 +229,17 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
     }
 
     private int resolveDuration(ProviderService service, Integer requestedDuration) {
-        String type = firstNonBlank(service.getDurationType(), "FIXED").toUpperCase(Locale.ROOT);
         int fixed = Math.max(Optional.ofNullable(service.getDurationMinutes()).orElse(30), 5);
-        if ("RANGE".equals(type)) {
-            return Math.max(Optional.ofNullable(service.getMinDurationMinutes()).orElse(fixed), 5);
-        }
-        if ("CUSTOMER_SELECTED".equals(type)) {
-            int min = Math.max(Optional.ofNullable(service.getMinDurationMinutes()).orElse(fixed), 5);
-            int max = Math.max(Optional.ofNullable(service.getMaxDurationMinutes()).orElse(min), min);
-            int step = Math.max(Optional.ofNullable(service.getDurationStepMinutes()).orElse(15), 1);
-            if (requestedDuration == null || requestedDuration < min || requestedDuration > max
-                    || (requestedDuration - min) % step != 0) {
-                throw new BadRequestException("Thời lượng đã chọn không hợp lệ");
-            }
-            return requestedDuration;
-        }
         return fixed;
     }
 
     private int resolveBufferAfter(ProviderService service) {
-        return Math.max(Optional.ofNullable(service.getBufferAfterMinutes())
-                .orElse(Optional.ofNullable(service.getBookingBufferMinutes()).orElse(0)), 0);
+        return Math.max(Optional.ofNullable(service.getBookingBufferMinutes()).orElse(0), 0);
     }
 
     private ZoneId resolveZone(ProviderProfile provider) {
         try {
-            return ZoneId.of(firstNonBlank(provider.getTimezone(), defaultTimezone, "Asia/Ho_Chi_Minh"));
+            return ZoneId.of(firstNonBlank(defaultTimezone, "Asia/Ho_Chi_Minh"));
         } catch (Exception ex) {
             return ZoneId.of("Asia/Ho_Chi_Minh");
         }
@@ -285,7 +270,7 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
 
     private int resolveMaxConcurrent(ProviderBusinessHour hour, List<ProviderScheduleException> exceptions,
             LocalTime slotStart) {
-        int maxConcurrent = Math.max(Optional.ofNullable(hour.getMaxConcurrent()).orElse(1), 1);
+        int maxConcurrent = 1;
         if (exceptions == null || exceptions.isEmpty()) {
             return maxConcurrent;
         }
