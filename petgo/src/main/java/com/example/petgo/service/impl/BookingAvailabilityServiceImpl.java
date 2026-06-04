@@ -146,11 +146,11 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
         LocalTime occupiedEnd = serviceEnd.plusMinutes(buffer);
         if (start.isBefore(hour.getOpensAt()) || serviceEnd.isAfter(hour.getClosesAt())
                 || overlapsBreak(start, occupiedEnd, hour) || isBlockedByException(start, occupiedEnd, exceptions)) {
-            throw new BadRequestException("Khung giờ đã chọn nằm ngoài lịch nhận booking của shop");
+            throw new BadRequestException("Khung giờ đã chọn nằm ngoài lịch nhận booking của nhà cung cấp");
         }
         int maxConcurrent = resolveMaxConcurrent(hour, exceptions, start);
         if (maxConcurrent <= 0) {
-            throw new BadRequestException("Shop không nhận booking vào khung giờ này");
+            throw new BadRequestException("Nhà cung cấp không nhận booking vào khung giờ này");
         }
         int occupied = countOccupied(provider.getId(), service.getId(), request.appointmentDate(), start, occupiedEnd,
                 owner.getId());
@@ -221,9 +221,9 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
                 .stream()
                 .filter(item -> Objects.equals(item.getWeekday(), toPetGoWeekday(date)))
                 .findFirst()
-                .orElseThrow(() -> new BadRequestException("Shop chưa mở nhận booking vào ngày này"));
+                .orElseThrow(() -> new BadRequestException("Nhà cung cấp chưa mở nhận booking vào ngày này"));
         if (Boolean.TRUE.equals(hour.getClosed()) || hour.getOpensAt() == null || hour.getClosesAt() == null) {
-            throw new BadRequestException("Shop không nhận booking vào ngày này");
+            throw new BadRequestException("Nhà cung cấp không nhận booking vào ngày này");
         }
         return hour;
     }

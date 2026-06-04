@@ -123,7 +123,7 @@ public class BookingNotificationService {
     private String providerName(Booking booking) {
         return firstNonBlank(booking != null ? booking.getProviderNameSnapshot() : null,
                 booking != null && booking.getProvider() != null ? booking.getProvider().getBusinessName() : null,
-                "Shop");
+                "Nhà cung cấp");
     }
 
     private String serviceName(Booking booking) {

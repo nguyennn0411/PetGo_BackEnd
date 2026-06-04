@@ -183,7 +183,8 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
 
     private Booking requireOwnedBooking(Long providerId, Long bookingId) {
         return bookingRepository.findDetailedByProviderIdAndBookingId(providerId, bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking thuộc shop hiện tại."));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Không tìm thấy booking thuộc nhà cung cấp hiện tại."));
     }
 
     private BookingMutationResponse transitionBooking(Booking booking, User changedBy, String nextStatus, String note) {

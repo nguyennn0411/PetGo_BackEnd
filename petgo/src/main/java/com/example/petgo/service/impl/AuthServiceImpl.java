@@ -171,11 +171,12 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthTokenBundleResponse login(AuthLoginRequest request) {
         String principal = request.userName() == null ? "" : request.userName().trim();
+        String password = normalizePassword(request.password());
         User user = findUserForLogin(principal)
                 .filter(candidate -> candidate.getDeletedAt() == null)
                 .orElseThrow(() -> new UnauthorizedException("Thông tin đăng nhập không chính xác."));
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new UnauthorizedException("Thông tin đăng nhập không chính xác.");
         }
 
@@ -346,6 +347,13 @@ public class AuthServiceImpl implements AuthService {
 
     private String normalizePhone(String phone) {
         return phone == null ? null : phone.trim();
+    }
+
+    private String normalizePassword(String password) {
+        if (password == null) {
+            return null;
+        }
+        return password.strip();
     }
 
     private String defaultAvatarUrl() {

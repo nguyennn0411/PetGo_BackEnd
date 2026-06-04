@@ -2,6 +2,7 @@ package com.example.petgo.service.partner.impl;
 
 import com.example.petgo.dto.partner.PartnerProfileResponse;
 import com.example.petgo.dto.partner.PartnerProfileUpdateRequest;
+import com.example.petgo.entity.ProviderPhoto;
 import com.example.petgo.entity.ProviderProfile;
 import com.example.petgo.entity.RegistrationApplication;
 import com.example.petgo.entity.RegistrationType;
@@ -18,7 +19,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +48,10 @@ public class PartnerProfileServiceImpl implements PartnerProfileService {
         PartnerAccessService.PartnerContext context = partnerAccessService.requirePartnerContext(request);
         ProviderProfile provider = context.provider();
 
+        String businessName = mapper.normalizeBlank(requestBody.businessName());
+        if (businessName != null) {
+            provider.setBusinessName(businessName);
+        }
         provider.setDescription(mapper.normalizeBlank(requestBody.description()));
         provider.setEmergencyPhone(mapper.normalizeBlank(requestBody.emergencyPhone()));
         provider.setPrimaryAddressLine1(mapper.normalizeBlank(requestBody.primaryAddressLine1()));
@@ -60,8 +68,36 @@ public class PartnerProfileServiceImpl implements PartnerProfileService {
         }
         provider.setMainImageUrl(mapper.normalizeBlank(requestBody.mainImageUrl()));
         provider.setCoverImageUrl(mapper.normalizeBlank(requestBody.coverImageUrl()));
+        replaceGalleryPhotos(provider, requestBody.photoUrls());
 
         return buildResponse(provider);
+    }
+
+    private void replaceGalleryPhotos(ProviderProfile provider, List<String> rawPhotoUrls) {
+        if (rawPhotoUrls == null)
+            return;
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
+        rawPhotoUrls.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(url -> !url.isBlank())
+                .limit(10)
+                .forEach(normalized::add);
+
+        providerPhotoRepository.deleteByProvider_Id(provider.getId());
+        List<ProviderPhoto> photos = new ArrayList<>();
+        int sortOrder = 0;
+        for (String photoUrl : normalized) {
+            ProviderPhoto photo = new ProviderPhoto();
+            photo.setProvider(provider);
+            photo.setPhotoUrl(photoUrl);
+            photo.setMediaType("IMAGE");
+            photo.setPrimary(sortOrder == 0);
+            photo.setSortOrder(sortOrder++);
+            photos.add(photo);
+        }
+        if (!photos.isEmpty())
+            providerPhotoRepository.saveAll(photos);
     }
 
     private PartnerProfileResponse buildResponse(ProviderProfile provider) {

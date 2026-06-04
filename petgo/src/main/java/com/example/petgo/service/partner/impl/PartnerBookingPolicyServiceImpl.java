@@ -99,7 +99,7 @@ public class PartnerBookingPolicyServiceImpl implements PartnerBookingPolicyServ
                 .rescheduleWindowHours(24)
                 .maxReschedulesPerBooking(1)
                 .usingDefault(true)
-                .note("Shop chưa cấu hình policy riêng; đang dùng default platform 24h, không phí, đổi lịch tối đa 1 lần.")
+                .note("Nhà cung cấp chưa cấu hình policy riêng; đang dùng default platform 24h, không phí, đổi lịch tối đa 1 lần.")
                 .build();
     }
 
@@ -117,7 +117,7 @@ public class PartnerBookingPolicyServiceImpl implements PartnerBookingPolicyServ
                 .rescheduleWindowHours(policy.getRescheduleWindowHours())
                 .maxReschedulesPerBooking(policy.getMaxReschedulesPerBooking())
                 .usingDefault(usingDefault)
-                .note("Policy riêng của shop đang được áp dụng.")
+                .note("Policy riêng của nhà cung cấp đang được áp dụng.")
                 .build();
     }
 

@@ -1,6 +1,7 @@
 package com.example.petgo.controller;
 
 import com.example.petgo.dto.ProviderFilterOptionsResponse;
+import com.example.petgo.dto.ProviderDetailServiceItemResponse;
 import com.example.petgo.dto.ProviderListResponse;
 import com.example.petgo.dto.ProviderSearchCriteria;
 import com.example.petgo.service.ProviderDiscoveryService;
@@ -91,6 +92,28 @@ public class ProviderDiscoveryController {
         @GetMapping("/filter-options")
         public ResponseEntity<ProviderFilterOptionsResponse> getFilterOptions() {
                 return ResponseEntity.ok(providerDiscoveryService.getFilterOptions());
+        }
+
+        @GetMapping("/services")
+        public ResponseEntity<List<ProviderDetailServiceItemResponse>> getActiveServices(
+                        @RequestParam(required = false) String query,
+                        @RequestParam(required = false) String city,
+                        @RequestParam(required = false) String serviceCategoryIds,
+                        @RequestParam(required = false) BigDecimal minPrice,
+                        @RequestParam(required = false) BigDecimal maxPrice,
+                        @RequestParam(required = false) BigDecimal minRating,
+                        @RequestParam(required = false) Double latitude,
+                        @RequestParam(required = false) Double longitude,
+                        @RequestParam(required = false) Double maxDistanceKm,
+                        @RequestParam(required = false) String timeOfDay,
+                        @RequestParam(required = false, defaultValue = "FEATURED") String sortBy,
+                        @RequestParam(required = false, defaultValue = "false") Boolean featuredOnly,
+                        @RequestParam(required = false, defaultValue = "0") Integer page,
+                        @RequestParam(required = false, defaultValue = "200") Integer size) {
+                return ResponseEntity.ok(providerDiscoveryService.findActiveServices(buildCriteria(
+                                query, city, serviceCategoryIds, minPrice,
+                                maxPrice, minRating,
+                                latitude, longitude, maxDistanceKm, timeOfDay, sortBy, featuredOnly, page, size)));
         }
 
         private ProviderSearchCriteria buildCriteria(

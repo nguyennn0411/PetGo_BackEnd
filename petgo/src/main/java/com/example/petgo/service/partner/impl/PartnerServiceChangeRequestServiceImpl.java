@@ -461,7 +461,8 @@ public class PartnerServiceChangeRequestServiceImpl implements PartnerServiceCha
 
     private ProviderService requireOwnedService(Long providerId, Long providerServiceId) {
         return providerServiceRepository.findDetailByProviderIdAndId(providerId, providerServiceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ thuộc shop hiện tại."));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Không tìm thấy dịch vụ thuộc nhà cung cấp hiện tại."));
     }
 
     private User requireAdmin(HttpServletRequest request) {

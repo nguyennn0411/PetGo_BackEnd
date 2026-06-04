@@ -232,7 +232,7 @@ public class BookingServiceImpl implements BookingService {
         history.setFromStatus(null);
         history.setToStatus(saved.getStatus());
         history.setChangedByUser(owner);
-        history.setNote("Owner gửi yêu cầu đặt lịch từ BookingPage, chờ shop duyệt/xếp lịch");
+        history.setNote("Owner gửi yêu cầu đặt lịch từ BookingPage, chờ nhà cung cấp duyệt/xếp lịch");
         bookingStatusHistoryRepository.save(history);
 
         bookingNotificationService.notifyProviderBookingCreated(saved);
