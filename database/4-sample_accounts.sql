@@ -1,5 +1,9 @@
 -- Query tạo tài khoản mẫu PetGo.
 -- Chạy thủ công khi cần seed tài khoản demo; backend không còn tự tạo các tài khoản này khi khởi động.
+-- Yêu cầu chạy trước:
+--   2-base_roles.sql
+--   3-sample_service_categories.sql
+-- Sau khi chạy file này, chạy tiếp 5-base_wallets.sql để tạo ví cho tài khoản mẫu.
 -- Mật khẩu mẫu cho cả 3 tài khoản: petgo123
 -- BCrypt hash bên dưới tương ứng với mật khẩu petgo123.
 
@@ -10,7 +14,7 @@ SET @old_sql_safe_updates = @@SQL_SAFE_UPDATES;
 SET SQL_SAFE_UPDATES = 0;
 
 -- Đảm bảo role tồn tại trước khi gán user_roles.
--- Cần thiết nếu chạy file này khi backend chưa kịp seed role hoặc roles đang rỗng sau reset.
+-- Khối này trùng logic với 2-base_roles.sql để file sample_accounts vẫn an toàn nếu lỡ chạy thiếu bước role seed.
 INSERT INTO roles (code, name, description)
 SELECT 'USER', 'User', 'Người dùng hệ thống'
 WHERE NOT EXISTS (SELECT 1 FROM roles WHERE code = 'USER');

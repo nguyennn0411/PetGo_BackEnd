@@ -1,8 +1,9 @@
 -- Reset toàn bộ dữ liệu cũ trong database PetGo.
 -- File này chỉ tạo query, KHÔNG tự chạy.
 -- CẢNH BÁO: Chạy file này sẽ xóa dữ liệu trong các bảng bên dưới.
--- Sau khi reset, backend sẽ tự seed lại role USER/PROVIDER/ADMIN khi khởi động.
--- Nếu cần tài khoản demo, chạy thêm: PetGo_BackEnd/petgo/database/sample_accounts.sql
+-- Sau khi reset, chạy lại PetGo_BackEnd/database/2-base_roles.sql để seed role USER/PROVIDER/ADMIN.
+-- Nếu cần dữ liệu demo, chạy tiếp các file sample trong thư mục PetGo_BackEnd/database theo thứ tự số prefix.
+-- Sau khi tạo user demo hoặc user thật, chạy PetGo_BackEnd/database/5-base_wallets.sql để tạo ví và cấu hình ví mặc định.
 
 USE petgo_db;
 
@@ -53,6 +54,10 @@ TRUNCATE TABLE home_sliders;
 TRUNCATE TABLE membership_subscriptions;
 TRUNCATE TABLE membership_plan_features;
 TRUNCATE TABLE membership_plans;
+
+TRUNCATE TABLE wallet_transactions;
+TRUNCATE TABLE wallets;
+TRUNCATE TABLE wallet_settings;
 
 TRUNCATE TABLE refresh_tokens;
 TRUNCATE TABLE user_roles;
