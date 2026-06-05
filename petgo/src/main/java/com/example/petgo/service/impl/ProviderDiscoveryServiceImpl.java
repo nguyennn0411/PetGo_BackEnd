@@ -67,7 +67,6 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
                         Collectors.toList()));
 
         List<ProviderView> filteredViews = providers.stream()
-                .filter(provider -> providerServicesMap.containsKey(provider.getId()))
                 .map(provider -> toProviderView(provider,
                         providerServicesMap.getOrDefault(provider.getId(), List.of()),
                         providerSlotsMap.getOrDefault(provider.getId(), List.of()),
@@ -108,100 +107,6 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
                 .sortOptions(List.of("FEATURED", "NEAREST", "TOP_RATED", "LOWEST_PRICE"))
                 .timeOfDayOptions(List.of("MORNING", "NOON", "AFTERNOON", "EVENING"))
                 .build();
-    }
-
-    @Override
-    public List<ProviderDetailServiceItemResponse> findActiveServices(ProviderSearchCriteria criteria) {
-        ProviderSearchCriteria safeCriteria = normalizeCriteria(criteria);
-        return providerServiceRepository.findAllActiveDetails().stream()
-                .filter(service -> matchesServiceFilters(service, safeCriteria))
-                .map(this::mapProviderServiceItem)
-                .toList();
-    }
-
-    private boolean matchesServiceFilters(ProviderService service, ProviderSearchCriteria criteria) {
-        ProviderProfile provider = service.getProvider();
-        ServiceCategory category = service.getService() != null ? service.getService().getCategory() : null;
-        List<Long> categoryIds = collectCategoryIds(category);
-        if (criteria.query() != null
-                && !buildServiceSearchableText(service, provider, category).contains(criteria.query())) {
-            return false;
-        }
-        if (criteria.city() != null) {
-            String cityValue = Optional.ofNullable(provider.getCity()).orElse("").toLowerCase(Locale.ROOT);
-            String provinceValue = Optional.ofNullable(provider.getProvince()).orElse("").toLowerCase(Locale.ROOT);
-            if (!cityValue.contains(criteria.city()) && !provinceValue.contains(criteria.city())) {
-                return false;
-            }
-        }
-        if (!criteria.serviceCategoryIds().isEmpty()
-                && Collections.disjoint(categoryIds, criteria.serviceCategoryIds())) {
-            return false;
-        }
-        BigDecimal price = service.getPriceAmount();
-        if (criteria.minPrice() != null && (price == null || price.compareTo(criteria.minPrice()) < 0)) {
-            return false;
-        }
-        if (criteria.maxPrice() != null && (price == null || price.compareTo(criteria.maxPrice()) > 0)) {
-            return false;
-        }
-        if (criteria.minRating() != null
-                && (provider.getAverageRating() == null
-                        || provider.getAverageRating().compareTo(criteria.minRating()) < 0)) {
-            return false;
-        }
-        if (criteria.featuredOnly() && !Boolean.TRUE.equals(provider.getFeatured())
-                && !Boolean.TRUE.equals(service.getFeatured())) {
-            return false;
-        }
-        return true;
-    }
-
-    private ProviderDetailServiceItemResponse mapProviderServiceItem(ProviderService providerService) {
-        ProviderProfile provider = providerService.getProvider();
-        String serviceName = firstNonBlank(providerService.getCustomName(), providerService.getService().getName(),
-                "Dịch vụ");
-        String description = firstNonBlank(providerService.getShortDescription(), providerService.getDescription(),
-                providerService.getService().getShortDescription(), providerService.getService().getDescription());
-        return ProviderDetailServiceItemResponse.builder()
-                .id(providerService.getId())
-                .name(serviceName)
-                .desc(description)
-                .price(providerService.getPriceAmount())
-                .priceDisplay(formatMoney(providerService.getPriceAmount()))
-                .currencyCode(firstNonBlank(providerService.getCurrencyCode(),
-                        providerService.getService().getCurrencyCode(), "VND"))
-                .priceUnit(providerService.getPriceUnit())
-                .durationMinutes(providerService.getDurationMinutes())
-                .duration(formatDuration(providerService.getDurationMinutes()))
-                .featured(Boolean.TRUE.equals(providerService.getFeatured()))
-                .categoryId(providerService.getService().getCategory().getId())
-                .categoryName(providerService.getService().getCategory().getName())
-                .providerId(provider.getId())
-                .providerName(provider.getBusinessName())
-                .providerImage(resolveProviderImage(provider))
-                .providerAddress(buildAddress(provider))
-                .build();
-    }
-
-    private String buildServiceSearchableText(ProviderService service, ProviderProfile provider,
-            ServiceCategory category) {
-        return Stream.of(
-                service.getCustomName(),
-                service.getShortDescription(),
-                service.getDescription(),
-                service.getService() != null ? service.getService().getName() : null,
-                service.getService() != null ? service.getService().getShortDescription() : null,
-                service.getService() != null ? service.getService().getDescription() : null,
-                category != null ? category.getName() : null,
-                provider.getBusinessName(),
-                provider.getHeadline(),
-                provider.getCity(),
-                provider.getProvince(),
-                provider.getDistrict())
-                .filter(Objects::nonNull)
-                .map(value -> value.toLowerCase(Locale.ROOT))
-                .collect(Collectors.joining(" | "));
     }
 
     private List<ProviderCategoryOptionResponse> buildProviderCategoryTree(List<ServiceCategory> categories,
@@ -480,35 +385,6 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
         return providerService.getShortDescription();
     }
 
-    private String firstNonBlank(String... values) {
-        if (values == null) {
-            return null;
-        }
-        return Arrays.stream(values)
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(value -> !value.isBlank())
-                .findFirst()
-                .orElse(null);
-    }
-
-    private String formatMoney(BigDecimal amount) {
-        if (amount == null) {
-            return null;
-        }
-        return amount.setScale(0, RoundingMode.HALF_UP).toPlainString();
-    }
-
-    private String formatDuration(Integer minutes) {
-        if (minutes == null || minutes <= 0) {
-            return null;
-        }
-        if (minutes % 60 == 0) {
-            return (minutes / 60) + " giờ";
-        }
-        return minutes + " phút";
-    }
-
     private String buildAddress(ProviderProfile provider) {
         return Stream
                 .of(provider.getPrimaryAddressLine1(), provider.getDistrict(), provider.getCity(),
@@ -562,7 +438,7 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
         if (provider.getCoverImageUrl() != null && !provider.getCoverImageUrl().isBlank()) {
             return provider.getCoverImageUrl();
         }
-        return null;
+        return "https://placehold.co/800x600?text=PetGo+Provider";
     }
 
     private String formatDistance(Double distanceKm) {

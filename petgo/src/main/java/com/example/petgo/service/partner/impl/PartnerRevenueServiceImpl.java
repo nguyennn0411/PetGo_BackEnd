@@ -144,8 +144,7 @@ public class PartnerRevenueServiceImpl implements PartnerRevenueService {
     public PartnerInvoiceDetailResponse getInvoiceDetail(HttpServletRequest request, Long invoiceId) {
         ProviderProfile provider = partnerAccessService.requirePartnerContext(request).provider();
         Invoice invoice = invoiceRepository.findDetailedByProviderIdAndInvoiceId(provider.getId(), invoiceId)
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("Không tìm thấy invoice thuộc nhà cung cấp hiện tại."));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy invoice thuộc shop hiện tại."));
         Payment payment = latestPayment(invoice.getId());
         List<InvoiceItemResponse> items = invoiceItemRepository.findByInvoiceIdOrderBySortOrderAscIdAsc(invoice.getId())
                 .stream()

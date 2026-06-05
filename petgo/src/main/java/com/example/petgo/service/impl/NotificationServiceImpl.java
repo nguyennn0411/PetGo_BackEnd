@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
 
-    private static final Set<RoleType> NOTIFIABLE_ROLE_TYPES = Set.of(RoleType.USER, RoleType.PROVIDER);
+    private static final Set<RoleType> NOTIFIABLE_ROLE_TYPES = Set.of(RoleType.USER, RoleType.SHOP);
 
     private final AuthService authService;
     private final UserRepository userRepository;
@@ -235,7 +235,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .toList();
         boolean containsUnsupportedRole = roles.stream().anyMatch(role -> !NOTIFIABLE_ROLE_TYPES.contains(role));
         if (containsUnsupportedRole) {
-            throw new BadRequestException("Chỉ hỗ trợ gửi thông báo tới role USER hoặc PROVIDER.");
+            throw new BadRequestException("Chỉ hỗ trợ gửi thông báo tới role USER hoặc SHOP.");
         }
         return roles;
     }

@@ -2,7 +2,7 @@ package com.example.petgo.entity;
 
 public enum RoleType {
     USER("User", "Người dùng hệ thống"),
-    PROVIDER("Provider", "Đối tác cung cấp dịch vụ"),
+    SHOP("Shop", "Shop/đối tác cung cấp dịch vụ"),
     ADMIN("Administrator", "Quản trị hệ thống");
 
     private final String displayName;

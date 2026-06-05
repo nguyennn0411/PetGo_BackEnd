@@ -208,7 +208,7 @@ public class PromotionPolicyServiceImpl implements PromotionPolicyService {
 
         Set<Long> providerIds = parseLongCsv(promo.getProviderIds());
         if (!providerIds.isEmpty() && !providerIds.contains(bookingProviderId)) {
-            throw new BadRequestException("Mã ưu đãi không áp dụng cho nhà cung cấp này");
+            throw new BadRequestException("Mã ưu đãi không áp dụng cho shop này");
         }
 
         Long providerServiceId = booking.getProviderService() != null ? booking.getProviderService().getId() : null;

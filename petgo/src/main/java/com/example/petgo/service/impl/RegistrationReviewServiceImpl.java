@@ -164,7 +164,7 @@ public class RegistrationReviewServiceImpl implements RegistrationReviewService 
     }
 
     private void ensureApprovedRoles(User user) {
-        ensureRoleAssigned(user, RoleType.PROVIDER);
+        ensureRoleAssigned(user, RoleType.SHOP);
     }
 
     private void ensureRoleAssigned(User user, RoleType roleType) {

@@ -99,27 +99,23 @@ public class PartnerServiceManagementServiceImpl implements PartnerServiceManage
 
     private ProviderService requireOwnedService(Long providerId, Long providerServiceId) {
         return providerServiceRepository.findDetailByProviderIdAndId(providerId, providerServiceId)
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("Không tìm thấy dịch vụ thuộc nhà cung cấp hiện tại."));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ thuộc shop hiện tại."));
     }
 
     private void validateCatalogServiceAllowed(ProviderProfile provider, CatalogService catalogService) {
         Set<Long> registeredCategoryIds = resolveRegisteredCategoryIds(provider);
-        if (!registeredCategoryIds.isEmpty()
-                && !isCategoryAllowed(catalogService.getCategory(), registeredCategoryIds)) {
-            throw new BadRequestException("Dịch vụ không thuộc nhóm dịch vụ nhà cung cấp đã đăng ký.");
+        if (!registeredCategoryIds.isEmpty() && !isCategoryAllowed(catalogService.getCategory(), registeredCategoryIds)) {
+            throw new BadRequestException("Dịch vụ không thuộc nhóm dịch vụ shop đã đăng ký.");
         }
     }
 
-    private void ensureNoDuplicateCatalogService(Long providerId, Long catalogServiceId,
-            Long currentProviderServiceId) {
+    private void ensureNoDuplicateCatalogService(Long providerId, Long catalogServiceId, Long currentProviderServiceId) {
         boolean duplicated = currentProviderServiceId == null
                 ? providerServiceRepository.existsByProvider_IdAndService_Id(providerId, catalogServiceId)
                 : providerServiceRepository.existsByProvider_IdAndService_IdAndIdNot(providerId, catalogServiceId,
                         currentProviderServiceId);
         if (duplicated) {
-            throw new BadRequestException(
-                    "Nhà cung cấp đã có dịch vụ này. Vui lòng sửa dịch vụ hiện có thay vì tạo trùng.");
+            throw new BadRequestException("Shop đã có dịch vụ này. Vui lòng sửa dịch vụ hiện có thay vì tạo trùng.");
         }
     }
 
@@ -190,7 +186,6 @@ public class PartnerServiceManagementServiceImpl implements PartnerServiceManage
         providerService.setActive(requestBody.active() == null || Boolean.TRUE.equals(requestBody.active()));
         providerService.setCapacityPerSlot(Optional.ofNullable(requestBody.capacityPerSlot()).orElse(1));
         providerService.setBookingBufferMinutes(Optional.ofNullable(requestBody.bookingBufferMinutes()).orElse(0));
-        providerService.setBufferAfterMinutes(Optional.ofNullable(requestBody.bookingBufferMinutes()).orElse(0));
         providerService.setDisplayOrder(Optional.ofNullable(requestBody.displayOrder()).orElse(0));
     }
 }

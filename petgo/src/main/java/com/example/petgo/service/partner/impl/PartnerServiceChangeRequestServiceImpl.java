@@ -53,7 +53,6 @@ public class PartnerServiceChangeRequestServiceImpl implements PartnerServiceCha
     private static final int MAX_DRAFTS_PER_PROVIDER = 3;
     private static final int MIN_PHOTOS = 1;
     private static final int MAX_PHOTOS = 5;
-    private static final String DEFAULT_DURATION_TYPE = "FIXED";
 
     private final PartnerAccessService partnerAccessService;
     private final PartnerMappingSupport mapper;
@@ -300,7 +299,6 @@ public class PartnerServiceChangeRequestServiceImpl implements PartnerServiceCha
         providerService.setShortDescription(buildShortDescription(changeRequest.getDescription()));
         providerService.setDescription(changeRequest.getDescription());
         providerService.setDurationMinutes(defaultDuration(providerService.getService()));
-        providerService.setDurationType(defaultDurationType(providerService.getDurationType()));
         providerService.setPriceAmount(changeRequest.getPriceAmount());
         providerService.setCurrencyCode(mapper.firstNonBlank(changeRequest.getCurrencyCode(),
                 providerService.getService() != null ? providerService.getService().getCurrencyCode() : null, "VND"));
@@ -310,7 +308,6 @@ public class PartnerServiceChangeRequestServiceImpl implements PartnerServiceCha
         providerService.setActive(Boolean.TRUE);
         providerService.setCapacityPerSlot(1);
         providerService.setBookingBufferMinutes(0);
-        providerService.setBufferAfterMinutes(0);
         providerService.setDisplayOrder(0);
         providerService.setCategoryIds(changeRequest.getCategoryIds());
         providerService.setPhotoUrls(changeRequest.getPhotoUrls());
@@ -461,8 +458,7 @@ public class PartnerServiceChangeRequestServiceImpl implements PartnerServiceCha
 
     private ProviderService requireOwnedService(Long providerId, Long providerServiceId) {
         return providerServiceRepository.findDetailByProviderIdAndId(providerId, providerServiceId)
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("Không tìm thấy dịch vụ thuộc nhà cung cấp hiện tại."));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ thuộc shop hiện tại."));
     }
 
     private User requireAdmin(HttpServletRequest request) {
@@ -545,10 +541,6 @@ public class PartnerServiceChangeRequestServiceImpl implements PartnerServiceCha
         return service != null && service.getDefaultDurationMinutes() != null && service.getDefaultDurationMinutes() > 0
                 ? service.getDefaultDurationMinutes()
                 : 60;
-    }
-
-    private String defaultDurationType(String currentDurationType) {
-        return mapper.firstNonBlank(currentDurationType, DEFAULT_DURATION_TYPE).toUpperCase(Locale.ROOT);
     }
 
     private String buildShortDescription(String description) {

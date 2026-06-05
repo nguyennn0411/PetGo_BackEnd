@@ -9,7 +9,6 @@ import com.example.petgo.entity.*;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.repository.*;
-import com.example.petgo.service.impl.BookingNotificationService;
 import com.example.petgo.service.partner.PartnerAccessService;
 import com.example.petgo.service.partner.PartnerBookingManagementService;
 import com.example.petgo.service.partner.PartnerMappingSupport;
@@ -37,7 +36,6 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
     private final BookingStatusHistoryRepository bookingStatusHistoryRepository;
     private final BookingCancellationRepository bookingCancellationRepository;
     private final ProviderAvailabilitySlotRepository providerAvailabilitySlotRepository;
-    private final BookingNotificationService bookingNotificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -92,10 +90,8 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
         if (!mapper.canConfirm(booking)) {
             throw new BadRequestException("Booking hiện không thể xác nhận.");
         }
-        BookingMutationResponse response = transitionBooking(booking, provider.getUser(), "CONFIRMED",
+        return transitionBooking(booking, provider.getUser(), "CONFIRMED",
                 noteOrDefault(requestBody, "Partner xác nhận booking"));
-        bookingNotificationService.notifyOwnerBookingConfirmed(booking);
-        return response;
     }
 
     @Override
@@ -183,8 +179,7 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
 
     private Booking requireOwnedBooking(Long providerId, Long bookingId) {
         return bookingRepository.findDetailedByProviderIdAndBookingId(providerId, bookingId)
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("Không tìm thấy booking thuộc nhà cung cấp hiện tại."));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking thuộc shop hiện tại."));
     }
 
     private BookingMutationResponse transitionBooking(Booking booking, User changedBy, String nextStatus, String note) {
