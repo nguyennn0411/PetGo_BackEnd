@@ -37,27 +37,5 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             """)
     Optional<Booking> findDetailedOwnedById(@Param("ownerUserId") Long ownerUserId, @Param("bookingId") Long bookingId);
 
-    @EntityGraph(attributePaths = {"customerUser", "provider", "pet", "providerService", "providerService.service", "availabilitySlot"})
-    @Query("""
-            select b
-            from Booking b
-            where b.provider.id = :providerId
-            order by b.appointmentDate desc, b.startTime desc, b.id desc
-            """)
-    List<Booking> findDetailedByProviderId(@Param("providerId") Long providerId);
-
-    @EntityGraph(attributePaths = {"customerUser", "provider", "pet", "providerService", "providerService.service", "availabilitySlot"})
-    @Query("""
-            select b
-            from Booking b
-            where b.provider.id = :providerId
-              and b.id = :bookingId
-            """)
-    Optional<Booking> findDetailedByProviderIdAndBookingId(@Param("providerId") Long providerId, @Param("bookingId") Long bookingId);
-
     long countByCustomerUser_Id(Long ownerUserId);
-
-    long countByProviderService_Id(Long providerServiceId);
-
-    boolean existsByProviderService_Id(Long providerServiceId);
 }

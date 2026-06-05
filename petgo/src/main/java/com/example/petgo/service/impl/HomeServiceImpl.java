@@ -17,7 +17,6 @@ import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -44,23 +43,17 @@ public class HomeServiceImpl implements HomeService {
 
     @Override
     public HomePageResponse getHomePage(Double latitude, Double longitude) {
-        List<ServiceCategory> categories = serviceCategoryRepository.findByActiveTrueOrderByNameAscIdAsc();
-        List<ProviderProfile> featuredProviders = providerProfileRepository
-                .findFeaturedProviders(PageRequest.of(0, featuredLimit));
-        List<ProviderProfile> nearbyProviders = providerProfileRepository
-                .findNearbyProviders(PageRequest.of(0, nearbyLimit));
-        List<MembershipPlan> membershipPlans = membershipPlanRepository
-                .findByActiveTrueOrderByPopularDescSortOrderAscIdAsc(PageRequest.of(0, membershipLimit));
-        List<Review> reviews = reviewRepository.findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc("VISIBLE",
-                PageRequest.of(0, reviewLimit));
+        List<ServiceCategory> categories = serviceCategoryRepository.findByActiveTrueOrderBySortOrderAscIdAsc();
+        List<ProviderProfile> featuredProviders = providerProfileRepository.findFeaturedProviders(PageRequest.of(0, featuredLimit));
+        List<ProviderProfile> nearbyProviders = providerProfileRepository.findNearbyProviders(PageRequest.of(0, nearbyLimit));
+        List<MembershipPlan> membershipPlans = membershipPlanRepository.findByActiveTrueOrderByPopularDescSortOrderAscIdAsc(PageRequest.of(0, membershipLimit));
+        List<Review> reviews = reviewRepository.findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc("VISIBLE", PageRequest.of(0, reviewLimit));
 
-        List<HomeProviderResponse> mappedNearbyProviders = mapProvidersWithDistance(nearbyProviders, latitude,
-                longitude);
-        List<HomeProviderResponse> mappedFeaturedProviders = mapProvidersWithDistance(featuredProviders, latitude,
-                longitude);
+        List<HomeProviderResponse> mappedNearbyProviders = mapProvidersWithDistance(nearbyProviders, latitude, longitude);
+        List<HomeProviderResponse> mappedFeaturedProviders = mapProvidersWithDistance(featuredProviders, latitude, longitude);
 
         return HomePageResponse.builder()
-                .categories(buildCategoryTree(categories, null))
+                .categories(categories.stream().map(this::mapCategory).toList())
                 .nearbyProviders(mappedNearbyProviders)
                 .featuredProviders(mappedFeaturedProviders)
                 .membershipPlans(membershipPlans.stream().map(this::mapMembership).toList())
@@ -74,43 +67,23 @@ public class HomeServiceImpl implements HomeService {
                 .build();
     }
 
-    private List<HomeProviderResponse> mapProvidersWithDistance(List<ProviderProfile> providers, Double userLat,
-            Double userLng) {
+    private List<HomeProviderResponse> mapProvidersWithDistance(List<ProviderProfile> providers, Double userLat, Double userLng) {
         return providers.stream()
-                .map(provider -> new ProviderWithDistance(provider,
-                        calculateDistanceKm(userLat, userLng, provider.getLatitude(), provider.getLongitude())))
-                .sorted(Comparator
-                        .comparing(ProviderWithDistance::distanceForSort,
-                                Comparator.nullsLast(Comparator.naturalOrder()))
-                        .thenComparing(item -> item.provider().getAverageRating(),
-                                Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(provider -> new ProviderWithDistance(provider, calculateDistanceKm(userLat, userLng, provider.getLatitude(), provider.getLongitude())))
+                .sorted(Comparator.comparing(ProviderWithDistance::distanceForSort, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(item -> item.provider().getAverageRating(), Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(item -> mapProvider(item.provider(), item.distanceForSort()))
                 .toList();
     }
 
     private HomeCategoryResponse mapCategory(ServiceCategory category) {
-        return mapCategory(category, List.of());
-    }
-
-    private HomeCategoryResponse mapCategory(ServiceCategory category, List<HomeCategoryResponse> children) {
         return HomeCategoryResponse.builder()
                 .id(category.getId())
-                .parentId(category.getParent() != null ? category.getParent().getId() : null)
                 .name(category.getName())
+                .slug(category.getSlug())
+                .iconKey(category.getIconKey())
                 .description(category.getDescription())
-                .children(children)
                 .build();
-    }
-
-    private List<HomeCategoryResponse> buildCategoryTree(List<ServiceCategory> categories, Long parentId) {
-        return categories.stream()
-                .filter(category -> Objects.equals(parentIdOf(category), parentId))
-                .map(category -> mapCategory(category, buildCategoryTree(categories, category.getId())))
-                .toList();
-    }
-
-    private Long parentIdOf(ServiceCategory category) {
-        return category.getParent() != null ? category.getParent().getId() : null;
     }
 
     private HomeProviderResponse mapProvider(ProviderProfile provider, Double distanceKm) {
@@ -144,8 +117,7 @@ public class HomeServiceImpl implements HomeService {
                 .monthlyVoucherAmount(plan.getMonthlyVoucherAmount())
                 .popular(plan.getPopular())
                 .features(plan.getFeatures().stream()
-                        .sorted(Comparator.comparing(MembershipPlanFeature::getSortOrder)
-                                .thenComparing(MembershipPlanFeature::getId))
+                        .sorted(Comparator.comparing(MembershipPlanFeature::getSortOrder).thenComparing(MembershipPlanFeature::getId))
                         .map(MembershipPlanFeature::getFeatureText)
                         .limit(6)
                         .toList())
@@ -156,8 +128,7 @@ public class HomeServiceImpl implements HomeService {
         Pet pet = review.getBooking() != null ? review.getBooking().getPet() : null;
         return HomeReviewResponse.builder()
                 .id(review.getId())
-                .customerName(
-                        review.getCustomerUser() != null ? review.getCustomerUser().getFullName() : "Khách hàng PetGo")
+                .customerName(review.getCustomerUser() != null ? review.getCustomerUser().getFullName() : "Khách hàng PetGo")
                 .petLabel(buildPetLabel(pet))
                 .rating(review.getRating())
                 .text(review.getComment())
@@ -204,7 +175,7 @@ public class HomeServiceImpl implements HomeService {
         double dLng = Math.toRadians(providerLng.doubleValue() - userLng);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                 + Math.cos(Math.toRadians(userLat)) * Math.cos(Math.toRadians(providerLat.doubleValue()))
-                        * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return earthRadiusKm * c;
     }

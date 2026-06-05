@@ -11,13 +11,18 @@ public interface PetService {
 
     PetResponse getPetDetail(Long ownerUserId, Long petId);
 
-    PetResponse createPet(Long ownerUserId, PetUpsertRequest request);
+    PetResponse createPet(
+            Long ownerUserId,
+            PetUpsertRequest request,
+            MultipartFile avatarFile
+    );
 
-    PetResponse createPet(Long ownerUserId, PetUpsertRequest request, MultipartFile avatarFile);
-
-    PetResponse updatePet(Long ownerUserId, Long petId, PetUpsertRequest request);
-
-    PetResponse updatePet(Long ownerUserId, Long petId, PetUpsertRequest request, MultipartFile avatarFile);
+    PetResponse updatePet(
+            Long ownerUserId,
+            Long petId,
+            PetUpsertRequest request,
+            MultipartFile avatarFile
+    );
 
     void deletePet(Long ownerUserId, Long petId);
 }

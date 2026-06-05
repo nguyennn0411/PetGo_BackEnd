@@ -7,16 +7,17 @@ import java.util.List;
 
 @Builder
 public record ProviderAppliedFiltersResponse(
-                String query,
-                String city,
-                List<Long> serviceCategoryIds,
-                BigDecimal minPrice,
-                BigDecimal maxPrice,
-                BigDecimal minRating,
-                Double latitude,
-                Double longitude,
-                Double maxDistanceKm,
-                String timeOfDay,
-                String sortBy,
-                Boolean featuredOnly) {
+        String query,
+        String city,
+        List<String> serviceCategorySlugs,
+        BigDecimal minPrice,
+        BigDecimal maxPrice,
+        BigDecimal minRating,
+        Double latitude,
+        Double longitude,
+        Double maxDistanceKm,
+        String timeOfDay,
+        String sortBy,
+        Boolean featuredOnly
+) {
 }
