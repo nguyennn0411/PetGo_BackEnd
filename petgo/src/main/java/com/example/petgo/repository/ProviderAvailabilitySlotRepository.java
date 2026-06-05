@@ -54,14 +54,4 @@ public interface ProviderAvailabilitySlotRepository extends JpaRepository<Provid
             """)
     Optional<ProviderAvailabilitySlot> findDetailedById(@Param("slotId") Long slotId);
 
-    @EntityGraph(attributePaths = {"provider", "providerService", "providerService.service"})
-    List<ProviderAvailabilitySlot> findByProvider_IdOrderBySlotDateAscStartTimeAscIdAsc(Long providerId);
-
-    @EntityGraph(attributePaths = {"provider", "providerService", "providerService.service"})
-    List<ProviderAvailabilitySlot> findByProvider_IdAndSlotDateBetweenOrderBySlotDateAscStartTimeAscIdAsc(
-            Long providerId,
-            LocalDate fromDate,
-            LocalDate toDate
-    );
-
 }

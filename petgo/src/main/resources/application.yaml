@@ -2,15 +2,10 @@ server:
   port: 8080
 
 spring:
-  servlet:
-    multipart:
-      max-file-size: 5MB
-      max-request-size: 6MB
-
   datasource:
     url: jdbc:mysql://localhost:3306/petgo_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
     username: root
-    password: 12345
+    password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -66,13 +61,6 @@ app:
     root-dir: uploads
     pet-avatar-dir: uploads/pets
     pet-avatar-public-path: /uploads/pets
-
-payos:
-  client-id: e2918732-3fa1-4d7e-8be9-a4e3b42eb6a4
-  api-key: 556763fe-64ba-4b75-aa80-904aee2b396e
-  checksum-key: e5607adc68354292c0e7e4bd79ea9e9e1c29c8fb4160def81921582743861d21
-  return-url: ${PAYOS_RETURN_URL:http://localhost:5173/payment/success}
-  cancel-url: ${PAYOS_CANCEL_URL:http://localhost:5173/payment/cancel}
 
 cloudinary:
   cloud-name: dxaok6qzg
