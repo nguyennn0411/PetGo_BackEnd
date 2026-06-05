@@ -643,6 +643,8 @@ CREATE TABLE service_categories (
                                     name VARCHAR(120) NOT NULL,
                                     description VARCHAR(255) NULL,
                                     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                                     PRIMARY KEY (id),
                                     KEY idx_service_categories_parent (parent_id),
                                     KEY idx_service_categories_active (is_active),

@@ -6,7 +6,6 @@ import com.example.petgo.entity.*;
 import com.example.petgo.repository.BookingRepository;
 import com.example.petgo.repository.InvoiceRepository;
 import com.example.petgo.repository.PaymentRepository;
-import com.example.petgo.repository.ServiceCategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +30,6 @@ public class PartnerMappingSupport {
     private final BookingRepository bookingRepository;
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
-    private final ServiceCategoryRepository serviceCategoryRepository;
 
     public PartnerProfileResponse mapProfile(ProviderProfile provider,
             RegistrationApplication registration,
@@ -89,10 +87,6 @@ public class PartnerMappingSupport {
         ServiceCategory category = service != null ? service.getCategory() : null;
         ServiceCategory parentCategory = category != null ? category.getParent() : null;
         String displayName = firstNonBlank(providerService.getCustomName(), service != null ? service.getName() : null);
-        List<Long> categoryIds = parseLongCsv(providerService.getCategoryIds());
-        if (categoryIds.isEmpty() && category != null && category.getId() != null) {
-            categoryIds = List.of(category.getId());
-        }
 
         return PartnerServiceResponse.builder()
                 .id(providerService.getId())
@@ -121,10 +115,6 @@ public class PartnerMappingSupport {
                 .categoryName(category != null ? category.getName() : null)
                 .parentCategoryId(parentCategory != null ? parentCategory.getId() : null)
                 .parentCategoryName(parentCategory != null ? parentCategory.getName() : null)
-                .categoryIds(categoryIds)
-                .categories(mapServiceCategories(categoryIds, providerService))
-                .photoUrls(parseTextLines(providerService.getPhotoUrls()))
-                .approvalStatus(firstNonBlank(providerService.getApprovalStatus(), "APPROVED"))
                 .bookingCount(providerService.getId() != null
                         ? bookingRepository.countByProviderService_Id(providerService.getId())
                         : 0)
@@ -344,36 +334,6 @@ public class PartnerMappingSupport {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    public List<String> parseTextLines(String text) {
-        if (text == null || text.isBlank()) {
-            return List.of();
-        }
-        return Arrays.stream(text.split("\\R"))
-                .map(String::trim)
-                .filter(value -> !value.isBlank())
-                .distinct()
-                .toList();
-    }
-
-    public List<Long> parseLongCsv(String csv) {
-        if (csv == null || csv.isBlank()) {
-            return List.of();
-        }
-        return Arrays.stream(csv.split(","))
-                .map(String::trim)
-                .filter(value -> !value.isBlank())
-                .map(value -> {
-                    try {
-                        return Long.parseLong(value);
-                    } catch (NumberFormatException ignored) {
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-    }
-
     public String formatIsoDate(LocalDate date) {
         return date != null ? date.format(ISO_DATE) : null;
     }
@@ -415,26 +375,6 @@ public class PartnerMappingSupport {
                 .parentId(category.getParent() != null ? category.getParent().getId() : null)
                 .parentName(category.getParent() != null ? category.getParent().getName() : null)
                 .build();
-    }
-
-    private List<PartnerServiceCategoryResponse> mapServiceCategories(List<Long> categoryIds,
-            ProviderService providerService) {
-        if (categoryIds == null || categoryIds.isEmpty()) {
-            return List.of();
-        }
-        List<ServiceCategory> categories = serviceCategoryRepository.findAllById(categoryIds);
-        if (!categories.isEmpty()) {
-            return categoryIds.stream()
-                    .map(id -> categories.stream().filter(category -> Objects.equals(category.getId(), id)).findFirst()
-                            .orElse(null))
-                    .filter(Objects::nonNull)
-                    .map(this::mapCategory)
-                    .toList();
-        }
-        ServiceCategory fallback = providerService != null && providerService.getService() != null
-                ? providerService.getService().getCategory()
-                : null;
-        return fallback == null ? List.of() : List.of(mapCategory(fallback));
     }
 
     private String buildAddress(ProviderProfile provider) {

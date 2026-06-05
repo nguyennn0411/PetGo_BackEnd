@@ -33,7 +33,6 @@ public class RegistrationReviewServiceImpl implements RegistrationReviewService 
     private final RegistrationApplicationRepository registrationApplicationRepository;
     private final ProviderProfileRepository providerProfileRepository;
     private final RegistrationMapperSupport mapper;
-    private final RegistrationNotificationService registrationNotificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -68,13 +67,12 @@ public class RegistrationReviewServiceImpl implements RegistrationReviewService 
         application.setReviewedAt(LocalDateTime.now());
         application.setAdminMessage(normalizeNullable(requestBody != null ? requestBody.message() : null));
         application.setRejectionReason(null);
-        RegistrationApplication savedApplication = registrationApplicationRepository.save(application);
+        registrationApplicationRepository.save(application);
 
-        ensureApprovedRoles(savedApplication.getUser());
-        ensureProviderProfile(savedApplication);
-        registrationNotificationService.notifyApplicantApproved(savedApplication, savedApplication.getAdminMessage());
+        ensureApprovedRoles(application.getUser());
+        ensureProviderProfile(application);
 
-        return mapper.toResponse(savedApplication);
+        return mapper.toResponse(application);
     }
 
     @Override
@@ -92,10 +90,9 @@ public class RegistrationReviewServiceImpl implements RegistrationReviewService 
         application.setReviewedAt(LocalDateTime.now());
         application.setRejectionReason(reason);
         application.setAdminMessage(reason);
-        RegistrationApplication savedApplication = registrationApplicationRepository.save(application);
-        registrationNotificationService.notifyApplicantRejected(savedApplication, reason);
+        registrationApplicationRepository.save(application);
 
-        return mapper.toResponse(savedApplication);
+        return mapper.toResponse(application);
     }
 
     @Override
@@ -113,10 +110,9 @@ public class RegistrationReviewServiceImpl implements RegistrationReviewService 
         application.setReviewedAt(LocalDateTime.now());
         application.setAdminMessage(message);
         application.setRejectionReason(null);
-        RegistrationApplication savedApplication = registrationApplicationRepository.save(application);
-        registrationNotificationService.notifyApplicantAdditionalInfoRequested(savedApplication, message);
+        registrationApplicationRepository.save(application);
 
-        return mapper.toResponse(savedApplication);
+        return mapper.toResponse(application);
     }
 
     private User requireAdmin(HttpServletRequest request) {
