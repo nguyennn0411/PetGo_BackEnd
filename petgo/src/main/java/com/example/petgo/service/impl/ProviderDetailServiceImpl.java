@@ -64,7 +64,7 @@ public class ProviderDetailServiceImpl implements ProviderDetailService {
                 firstPhotoUrl(photos), fallbackProviderImage(provider));
         String mainImage = firstNonBlank(provider.getMainImageUrl(), firstPhotoUrl(photos), bannerImage,
                 fallbackProviderImage(provider));
-        List<String> gallery = buildGallery(photos, bannerImage, mainImage);
+        List<String> gallery = buildGallery(photos);
         List<ProviderDetailServiceItemResponse> serviceItems = services.stream().map(this::mapService).toList();
         List<ProviderBusinessHourDetailResponse> hourItems = businessHours.stream().map(this::mapHour).toList();
         List<ProviderSlotResponse> slotItems = allUpcomingSlots.stream().limit(Math.max(detailSlotLimit, 1))
@@ -215,12 +215,8 @@ public class ProviderDetailServiceImpl implements ProviderDetailService {
                 .orElse(provider.getPriceFromAmount());
     }
 
-    private List<String> buildGallery(List<ProviderPhoto> photos, String bannerImage, String mainImage) {
+    private List<String> buildGallery(List<ProviderPhoto> photos) {
         LinkedHashSet<String> urls = new LinkedHashSet<>();
-        if (bannerImage != null && !bannerImage.isBlank())
-            urls.add(bannerImage);
-        if (mainImage != null && !mainImage.isBlank())
-            urls.add(mainImage);
         for (ProviderPhoto photo : photos) {
             if (photo.getPhotoUrl() != null && !photo.getPhotoUrl().isBlank()) {
                 urls.add(photo.getPhotoUrl());

@@ -562,7 +562,7 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
         if (provider.getCoverImageUrl() != null && !provider.getCoverImageUrl().isBlank()) {
             return provider.getCoverImageUrl();
         }
-        return "https://placehold.co/800x600?text=PetGo+Provider";
+        return null;
     }
 
     private String formatDistance(Double distanceKm) {

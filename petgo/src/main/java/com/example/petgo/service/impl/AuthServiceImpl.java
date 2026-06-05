@@ -13,6 +13,7 @@ import com.example.petgo.entity.RoleType;
 import com.example.petgo.entity.User;
 import com.example.petgo.entity.UserRole;
 import com.example.petgo.entity.UserRoleId;
+import com.example.petgo.entity.Wallet;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.exception.UnauthorizedException;
@@ -20,6 +21,7 @@ import com.example.petgo.repository.RefreshTokenRepository;
 import com.example.petgo.repository.RoleRepository;
 import com.example.petgo.repository.UserRepository;
 import com.example.petgo.repository.UserRoleRepository;
+import com.example.petgo.repository.WalletRepository;
 import com.example.petgo.service.AuthService;
 import com.example.petgo.service.MailService;
 import com.example.petgo.dto.VerifyOtpRequest;
@@ -51,6 +53,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenService jwtTokenService;
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
+    private final WalletRepository walletRepository;
 
     @Override
     @Transactional
@@ -82,6 +85,9 @@ public class AuthServiceImpl implements AuthService {
         user.setOtpExpiryTime(LocalDateTime.now().plusMinutes(10));
 
         userRepository.save(user);
+        Wallet wallet = new Wallet();
+        wallet.setUser(user);
+        walletRepository.save(wallet);
 
         mailService.sendOtpEmail(user.getEmail(), otp);
 
