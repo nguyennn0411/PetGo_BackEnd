@@ -8,13 +8,12 @@ import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.repository.*;
 import com.example.petgo.service.PaymentService;
-import com.example.petgo.service.PromotionPolicyService;
-import com.example.petgo.service.PromotionPolicyService.PromoPreview;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -33,7 +32,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final InvoiceRepository invoiceRepository;
     private final InvoiceItemRepository invoiceItemRepository;
     private final PaymentRepository paymentRepository;
-    private final PromotionPolicyService promotionPolicyService;
+    private final PromoCodeRepository promoCodeRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -41,15 +40,13 @@ public class PaymentServiceImpl implements PaymentService {
         Booking booking = bookingRepository.findDetailedById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking để thanh toán"));
 
-        PromoPreview promoPreview = promotionPolicyService.previewForBooking(booking, promoCode);
+        PromoPreview promoPreview = resolvePromoPreview(booking, promoCode);
         Invoice invoice = invoiceRepository.findByBookingId(bookingId).orElse(null);
-        Payment payment = invoice != null
-                ? paymentRepository.findTopByInvoiceIdOrderByCreatedAtDesc(invoice.getId()).orElse(null)
-                : null;
+        Payment payment = invoice != null ? paymentRepository.findTopByInvoiceIdOrderByCreatedAtDesc(invoice.getId()).orElse(null) : null;
 
         BigDecimal subtotal = defaultMoney(booking.getSubtotalAmount());
         BigDecimal tax = defaultMoney(booking.getTaxAmount());
-        BigDecimal total = promotionPolicyService.calculateTotal(subtotal, promoPreview.discountAmount(), tax);
+        BigDecimal total = calculateTotal(subtotal, promoPreview.discountAmount(), tax);
 
         return PaymentCheckoutContextResponse.builder()
                 .bookingId(booking.getId())
@@ -61,9 +58,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .providerAddress(booking.getProviderAddressSnapshot())
                 .serviceName(booking.getServiceNameSnapshot())
                 .petName(buildPetLabel(booking))
-                .appointmentDate(booking.getAppointmentDate() != null
-                        ? booking.getAppointmentDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                        : null)
+                .appointmentDate(booking.getAppointmentDate() != null ? booking.getAppointmentDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : null)
                 .startTime(formatTimeRange(booking))
                 .subtotalAmount(subtotal)
                 .discountAmount(promoPreview.discountAmount())
@@ -92,11 +87,11 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         String paymentMethod = normalizePaymentMethod(request.paymentMethod());
-        PromoPreview promoPreview = promotionPolicyService.previewForBooking(booking, request.promoCode());
+        PromoPreview promoPreview = resolvePromoPreview(booking, request.promoCode());
 
         BigDecimal subtotal = defaultMoney(booking.getSubtotalAmount());
         BigDecimal tax = defaultMoney(booking.getTaxAmount());
-        BigDecimal total = promotionPolicyService.calculateTotal(subtotal, promoPreview.discountAmount(), tax);
+        BigDecimal total = calculateTotal(subtotal, promoPreview.discountAmount(), tax);
 
         booking.setPromoDiscountAmount(promoPreview.discountAmount());
         booking.setTaxAmount(tax);
@@ -120,8 +115,6 @@ public class PaymentServiceImpl implements PaymentService {
             invoice.setPaidAt(payment.getPaidAt());
             invoiceRepository.save(invoice);
         }
-
-        promotionPolicyService.recordBookingRedemption(promoPreview, booking.getCustomerUser(), booking, invoice);
 
         if (!Objects.equals(previousStatus, booking.getStatus())) {
             BookingStatusHistory history = new BookingStatusHistory();
@@ -156,20 +149,19 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private void populateInvoice(Invoice invoice,
-            Booking booking,
-            BigDecimal subtotal,
-            BigDecimal discount,
-            BigDecimal tax,
-            BigDecimal total,
-            String paymentMethod) {
+                                 Booking booking,
+                                 BigDecimal subtotal,
+                                 BigDecimal discount,
+                                 BigDecimal tax,
+                                 BigDecimal total,
+                                 String paymentMethod) {
         User user = booking.getCustomerUser();
         invoice.setInvoiceNumber(invoice.getInvoiceNumber() != null ? invoice.getInvoiceNumber() : generateCode("INV"));
         invoice.setUser(user);
         invoice.setBooking(booking);
         invoice.setInvoiceType("BOOKING");
         invoice.setStatus(isOnlineSuccess(paymentMethod) || total.compareTo(BigDecimal.ZERO) == 0 ? "PAID" : "ISSUED");
-        invoice.setBillingName(firstNonBlank(user != null ? user.getFullName() : null, booking.getPetNameSnapshot(),
-                "Khách hàng PetGo"));
+        invoice.setBillingName(firstNonBlank(user != null ? user.getFullName() : null, booking.getPetNameSnapshot(), "Khách hàng PetGo"));
         invoice.setBillingEmail(user != null ? user.getEmail() : null);
         invoice.setBillingPhone(user != null ? user.getPhoneNumber() : null);
         invoice.setBillingAddress(buildUserAddress(user));
@@ -180,17 +172,15 @@ public class PaymentServiceImpl implements PaymentService {
         invoice.setCurrencyCode(firstNonBlank(booking.getCurrencyCode(), "VND"));
         invoice.setIssuedAt(invoice.getIssuedAt() != null ? invoice.getIssuedAt() : LocalDateTime.now(APP_ZONE));
         invoice.setDueAt(LocalDateTime.now(APP_ZONE).plusHours(24));
-        invoice.setPaidAt(
-                isOnlineSuccess(paymentMethod) || total.compareTo(BigDecimal.ZERO) == 0 ? LocalDateTime.now(APP_ZONE)
-                        : null);
+        invoice.setPaidAt(isOnlineSuccess(paymentMethod) || total.compareTo(BigDecimal.ZERO) == 0 ? LocalDateTime.now(APP_ZONE) : null);
         invoice.setNote("Tạo từ checkout booking " + booking.getBookingCode());
     }
 
     private void refreshInvoiceItems(Invoice invoice,
-            Booking booking,
-            BigDecimal subtotal,
-            BigDecimal discount,
-            BigDecimal tax) {
+                                     Booking booking,
+                                     BigDecimal subtotal,
+                                     BigDecimal discount,
+                                     BigDecimal tax) {
         if (invoice.getId() != null) {
             invoiceItemRepository.deleteByInvoiceId(invoice.getId());
         }
@@ -238,11 +228,11 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private void populatePayment(Payment payment,
-            Invoice invoice,
-            User payer,
-            String paymentMethod,
-            BigDecimal total,
-            String currencyCode) {
+                                 Invoice invoice,
+                                 User payer,
+                                 String paymentMethod,
+                                 BigDecimal total,
+                                 String currencyCode) {
         payment.setPaymentCode(generateCode("PAY"));
         payment.setInvoice(invoice);
         payment.setPayerUser(payer);
@@ -251,13 +241,73 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setPaymentMethod(paymentMethod);
         payment.setGatewayName(resolveGatewayName(paymentMethod));
         payment.setGatewayTransactionId(generateCode("TXN"));
-        payment.setStatus(
-                isOnlineSuccess(paymentMethod) || total.compareTo(BigDecimal.ZERO) == 0 ? "SUCCEEDED" : "PENDING");
-        payment.setPaidAt(
-                isOnlineSuccess(paymentMethod) || total.compareTo(BigDecimal.ZERO) == 0 ? LocalDateTime.now(APP_ZONE)
-                        : null);
+        payment.setStatus(isOnlineSuccess(paymentMethod) || total.compareTo(BigDecimal.ZERO) == 0 ? "SUCCEEDED" : "PENDING");
+        payment.setPaidAt(isOnlineSuccess(paymentMethod) || total.compareTo(BigDecimal.ZERO) == 0 ? LocalDateTime.now(APP_ZONE) : null);
         payment.setFailureReason(null);
         payment.setMetadataJson("{\"source\":\"petgo-checkout\"}");
+    }
+
+    private PromoPreview resolvePromoPreview(Booking booking, String rawPromoCode) {
+        String promoCode = normalizeBlank(rawPromoCode);
+        if (promoCode == null) {
+            return new PromoPreview(null, BigDecimal.ZERO, null);
+        }
+
+        PromoCode promo = promoCodeRepository.findByCodeIgnoreCaseAndActiveTrue(promoCode)
+                .orElseThrow(() -> new BadRequestException("Mã promo không tồn tại hoặc đã hết hạn"));
+
+        LocalDateTime now = LocalDateTime.now(APP_ZONE);
+        if (promo.getStartsAt() != null && now.isBefore(promo.getStartsAt())) {
+            throw new BadRequestException("Mã promo chưa đến thời gian sử dụng");
+        }
+        if (promo.getEndsAt() != null && now.isAfter(promo.getEndsAt())) {
+            throw new BadRequestException("Mã promo đã hết hạn");
+        }
+        if (!List.of("BOOKING", "BOTH").contains(firstNonBlank(promo.getTargetType(), "BOOKING").toUpperCase(Locale.ROOT))) {
+            throw new BadRequestException("Mã promo không áp dụng cho booking này");
+        }
+
+        BigDecimal subtotal = defaultMoney(booking.getSubtotalAmount());
+        BigDecimal minOrder = defaultMoney(promo.getMinOrderAmount());
+        if (subtotal.compareTo(minOrder) < 0) {
+            throw new BadRequestException("Booking chưa đạt giá trị tối thiểu để dùng promo");
+        }
+
+        BigDecimal discount = calculatePromoDiscount(subtotal, promo);
+        String message = discount.compareTo(BigDecimal.ZERO) > 0
+                ? "Đã áp dụng mã " + promo.getCode().toUpperCase(Locale.ROOT)
+                : "Mã promo không tạo ra giảm giá";
+        return new PromoPreview(promo.getCode().toUpperCase(Locale.ROOT), discount, message);
+    }
+
+    private BigDecimal calculatePromoDiscount(BigDecimal subtotal, PromoCode promo) {
+        BigDecimal discountValue = defaultMoney(promo.getDiscountValue());
+        if (discountValue.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal discount;
+        String discountType = firstNonBlank(promo.getDiscountType(), "FIXED_AMOUNT").toUpperCase(Locale.ROOT);
+        if ("PERCENTAGE".equals(discountType)) {
+            discount = subtotal.multiply(discountValue).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        } else {
+            discount = discountValue;
+        }
+
+        BigDecimal maxDiscount = promo.getMaxDiscountAmount();
+        if (maxDiscount != null && maxDiscount.compareTo(BigDecimal.ZERO) > 0 && discount.compareTo(maxDiscount) > 0) {
+            discount = maxDiscount;
+        }
+
+        if (discount.compareTo(subtotal) > 0) {
+            discount = subtotal;
+        }
+        return discount.max(BigDecimal.ZERO);
+    }
+
+    private BigDecimal calculateTotal(BigDecimal subtotal, BigDecimal discount, BigDecimal tax) {
+        BigDecimal total = defaultMoney(subtotal).subtract(defaultMoney(discount)).add(defaultMoney(tax));
+        return total.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : total;
     }
 
     private boolean isOnlineSuccess(String paymentMethod) {
@@ -287,17 +337,14 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private String formatMoney(BigDecimal amount) {
-        if (amount == null)
-            return "0 đ";
+        if (amount == null) return "0 đ";
         return String.format(Locale.forLanguageTag("vi-VN"), "%,.0f đ", amount);
     }
 
     private String formatTimeRange(Booking booking) {
-        if (booking.getStartTime() == null)
-            return null;
+        if (booking.getStartTime() == null) return null;
         String start = booking.getStartTime().format(DateTimeFormatter.ofPattern("HH:mm"));
-        if (booking.getEndTime() == null)
-            return start;
+        if (booking.getEndTime() == null) return start;
         return start + " - " + booking.getEndTime().format(DateTimeFormatter.ofPattern("HH:mm"));
     }
 
@@ -309,16 +356,13 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private String buildAppointmentDescription(Booking booking) {
-        String date = booking.getAppointmentDate() != null
-                ? booking.getAppointmentDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                : "";
+        String date = booking.getAppointmentDate() != null ? booking.getAppointmentDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "";
         String time = formatTimeRange(booking);
         return (date + (time != null ? " • " + time : "")).trim();
     }
 
     private String buildUserAddress(User user) {
-        if (user == null)
-            return null;
+        if (user == null) return null;
         List<String> parts = new ArrayList<>();
         addIfPresent(parts, user.getAddressLine1());
         addIfPresent(parts, user.getWard());
@@ -343,16 +387,17 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private String firstNonBlank(String... values) {
-        if (values == null)
-            return null;
+        if (values == null) return null;
         for (String value : values) {
-            if (value != null && !value.isBlank())
-                return value.trim();
+            if (value != null && !value.isBlank()) return value.trim();
         }
         return null;
     }
 
     private String generateCode(String prefix) {
         return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(Locale.ROOT);
+    }
+
+    private record PromoPreview(String appliedCode, BigDecimal discountAmount, String message) {
     }
 }

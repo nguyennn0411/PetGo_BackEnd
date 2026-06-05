@@ -73,8 +73,4 @@ public interface ProviderServiceRepository extends JpaRepository<ProviderService
                                                         @Param("providerServiceId") Long providerServiceId);
 
   List<ProviderService> findByProvider_Id(Long providerId);
-
-  boolean existsByProvider_IdAndService_Id(Long providerId, Long serviceId);
-
-  boolean existsByProvider_IdAndService_IdAndIdNot(Long providerId, Long serviceId, Long id);
 }

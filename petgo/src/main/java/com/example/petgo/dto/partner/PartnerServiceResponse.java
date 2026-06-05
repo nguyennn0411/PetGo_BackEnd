@@ -3,7 +3,6 @@ package com.example.petgo.dto.partner;
 import lombok.Builder;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @Builder
 public record PartnerServiceResponse(
@@ -29,9 +28,5 @@ public record PartnerServiceResponse(
         String categoryName,
         Long parentCategoryId,
         String parentCategoryName,
-        List<Long> categoryIds,
-        List<PartnerServiceCategoryResponse> categories,
-        List<String> photoUrls,
-        String approvalStatus,
         long bookingCount) {
 }

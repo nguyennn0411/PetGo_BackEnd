@@ -1,6 +1,5 @@
 package com.example.petgo.controller.partner;
 
-import com.example.petgo.dto.partner.PartnerCatalogServiceOptionResponse;
 import com.example.petgo.dto.partner.PartnerServiceRequest;
 import com.example.petgo.dto.partner.PartnerServiceResponse;
 import com.example.petgo.dto.partner.PartnerServiceStatusRequest;
@@ -24,11 +23,6 @@ public class PartnerServiceController {
     @GetMapping
     public ResponseEntity<List<PartnerServiceResponse>> listServices(HttpServletRequest request) {
         return ResponseEntity.ok(partnerServiceManagementService.listServices(request));
-    }
-
-    @GetMapping("/catalog-options")
-    public ResponseEntity<List<PartnerCatalogServiceOptionResponse>> listCatalogOptions(HttpServletRequest request) {
-        return ResponseEntity.ok(partnerServiceManagementService.listCatalogOptions(request));
     }
 
     @PostMapping

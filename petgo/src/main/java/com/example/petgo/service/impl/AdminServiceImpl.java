@@ -213,6 +213,7 @@ public class AdminServiceImpl implements AdminService {
                 .name(category.getName())
                 .description(category.getDescription())
                 .active(category.getActive())
+                .createdAt(category.getCreatedAt())
                 .children(children)
                 .build();
     }
