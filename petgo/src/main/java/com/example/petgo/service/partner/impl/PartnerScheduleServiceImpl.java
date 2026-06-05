@@ -20,11 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
-import java.util.HashSet;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -57,7 +55,6 @@ public class PartnerScheduleServiceImpl implements PartnerScheduleService {
     public PartnerScheduleResponse updateWeeklySchedule(HttpServletRequest request,
             PartnerWeeklyScheduleRequest requestBody) {
         ProviderProfile provider = partnerAccessService.requirePartnerContext(request).provider();
-        validateWeeklySchedule(requestBody);
         Map<Integer, ProviderBusinessHour> existingByWeekday = providerBusinessHourRepository
                 .findByProvider_IdOrderByWeekdayAscIdAsc(provider.getId()).stream()
                 .collect(
@@ -113,47 +110,6 @@ public class PartnerScheduleServiceImpl implements PartnerScheduleService {
             return LocalDate.parse(value, PartnerMappingSupport.ISO_DATE);
         } catch (DateTimeParseException ex) {
             throw new BadRequestException("Ngày cần định dạng yyyy-MM-dd.");
-        }
-    }
-
-    private void validateWeeklySchedule(PartnerWeeklyScheduleRequest requestBody) {
-        if (requestBody == null || requestBody.weeklyHours() == null || requestBody.weeklyHours().isEmpty()) {
-            throw new BadRequestException("Vui lòng cấu hình ít nhất một ngày.");
-        }
-        Set<Integer> weekdays = new HashSet<>();
-        boolean hasOpenDay = false;
-        for (PartnerBusinessHourRequest hourRequest : requestBody.weeklyHours()) {
-            if (hourRequest.weekday() == null || hourRequest.weekday() < 1 || hourRequest.weekday() > 7) {
-                throw new BadRequestException("weekday phải từ 1 đến 7.");
-            }
-            if (!weekdays.add(hourRequest.weekday())) {
-                throw new BadRequestException("Không được cấu hình trùng ngày trong tuần.");
-            }
-            if (Boolean.TRUE.equals(hourRequest.closed())) {
-                continue;
-            }
-            hasOpenDay = true;
-            LocalTime opensAt = parseTime(hourRequest.opensAt(), "Giờ mở cửa không hợp lệ.");
-            LocalTime closesAt = parseTime(hourRequest.closesAt(), "Giờ đóng cửa không hợp lệ.");
-            if (!opensAt.isBefore(closesAt)) {
-                throw new BadRequestException("Giờ mở cửa phải trước giờ đóng cửa.");
-            }
-            LocalTime breakStartsAt = parseOptionalTime(hourRequest.breakStartsAt(), "Giờ bắt đầu nghỉ không hợp lệ.");
-            LocalTime breakEndsAt = parseOptionalTime(hourRequest.breakEndsAt(), "Giờ kết thúc nghỉ không hợp lệ.");
-            if ((breakStartsAt == null) != (breakEndsAt == null)) {
-                throw new BadRequestException("Cần nhập đủ giờ bắt đầu và kết thúc nghỉ giữa ca.");
-            }
-            if (breakStartsAt != null) {
-                if (!breakStartsAt.isBefore(breakEndsAt)) {
-                    throw new BadRequestException("Giờ bắt đầu nghỉ phải trước giờ kết thúc nghỉ.");
-                }
-                if (breakStartsAt.isBefore(opensAt) || breakEndsAt.isAfter(closesAt)) {
-                    throw new BadRequestException("Giờ nghỉ phải nằm trong giờ mở cửa.");
-                }
-            }
-        }
-        if (!hasOpenDay) {
-            throw new BadRequestException("Vui lòng mở ít nhất một ngày trong tuần.");
         }
     }
 

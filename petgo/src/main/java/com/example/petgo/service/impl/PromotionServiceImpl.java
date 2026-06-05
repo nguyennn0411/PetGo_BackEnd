@@ -257,11 +257,11 @@ public class PromotionServiceImpl implements PromotionService {
 
     private void validatePartnerScope(ProviderProfile ownerProvider, List<Long> providerServiceIds) {
         if (ownerProvider == null || ownerProvider.getId() == null) {
-            throw new BadRequestException("Không tìm thấy nhà cung cấp để tạo ưu đãi partner.");
+            throw new BadRequestException("Không tìm thấy shop để tạo ưu đãi partner.");
         }
         for (Long providerServiceId : providerServiceIds) {
             providerServiceRepository.findDetailByProviderIdAndId(ownerProvider.getId(), providerServiceId)
-                    .orElseThrow(() -> new BadRequestException("Dịch vụ áp dụng không thuộc nhà cung cấp hiện tại."));
+                    .orElseThrow(() -> new BadRequestException("Dịch vụ áp dụng không thuộc shop hiện tại."));
         }
     }
 
@@ -291,7 +291,7 @@ public class PromotionServiceImpl implements PromotionService {
                         option("SEASONAL", "Theo mùa/sự kiện", "Ưu đãi dịp lễ, cuối tuần, chiến dịch."),
                         option("BUNDLE", "Combo/bundle", "Ưu đãi theo nhóm dịch vụ hoặc gói."),
                         option("FREE_SERVICE", "Tặng dịch vụ", "Có thể cấu hình miễn phí/toàn phần."),
-                        option("PARTNER_EXCLUSIVE", "Riêng cho nhà cung cấp", "Ưu đãi riêng của từng partner.")))
+                        option("PARTNER_EXCLUSIVE", "Riêng cho shop", "Ưu đãi riêng của từng partner.")))
                 .targetTypes(List.of(
                         option("BOOKING", "Booking dịch vụ", "Áp dụng khi khách thanh toán booking."),
                         option("MEMBERSHIP", "Membership", "Áp dụng khi khách mua gói hội viên."),
@@ -664,7 +664,7 @@ public class PromotionServiceImpl implements PromotionService {
             parts.add("Theo ngày trong tuần");
         }
         if (!parseLongCsv(promo.getProviderIds()).isEmpty() || promo.getProvider() != null) {
-            parts.add("Giới hạn nhà cung cấp");
+            parts.add("Giới hạn shop");
         }
         if (!parseLongCsv(promo.getProviderServiceIds()).isEmpty()) {
             parts.add("Giới hạn dịch vụ");

@@ -82,8 +82,7 @@ public class PartnerCustomerManagementServiceImpl implements PartnerCustomerMana
         CustomerAggregate aggregate = buildAggregates(provider.getId()).stream()
                 .filter(item -> item.customer() != null && Objects.equals(item.customer().getId(), customerUserId))
                 .findFirst()
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("Không tìm thấy khách hàng thuộc nhà cung cấp hiện tại."));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khách hàng thuộc shop hiện tại."));
 
         PartnerCustomerSummaryResponse summary = mapCustomerSummary(aggregate);
         List<Booking> bookings = aggregate.bookings().stream()

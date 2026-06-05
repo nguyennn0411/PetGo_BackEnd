@@ -37,8 +37,6 @@ public class BookingServiceImpl implements BookingService {
     private final ProviderPhotoRepository providerPhotoRepository;
     private final BookingRepository bookingRepository;
     private final BookingStatusHistoryRepository bookingStatusHistoryRepository;
-    private final BookingNotificationService bookingNotificationService;
-    private final BookingAvailabilityServiceImpl bookingAvailabilityService;
 
     @Value("${app.providers.slot-lookahead-days:7}")
     private int slotLookaheadDays;
@@ -106,10 +104,6 @@ public class BookingServiceImpl implements BookingService {
         }
 
         final Long finalResolvedServiceId = resolvedServiceId;
-        ProviderService selectedService = services.stream()
-                .filter(service -> Objects.equals(service.getId(), finalResolvedServiceId))
-                .findFirst()
-                .orElse(services.get(0));
 
         List<ProviderAvailabilitySlot> visibleSlots = upcomingSlots;
         if (finalResolvedServiceId != null) {
@@ -125,38 +119,17 @@ public class BookingServiceImpl implements BookingService {
 
         final Long finalSelectedSlotId = selectedSlotId;
 
-        List<BookingSlotOptionResponse> slotResponses;
-        List<String> availableDates;
-        if (!visibleSlots.isEmpty()) {
-            slotResponses = visibleSlots.stream()
-                    .map(slot -> mapSlot(slot, finalSelectedSlotId))
-                    .toList();
-            availableDates = visibleSlots.stream()
-                    .map(ProviderAvailabilitySlot::getSlotDate)
-                    .filter(Objects::nonNull)
-                    .distinct()
-                    .sorted()
-                    .map(ISO_DATE::format)
-                    .toList();
-        } else {
-            List<BookingSlotOptionResponse> generatedSlots = buildGeneratedAvailabilitySlots(provider, selectedService,
-                    resolvedDate);
-            if (resolvedDate == null && !generatedSlots.isEmpty()) {
-                resolvedDate = parseFlexibleDate(generatedSlots.get(0).date());
-            }
-            LocalDate finalResolvedDate = resolvedDate;
-            LocalTime finalResolvedTime = resolvedTime;
-            slotResponses = generatedSlots.stream()
-                    .map(slot -> Boolean.TRUE.equals(slot.selected()) ? slot
-                            : markGeneratedSlotSelected(slot, finalResolvedDate, finalResolvedTime))
-                    .toList();
-            availableDates = generatedSlots.stream()
-                    .map(BookingSlotOptionResponse::date)
-                    .filter(Objects::nonNull)
-                    .distinct()
-                    .sorted()
-                    .toList();
-        }
+        List<BookingSlotOptionResponse> slotResponses = visibleSlots.stream()
+                .map(slot -> mapSlot(slot, finalSelectedSlotId))
+                .toList();
+
+        List<String> availableDates = visibleSlots.stream()
+                .map(ProviderAvailabilitySlot::getSlotDate)
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .map(ISO_DATE::format)
+                .toList();
 
         return BookingCreateContextResponse.builder()
                 .ownerUserId(owner.getId())
@@ -170,49 +143,6 @@ public class BookingServiceImpl implements BookingService {
                 .selectedDate(resolvedDate != null ? resolvedDate.format(ISO_DATE) : null)
                 .selectedTime(resolvedTime != null ? resolvedTime.format(TIME_FORMATTER) : null)
                 .selectedSlotId(finalSelectedSlotId)
-                .build();
-    }
-
-    private List<BookingSlotOptionResponse> buildGeneratedAvailabilitySlots(ProviderProfile provider,
-            ProviderService service,
-            LocalDate requestedDate) {
-        LocalDate today = LocalDate.now(APP_ZONE);
-        LocalDate fromDate = requestedDate != null && !requestedDate.isBefore(today) ? requestedDate : today;
-        int days = requestedDate != null ? 1 : Math.max(slotLookaheadDays, 1);
-        List<BookingSlotOptionResponse> slots = new ArrayList<>();
-        for (int index = 0; index <= days; index++) {
-            LocalDate date = fromDate.plusDays(index);
-            try {
-                BookingAvailabilityResponse availability = bookingAvailabilityService.getAvailability(provider.getId(),
-                        service.getId(), date, service.getDurationMinutes());
-                if (availability.slots() != null) {
-                    slots.addAll(availability.slots());
-                }
-            } catch (RuntimeException ignored) {
-            }
-        }
-        return slots;
-    }
-
-    private BookingSlotOptionResponse markGeneratedSlotSelected(BookingSlotOptionResponse slot,
-            LocalDate resolvedDate,
-            LocalTime resolvedTime) {
-        boolean selected = resolvedDate != null
-                && Objects.equals(parseFlexibleDate(slot.date()), resolvedDate)
-                && (resolvedTime == null || Objects.equals(parseFlexibleTime(slot.startTime()), resolvedTime));
-        if (!selected) {
-            return slot;
-        }
-        return BookingSlotOptionResponse.builder()
-                .slotId(slot.slotId())
-                .providerServiceId(slot.providerServiceId())
-                .serviceName(slot.serviceName())
-                .date(slot.date())
-                .startTime(slot.startTime())
-                .endTime(slot.endTime())
-                .label(slot.label())
-                .capacityRemaining(slot.capacityRemaining())
-                .selected(true)
                 .build();
     }
 
@@ -244,10 +174,6 @@ public class BookingServiceImpl implements BookingService {
                 : Optional.ofNullable(request.endTime()).orElse(
                         startTime.plusMinutes(Optional.ofNullable(providerService.getDurationMinutes()).orElse(30)));
 
-        if (slot == null) {
-            validateGeneratedAvailability(provider, providerService, appointmentDate, startTime, endTime);
-        }
-
         String providerAddress = buildProviderAddress(provider);
         String serviceName = firstNonBlank(providerService.getCustomName(), providerService.getService().getName(),
                 "Dịch vụ PetGo");
@@ -271,7 +197,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setStartTime(startTime);
         booking.setEndTime(endTime);
         booking.setTimezone(firstNonBlank(bookingTimezone, "Asia/Ho_Chi_Minh"));
-        booking.setStatus("PENDING_CONFIRMATION");
+        booking.setStatus("PENDING_PAYMENT");
         booking.setCustomerNote(normalizeBlank(request.customerNote()));
         booking.setInternalNote(null);
         booking.setRescheduleCount(0);
@@ -305,10 +231,8 @@ public class BookingServiceImpl implements BookingService {
         history.setFromStatus(null);
         history.setToStatus(saved.getStatus());
         history.setChangedByUser(owner);
-        history.setNote("Owner gửi yêu cầu đặt lịch từ BookingPage, chờ nhà cung cấp duyệt/xếp lịch");
+        history.setNote("Tạo booking mới từ BookingPage");
         bookingStatusHistoryRepository.save(history);
-
-        bookingNotificationService.notifyProviderBookingCreated(saved);
 
         return mapSummary(saved);
     }
@@ -347,26 +271,6 @@ public class BookingServiceImpl implements BookingService {
                     return slot;
                 })
                 .orElseThrow(() -> new BadRequestException("Khung giờ đã chọn không còn khả dụng"));
-    }
-
-    private void validateGeneratedAvailability(ProviderProfile provider,
-            ProviderService providerService,
-            LocalDate appointmentDate,
-            LocalTime startTime,
-            LocalTime endTime) {
-        if (appointmentDate == null || startTime == null || endTime == null) {
-            throw new BadRequestException("Vui lòng chọn ngày và giờ hẹn hợp lệ");
-        }
-        BookingAvailabilityResponse availability = bookingAvailabilityService.getAvailability(provider.getId(),
-                providerService.getId(), appointmentDate, providerService.getDurationMinutes());
-        boolean available = availability.slots() != null && availability.slots().stream()
-                .anyMatch(slot -> Objects.equals(parseFlexibleDate(slot.date()), appointmentDate)
-                        && Objects.equals(parseFlexibleTime(slot.startTime()), startTime)
-                        && Objects.equals(parseFlexibleTime(slot.endTime()), endTime)
-                        && Optional.ofNullable(slot.capacityRemaining()).orElse(0) > 0);
-        if (!available) {
-            throw new BadRequestException("Khung giờ đã chọn không còn khả dụng");
-        }
     }
 
     private void validateSlot(ProviderAvailabilitySlot slot,

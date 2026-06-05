@@ -32,10 +32,10 @@ public class CloudinaryStorageServiceImpl implements CloudinaryStorageService {
     @Override
     public String uploadPartnerLocationImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new BadRequestException("Vui lòng chọn ảnh địa điểm nhà cung cấp.");
+            throw new BadRequestException("Vui lòng chọn ảnh địa điểm shop.");
         }
 
-        return uploadImage(file, "petgo/registrations/partner/locations", "File địa điểm nhà cung cấp phải là ảnh");
+        return uploadImage(file, "petgo/registrations/partner/locations", "File địa điểm shop phải là ảnh");
     }
 
     @Override
@@ -59,7 +59,9 @@ public class CloudinaryStorageServiceImpl implements CloudinaryStorageService {
                             "folder", folder,
                             "public_id", publicId,
                             "resource_type", "image",
-                            "overwrite", false));
+                            "overwrite", false
+                    )
+            );
 
             Object secureUrl = uploadResult.get("secure_url");
 
@@ -71,8 +73,7 @@ public class CloudinaryStorageServiceImpl implements CloudinaryStorageService {
         } catch (BadRequestException e) {
             throw e;
         } catch (IOException e) {
-            log.warn(
-                    "Unable to read image file before Cloudinary upload. folder={}, filename={}, contentType={}, size={}",
+            log.warn("Unable to read image file before Cloudinary upload. folder={}, filename={}, contentType={}, size={}",
                     folder, safeFilename(file), file.getContentType(), file.getSize(), e);
             throw new BadRequestException("Không thể đọc file ảnh");
         } catch (Exception e) {

@@ -1,6 +1,9 @@
 package com.example.petgo.controller;
 
-import com.example.petgo.dto.*;
+import com.example.petgo.dto.ProviderDetailResponse;
+import com.example.petgo.dto.ProviderVerificationRequest;
+import com.example.petgo.dto.ServiceCategoryRequest;
+import com.example.petgo.dto.UserStatusRequest;
 import com.example.petgo.service.AdminService;
 import com.example.petgo.service.UserService;
 import jakarta.validation.Valid;
@@ -35,7 +38,7 @@ public class AdminController {
     @GetMapping("/providers/pending")
     public ResponseEntity<Map<String, Object>> getPendingProviders() {
         return ResponseEntity.ok(Map.of(
-                "message", "Lấy danh sách nhà cung cấp chờ duyệt thành công.",
+                "message", "Lấy danh sách shop chờ duyệt thành công.",
                 "result", adminService.getPendingProviders()));
     }
 
@@ -55,7 +58,7 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> updateProviderStatus(@RequestBody ProviderVerificationRequest request) {
         adminService.updateProviderStatus(request);
         return ResponseEntity.ok(Map.of(
-                "message", "Cập nhật trạng thái duyệt nhà cung cấp thành công."));
+                "message", "Cập nhật trạng thái duyệt shop thành công."));
     }
 
     @PutMapping("/providers/status")
@@ -63,7 +66,7 @@ public class AdminController {
             @RequestBody ProviderVerificationRequest request) {
         adminService.updateProviderAccountStatus(request);
         return ResponseEntity.ok(Map.of(
-                "message", "Cập nhật trạng thái hoạt động nhà cung cấp thành công."));
+                "message", "Cập nhật trạng thái hoạt động shop thành công."));
     }
 
     @GetMapping("/categories")
@@ -93,42 +96,5 @@ public class AdminController {
         adminService.deleteCategory(id);
         return ResponseEntity.ok(Map.of(
                 "message", "Xóa (ẩn) danh mục thành công."));
-    }
-
-    @GetMapping("/home-sliders")
-    public ResponseEntity<Map<String, Object>> getHomeSliders() {
-        return ResponseEntity.ok(Map.of(
-                "message", "Lấy danh sách slider trang chủ thành công.",
-                "result", adminService.getAllHomeSliders()));
-    }
-
-    @PostMapping("/home-sliders")
-    public ResponseEntity<Map<String, Object>> createHomeSlider(@Valid @RequestBody HomeSliderRequest request) {
-        return ResponseEntity.ok(Map.of(
-                "message", "Tạo slider trang chủ thành công.",
-                "result", adminService.createHomeSlider(request)));
-    }
-
-    @PutMapping("/home-sliders/{id}")
-    public ResponseEntity<Map<String, Object>> updateHomeSlider(@PathVariable Long id,
-            @Valid @RequestBody HomeSliderRequest request) {
-        return ResponseEntity.ok(Map.of(
-                "message", "Cập nhật slider trang chủ thành công.",
-                "result", adminService.updateHomeSlider(id, request)));
-    }
-
-    @PatchMapping("/home-sliders/{id}/visibility")
-    public ResponseEntity<Map<String, Object>> updateHomeSliderVisibility(@PathVariable Long id,
-            @RequestBody Map<String, Boolean> request) {
-        return ResponseEntity.ok(Map.of(
-                "message", "Cập nhật trạng thái slider trang chủ thành công.",
-                "result", adminService.updateHomeSliderVisibility(id, request.get("active"))));
-    }
-
-    @DeleteMapping("/home-sliders/{id}")
-    public ResponseEntity<Map<String, Object>> deleteHomeSlider(@PathVariable Long id) {
-        adminService.deleteHomeSlider(id);
-        return ResponseEntity.ok(Map.of(
-                "message", "Xóa slider trang chủ thành công."));
     }
 }

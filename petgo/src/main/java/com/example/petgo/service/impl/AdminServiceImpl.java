@@ -23,7 +23,6 @@ public class AdminServiceImpl implements AdminService {
     private final ProviderProfileRepository providerProfileRepository;
     private final ProviderServiceRepository providerServiceRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
-    private final HomeSliderRepository homeSliderRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -45,7 +44,7 @@ public class AdminServiceImpl implements AdminService {
     @Transactional(readOnly = true)
     public ProviderDetailResponse getProviderDetail(Long providerId) {
         ProviderProfile provider = providerProfileRepository.findById(providerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà cung cấp."));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy shop."));
 
         List<ProviderService> services = providerServiceRepository.findByProvider_Id(providerId);
 
@@ -116,7 +115,7 @@ public class AdminServiceImpl implements AdminService {
     @Transactional
     public void updateProviderStatus(ProviderVerificationRequest request) {
         ProviderProfile provider = providerProfileRepository.findById(request.providerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu của nhà cung cấp."));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy shop yêu cầu."));
 
         provider.setVerificationStatus(request.status());
         if ("VERIFIED".equalsIgnoreCase(request.status())) {
@@ -129,7 +128,7 @@ public class AdminServiceImpl implements AdminService {
     @Transactional
     public void updateProviderAccountStatus(ProviderVerificationRequest request) {
         ProviderProfile provider = providerProfileRepository.findById(request.providerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu của nhà cung cấp."));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy shop yêu cầu."));
 
         provider.setStatus(request.status());
         providerProfileRepository.save(provider);
@@ -290,74 +289,5 @@ public class AdminServiceImpl implements AdminService {
         if (hasChanged) {
             serviceCategoryRepository.saveAllAndFlush(categories);
         }
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<HomeSliderResponse> getAllHomeSliders() {
-        return homeSliderRepository.findAllByOrderBySortOrderAscIdAsc().stream()
-                .map(this::mapToHomeSliderResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    public HomeSliderResponse createHomeSlider(HomeSliderRequest request) {
-        HomeSlider slider = new HomeSlider();
-        mapHomeSliderRequestToEntity(request, slider);
-        return mapToHomeSliderResponse(homeSliderRepository.save(slider));
-    }
-
-    @Override
-    @Transactional
-    public HomeSliderResponse updateHomeSlider(Long id, HomeSliderRequest request) {
-        HomeSlider slider = homeSliderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy slider trang chủ."));
-        mapHomeSliderRequestToEntity(request, slider);
-        return mapToHomeSliderResponse(homeSliderRepository.saveAndFlush(slider));
-    }
-
-    @Override
-    @Transactional
-    public void deleteHomeSlider(Long id) {
-        if (!homeSliderRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Không tìm thấy slider trang chủ.");
-        }
-        homeSliderRepository.deleteById(id);
-    }
-
-    @Override
-    @Transactional
-    public HomeSliderResponse updateHomeSliderVisibility(Long id, Boolean active) {
-        if (active == null) {
-            throw new BadRequestException("Trạng thái hiển thị không được để trống.");
-        }
-        HomeSlider slider = homeSliderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy slider trang chủ."));
-        slider.setActive(active);
-        return mapToHomeSliderResponse(homeSliderRepository.saveAndFlush(slider));
-    }
-
-    private void mapHomeSliderRequestToEntity(HomeSliderRequest request, HomeSlider slider) {
-        slider.setTitle(normalizeRequired(request.title(), "Tiêu đề slider không được để trống"));
-        slider.setSubtitle(normalizeNullable(request.subtitle()));
-        slider.setImageUrl(normalizeRequired(request.imageUrl(), "Ảnh slider không được để trống"));
-        slider.setCtaLabel(normalizeNullable(request.ctaLabel()));
-        slider.setCtaUrl(normalizeNullable(request.ctaUrl()));
-        slider.setSortOrder(request.sortOrder() != null ? request.sortOrder() : 0);
-        slider.setActive(request.active() != null ? request.active() : true);
-    }
-
-    private HomeSliderResponse mapToHomeSliderResponse(HomeSlider slider) {
-        return HomeSliderResponse.builder()
-                .id(slider.getId())
-                .title(slider.getTitle())
-                .subtitle(slider.getSubtitle())
-                .imageUrl(slider.getImageUrl())
-                .ctaLabel(slider.getCtaLabel())
-                .ctaUrl(slider.getCtaUrl())
-                .sortOrder(slider.getSortOrder())
-                .active(slider.getActive())
-                .build();
     }
 }

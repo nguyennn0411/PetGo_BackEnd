@@ -33,12 +33,13 @@ public class PartnerAccessService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tài khoản chưa có provider profile được duyệt."));
 
         boolean hasPartnerRole = authenticatedUser.roles() != null && authenticatedUser.roles().stream()
-                .anyMatch(role -> "PROVIDER".equalsIgnoreCase(role)
-                        || "PARTNER".equalsIgnoreCase(role));
+                .anyMatch(role -> "SHOP".equalsIgnoreCase(role)
+                        || "PARTNER".equalsIgnoreCase(role)
+                        || "PROVIDER".equalsIgnoreCase(role));
         if (!hasPartnerRole) {
             hasPartnerRole = userRoleRepository.findByUser_Id(user.getId()).stream()
                     .anyMatch(userRole -> userRole.getRole() != null
-                            && RoleType.PROVIDER.equals(userRole.getRole().getCode()));
+                            && RoleType.SHOP.equals(userRole.getRole().getCode()));
         }
 
         if (provider.getDeletedAt() != null || !"ACTIVE".equalsIgnoreCase(nullToEmpty(provider.getStatus()))) {

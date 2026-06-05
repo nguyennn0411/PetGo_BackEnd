@@ -98,11 +98,11 @@ public class PartnerDashboardServiceImpl implements PartnerDashboardService {
 
                 List<String> warnings = new ArrayList<>();
                 if (missingProfile)
-                        warnings.add("Hồ sơ nhà cung cấp còn thiếu mô tả, địa chỉ hoặc ảnh hiển thị.");
+                        warnings.add("Hồ sơ shop còn thiếu mô tả, địa chỉ hoặc ảnh hiển thị.");
                 if (missingServices)
-                        warnings.add("Nhà cung cấp chưa có dịch vụ active.");
+                        warnings.add("Shop chưa có dịch vụ active.");
                 if (missingSchedule)
-                        warnings.add("Nhà cung cấp chưa cấu hình lịch làm việc mở cửa.");
+                        warnings.add("Shop chưa cấu hình lịch làm việc mở cửa.");
 
                 List<PartnerBookingSummaryResponse> actionRequired = bookings.stream()
                                 .filter(booking -> mapper.canConfirm(booking) || mapper.canStart(booking)
