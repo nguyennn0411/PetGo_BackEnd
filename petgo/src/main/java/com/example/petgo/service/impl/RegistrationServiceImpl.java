@@ -178,13 +178,14 @@ public class RegistrationServiceImpl implements RegistrationService {
 
     private void applyBusinessFields(RegistrationApplication application, RegistrationUpsertRequest requestBody) {
         application.setBusinessName(
-                normalizeRequired(requestBody.businessName(), "Tên shop/doanh nghiệp không được để trống."));
+                normalizeRequired(requestBody.businessName(), "Tên nhà cung cấp/doanh nghiệp không được để trống."));
         application.setBusinessPhone(
-                normalizeRequired(requestBody.businessPhone(), "Số điện thoại shop không được để trống."));
+                normalizeRequired(requestBody.businessPhone(), "Số điện thoại nhà cung cấp không được để trống."));
         application.setBusinessEmail(
-                normalizeRequired(requestBody.businessEmail(), "Email shop không được để trống.").toLowerCase());
+                normalizeRequired(requestBody.businessEmail(), "Email nhà cung cấp không được để trống.")
+                        .toLowerCase());
         application.setBusinessAddress(
-                normalizeRequired(requestBody.businessAddress(), "Địa chỉ shop không được để trống."));
+                normalizeRequired(requestBody.businessAddress(), "Địa chỉ nhà cung cấp không được để trống."));
         application.setTaxCode(normalizeNullable(requestBody.taxCode()));
         application.setRepresentativeName(
                 normalizeRequired(requestBody.representativeName(), "Tên người đại diện không được để trống."));
@@ -200,26 +201,26 @@ public class RegistrationServiceImpl implements RegistrationService {
     }
 
     private void validateReadyToSubmit(RegistrationApplication application) {
-        normalizeRequired(application.getBusinessName(), "Tên shop/doanh nghiệp không được để trống.");
-        normalizeRequired(application.getBusinessPhone(), "Số điện thoại shop không được để trống.");
-        normalizeRequired(application.getBusinessEmail(), "Email shop không được để trống.");
-        normalizeRequired(application.getBusinessAddress(), "Địa chỉ shop không được để trống.");
+        normalizeRequired(application.getBusinessName(), "Tên nhà cung cấp/doanh nghiệp không được để trống.");
+        normalizeRequired(application.getBusinessPhone(), "Số điện thoại nhà cung cấp không được để trống.");
+        normalizeRequired(application.getBusinessEmail(), "Email nhà cung cấp không được để trống.");
+        normalizeRequired(application.getBusinessAddress(), "Địa chỉ nhà cung cấp không được để trống.");
         normalizeRequired(application.getRepresentativeName(), "Tên người đại diện không được để trống.");
         normalizeRequired(application.getRepresentativePhone(), "Số điện thoại người đại diện không được để trống.");
         normalizeRequired(application.getRepresentativeEmail(), "Email người đại diện không được để trống.");
 
         List<Long> categoryIds = mapper.parseLongCsv(application.getServiceCategoryIds());
         if (categoryIds.isEmpty()) {
-            throw new BadRequestException("Vui lòng chọn ít nhất một nhóm dịch vụ shop cung cấp.");
+            throw new BadRequestException("Vui lòng chọn ít nhất một nhóm dịch vụ nhà cung cấp cung cấp.");
         }
         validateServiceCategoryIds(categoryIds);
 
         List<String> imageUrls = mapper.parseTextLines(application.getLocationImageUrls());
         if (imageUrls.size() < MIN_LOCATION_IMAGE_COUNT) {
-            throw new BadRequestException("Vui lòng cung cấp tối thiểu 4 ảnh về địa điểm shop.");
+            throw new BadRequestException("Vui lòng cung cấp tối thiểu 4 ảnh về địa điểm nhà cung cấp.");
         }
         if (imageUrls.size() > MAX_LOCATION_IMAGE_COUNT) {
-            throw new BadRequestException("Chỉ được cung cấp tối đa 10 ảnh về địa điểm shop.");
+            throw new BadRequestException("Chỉ được cung cấp tối đa 10 ảnh về địa điểm nhà cung cấp.");
         }
     }
 

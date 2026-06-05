@@ -22,6 +22,7 @@ public interface ProviderServiceRepository extends JpaRepository<ProviderService
         and ps.provider.deletedAt is null
         and ps.service.active = true
         and ps.service.category.active = true
+        and upper(coalesce(ps.approvalStatus, 'APPROVED')) = 'APPROVED'
       order by ps.provider.id asc, ps.featured desc, ps.displayOrder asc, ps.id asc
       """)
   List<ProviderService> findActiveByProviderIds(@Param("providerIds") Collection<Long> providerIds);
@@ -36,6 +37,7 @@ public interface ProviderServiceRepository extends JpaRepository<ProviderService
         and ps.provider.deletedAt is null
         and ps.service.active = true
         and ps.service.category.active = true
+        and upper(coalesce(ps.approvalStatus, 'APPROVED')) = 'APPROVED'
       order by ps.featured desc, ps.displayOrder asc, ps.id asc
       """)
   List<ProviderService> findActiveDetailsByProviderId(@Param("providerId") Long providerId);
@@ -50,8 +52,23 @@ public interface ProviderServiceRepository extends JpaRepository<ProviderService
         and ps.provider.deletedAt is null
         and ps.service.active = true
         and ps.service.category.active = true
+        and upper(coalesce(ps.approvalStatus, 'APPROVED')) = 'APPROVED'
       """)
   Optional<ProviderService> findActiveDetailById(@Param("providerServiceId") Long providerServiceId);
+
+  @EntityGraph(attributePaths = { "provider", "service", "service.category", "service.category.parent" })
+  @Query("""
+      select ps
+      from ProviderService ps
+      where ps.active = true
+        and ps.provider.status = 'ACTIVE'
+        and ps.provider.deletedAt is null
+        and ps.service.active = true
+        and ps.service.category.active = true
+        and upper(coalesce(ps.approvalStatus, 'APPROVED')) = 'APPROVED'
+      order by ps.featured desc, ps.displayOrder asc, ps.id asc
+      """)
+  List<ProviderService> findAllActiveDetails();
 
   @EntityGraph(attributePaths = { "provider", "service", "service.category", "service.category.parent" })
   @Query("""
@@ -70,7 +87,7 @@ public interface ProviderServiceRepository extends JpaRepository<ProviderService
         and ps.id = :providerServiceId
       """)
   Optional<ProviderService> findDetailByProviderIdAndId(@Param("providerId") Long providerId,
-                                                        @Param("providerServiceId") Long providerServiceId);
+      @Param("providerServiceId") Long providerServiceId);
 
   List<ProviderService> findByProvider_Id(Long providerId);
 

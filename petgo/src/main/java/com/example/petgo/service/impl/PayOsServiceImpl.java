@@ -16,6 +16,7 @@ import com.example.petgo.repository.InvoiceRepository;
 import com.example.petgo.repository.PaymentRepository;
 import com.example.petgo.repository.MembershipSubscriptionRepository;
 import com.example.petgo.service.PayOsService;
+import com.example.petgo.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -49,6 +50,7 @@ public class PayOsServiceImpl implements PayOsService {
     private final BookingRepository bookingRepository;
     private final BookingStatusHistoryRepository bookingStatusHistoryRepository;
     private final MembershipSubscriptionRepository membershipSubscriptionRepository;
+    private final WalletService walletService;
 
     @Override
     @Transactional
@@ -120,7 +122,8 @@ public class PayOsServiceImpl implements PayOsService {
             headers.set("x-client-id", currentClientId);
             headers.set("x-api-key", currentApiKey);
 
-            org.springframework.http.HttpEntity<java.util.Map<String, Object>> entity = new org.springframework.http.HttpEntity<>(requestBody, headers);
+            org.springframework.http.HttpEntity<java.util.Map<String, Object>> entity = new org.springframework.http.HttpEntity<>(
+                    requestBody, headers);
 
             log.info("Bypass SDK: Đang gửi API trực tiếp tới cổng PayOS cho đơn hàng {}...", orderCodeId);
             org.springframework.http.ResponseEntity<java.util.Map> response = restTemplate.postForEntity(
@@ -162,14 +165,20 @@ public class PayOsServiceImpl implements PayOsService {
         payment.setGatewayTransactionId(paymentLinkId);
         payment.setStatus("PENDING");
 
-        // Tạo chuỗi metadata thủ công, không dùng hàm buildMetadataJson(mockResponse) cũ nữa để tránh ép kiểu lỗi
-        String customMetadataJson = "{\"paymentLinkId\":\"" + paymentLinkId + "\",\"checkoutUrl\":\"" + checkoutUrl + "\",\"orderCode\":" + orderCodeId + "}";
+        // Tạo chuỗi metadata thủ công, không dùng hàm buildMetadataJson(mockResponse)
+        // cũ nữa để tránh ép kiểu lỗi
+        String customMetadataJson = "{\"paymentLinkId\":\"" + paymentLinkId + "\",\"checkoutUrl\":\"" + checkoutUrl
+                + "\",\"orderCode\":" + orderCodeId + "}";
         payment.setMetadataJson(customMetadataJson);
 
         paymentRepository.save(payment);
 
         // Sinh link ảnh VietQR thủ công (Bypass qua hàm cũ)
-        String customQrImageUrl = "https://img.vietqr.io/image/970416-" + (qrCodeText != null && qrCodeText.contains("accountNo=") ? qrCodeText.split("accountNo=")[1].split("&")[0] : "payos") + "-compact2.jpg?amount=" + amountInt + "&addInfo=" + description;
+        String customQrImageUrl = "https://img.vietqr.io/image/970416-"
+                + (qrCodeText != null && qrCodeText.contains("accountNo=")
+                        ? qrCodeText.split("accountNo=")[1].split("&")[0]
+                        : "payos")
+                + "-compact2.jpg?amount=" + amountInt + "&addInfo=" + description;
 
         return PaymentResponseDTO.builder()
                 .invoiceId(invoice.getId())
@@ -186,7 +195,9 @@ public class PayOsServiceImpl implements PayOsService {
                 .createdAt(LocalDateTime.now(APP_ZONE).format(DATE_TIME_VIEW))
                 .expiredAt(null)
                 .bookingId(invoice.getBooking() != null ? invoice.getBooking().getId() : null)
-                .subscriptionId(invoice.getMembershipSubscription() != null ? invoice.getMembershipSubscription().getId() : null)
+                .subscriptionId(
+                        invoice.getMembershipSubscription() != null ? invoice.getMembershipSubscription().getId()
+                                : null)
                 .build();
     }
 
@@ -212,7 +223,8 @@ public class PayOsServiceImpl implements PayOsService {
 
     private String buildDescription(Invoice invoice) {
         // Sử dụng ID hóa đơn dạng số thuần túy để làm description
-        // Điều này đảm bảo chuỗi KHÔNG BAO GIỜ chứa ký tự đặc biệt hay tiếng Việt ngầm làm lỗi chữ ký
+        // Điều này đảm bảo chuỗi KHÔNG BAO GIỜ chứa ký tự đặc biệt hay tiếng Việt ngầm
+        // làm lỗi chữ ký
         String raw = "PetGo " + invoice.getId();
         return raw.length() > 25 ? raw.substring(0, 25) : raw;
     }
@@ -257,18 +269,21 @@ public class PayOsServiceImpl implements PayOsService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hóa đơn với ID: " + invoiceId));
 
         Payment latestPayment = paymentRepository.findTopByInvoiceIdOrderByCreatedAtDesc(invoiceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin thanh toán cho hóa đơn: " + invoiceId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy thông tin thanh toán cho hóa đơn: " + invoiceId));
 
         if ("PAID".equalsIgnoreCase(invoice.getStatus())) {
             return buildPaymentResponse(invoice, latestPayment);
         }
 
         try {
-            // SỬA ĐỔI: Bóc tách chính xác mã orderCode phức hợp đã lưu trong metadata của lần thanh toán gần nhất
+            // SỬA ĐỔI: Bóc tách chính xác mã orderCode phức hợp đã lưu trong metadata của
+            // lần thanh toán gần nhất
             long orderCode = extractOrderCodeFromMetadata(latestPayment.getMetadataJson(), invoice.getId());
 
             PaymentLinkData paymentLinkData = payOS.getPaymentLinkInformation(orderCode);
-            log.info("PayOS status check — invoiceId={}, orderCode={}, status={}", invoiceId, orderCode, paymentLinkData.getStatus());
+            log.info("PayOS status check — invoiceId={}, orderCode={}, status={}", invoiceId, orderCode,
+                    paymentLinkData.getStatus());
 
             if ("PAID".equalsIgnoreCase(paymentLinkData.getStatus())) {
                 processSuccessfulPayment(invoice, latestPayment);
@@ -288,15 +303,19 @@ public class PayOsServiceImpl implements PayOsService {
     public void handleWebhook(Webhook webhook) {
         try {
             WebhookData webhookData = payOS.verifyPaymentWebhookData(webhook);
-            log.info("PayOS webhook verified — orderCode={}, amount={}", webhookData.getOrderCode(), webhookData.getAmount());
+            log.info("PayOS webhook verified — orderCode={}, amount={}", webhookData.getOrderCode(),
+                    webhookData.getAmount());
 
-            // SỬA ĐỔI: Giải mã ngược từ orderCode phức hợp về invoiceId gốc (chia nguyên cho 10000)
+            // SỬA ĐỔI: Giải mã ngược từ orderCode phức hợp về invoiceId gốc (chia nguyên
+            // cho 10000)
             long compositeOrderCode = webhookData.getOrderCode();
+            walletService.handlePayOsWebhookOrderCode(compositeOrderCode);
             Long invoiceId = compositeOrderCode / 10000;
 
             Invoice invoice = invoiceRepository.findDetailedById(invoiceId).orElse(null);
             if (invoice == null) {
-                log.warn("Invoice not found for webhook orderCode: {} (decoded from {})", invoiceId, compositeOrderCode);
+                log.warn("Invoice not found for webhook orderCode: {} (decoded from {})", invoiceId,
+                        compositeOrderCode);
                 return;
             }
 
@@ -329,7 +348,8 @@ public class PayOsServiceImpl implements PayOsService {
 
         if ("BOOKING".equalsIgnoreCase(invoice.getInvoiceType()) && invoice.getBooking() != null) {
             Booking booking = invoice.getBooking();
-            if (!"PENDING_CONFIRMATION".equalsIgnoreCase(booking.getStatus()) && !"CONFIRMED".equalsIgnoreCase(booking.getStatus())) {
+            if (!"PENDING_CONFIRMATION".equalsIgnoreCase(booking.getStatus())
+                    && !"CONFIRMED".equalsIgnoreCase(booking.getStatus())) {
                 String previousStatus = booking.getStatus();
                 booking.setStatus("PENDING_CONFIRMATION");
                 bookingRepository.save(booking);
@@ -342,7 +362,8 @@ public class PayOsServiceImpl implements PayOsService {
                 history.setNote("Thanh toán thành công qua PayOS (VietQR)");
                 bookingStatusHistoryRepository.save(history);
             }
-        } else if ("MEMBERSHIP".equalsIgnoreCase(invoice.getInvoiceType()) && invoice.getMembershipSubscription() != null) {
+        } else if ("MEMBERSHIP".equalsIgnoreCase(invoice.getInvoiceType())
+                && invoice.getMembershipSubscription() != null) {
             MembershipSubscription subscription = invoice.getMembershipSubscription();
             if (!"ACTIVE".equalsIgnoreCase(subscription.getStatus())) {
                 MembershipPlan plan = subscription.getMembershipPlan();
@@ -369,7 +390,8 @@ public class PayOsServiceImpl implements PayOsService {
                 booking.setStatus("PENDING_PAYMENT");
                 bookingRepository.save(booking);
             }
-        } else if ("MEMBERSHIP".equalsIgnoreCase(invoice.getInvoiceType()) && invoice.getMembershipSubscription() != null) {
+        } else if ("MEMBERSHIP".equalsIgnoreCase(invoice.getInvoiceType())
+                && invoice.getMembershipSubscription() != null) {
             MembershipSubscription subscription = invoice.getMembershipSubscription();
             if (!"ACTIVE".equalsIgnoreCase(subscription.getStatus())) {
                 subscription.setStatus("CANCELLED");
@@ -391,7 +413,8 @@ public class PayOsServiceImpl implements PayOsService {
     private PaymentResponseDTO buildPaymentResponse(Invoice invoice, Payment payment) {
         String currency = invoice.getCurrencyCode() != null ? invoice.getCurrencyCode() : "VND";
 
-        // TỐI ƯU HIỆU NĂNG: Vì Entity không có trường checkoutUrl, bóc trực tiếp từ metadataJson để tránh sinh lỗi ngầm
+        // TỐI ƯU HIỆU NĂNG: Vì Entity không có trường checkoutUrl, bóc trực tiếp từ
+        // metadataJson để tránh sinh lỗi ngầm
         String checkoutUrl = (payment != null) ? extractCheckoutUrlFromMetadata(payment.getMetadataJson()) : null;
 
         return PaymentResponseDTO.builder()
@@ -406,10 +429,14 @@ public class PayOsServiceImpl implements PayOsService {
                 .qrCodeText(null)
                 .qrImageUrl(null)
                 .paymentLinkId(payment != null ? payment.getGatewayTransactionId() : null)
-                .createdAt(payment != null && payment.getCreatedAt() != null ? payment.getCreatedAt().format(DATE_TIME_VIEW) : LocalDateTime.now(APP_ZONE).format(DATE_TIME_VIEW))
+                .createdAt(payment != null && payment.getCreatedAt() != null
+                        ? payment.getCreatedAt().format(DATE_TIME_VIEW)
+                        : LocalDateTime.now(APP_ZONE).format(DATE_TIME_VIEW))
                 .expiredAt(null)
                 .bookingId(invoice.getBooking() != null ? invoice.getBooking().getId() : null)
-                .subscriptionId(invoice.getMembershipSubscription() != null ? invoice.getMembershipSubscription().getId() : null)
+                .subscriptionId(
+                        invoice.getMembershipSubscription() != null ? invoice.getMembershipSubscription().getId()
+                                : null)
                 .build();
     }
 
@@ -426,7 +453,8 @@ public class PayOsServiceImpl implements PayOsService {
         }
     }
 
-    // HELPER: Hàm lấy ngược trường orderCode dạng số Long nằm trong chuỗi metadataJson
+    // HELPER: Hàm lấy ngược trường orderCode dạng số Long nằm trong chuỗi
+    // metadataJson
     private long extractOrderCodeFromMetadata(String metadataJson, long fallbackId) {
         if (metadataJson == null || !metadataJson.contains("orderCode")) {
             return fallbackId * 10000;
@@ -446,13 +474,15 @@ public class PayOsServiceImpl implements PayOsService {
     private String generateHmacSha256(String data, String key) {
         try {
             javax.crypto.Mac sha256HMAC = javax.crypto.Mac.getInstance("HmacSHA256");
-            javax.crypto.spec.SecretKeySpec secretKey = new javax.crypto.spec.SecretKeySpec(key.getBytes(java.nio.charset.StandardCharsets.UTF_8), "HmacSHA256");
+            javax.crypto.spec.SecretKeySpec secretKey = new javax.crypto.spec.SecretKeySpec(
+                    key.getBytes(java.nio.charset.StandardCharsets.UTF_8), "HmacSHA256");
             sha256HMAC.init(secretKey);
             byte[] hash = sha256HMAC.doFinal(data.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             StringBuilder hexString = new StringBuilder();
             for (byte b : hash) {
                 String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
+                if (hex.length() == 1)
+                    hexString.append('0');
                 hexString.append(hex);
             }
             return hexString.toString();

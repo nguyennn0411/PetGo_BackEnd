@@ -13,6 +13,7 @@ import com.example.petgo.entity.RoleType;
 import com.example.petgo.entity.User;
 import com.example.petgo.entity.UserRole;
 import com.example.petgo.entity.UserRoleId;
+import com.example.petgo.entity.Wallet;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.exception.UnauthorizedException;
@@ -20,6 +21,7 @@ import com.example.petgo.repository.RefreshTokenRepository;
 import com.example.petgo.repository.RoleRepository;
 import com.example.petgo.repository.UserRepository;
 import com.example.petgo.repository.UserRoleRepository;
+import com.example.petgo.repository.WalletRepository;
 import com.example.petgo.service.AuthService;
 import com.example.petgo.service.MailService;
 import com.example.petgo.dto.VerifyOtpRequest;
@@ -51,6 +53,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenService jwtTokenService;
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
+    private final WalletRepository walletRepository;
 
     @Override
     @Transactional
@@ -82,6 +85,9 @@ public class AuthServiceImpl implements AuthService {
         user.setOtpExpiryTime(LocalDateTime.now().plusMinutes(10));
 
         userRepository.save(user);
+        Wallet wallet = new Wallet();
+        wallet.setUser(user);
+        walletRepository.save(wallet);
 
         mailService.sendOtpEmail(user.getEmail(), otp);
 
@@ -171,11 +177,12 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthTokenBundleResponse login(AuthLoginRequest request) {
         String principal = request.userName() == null ? "" : request.userName().trim();
+        String password = normalizePassword(request.password());
         User user = findUserForLogin(principal)
                 .filter(candidate -> candidate.getDeletedAt() == null)
                 .orElseThrow(() -> new UnauthorizedException("Thông tin đăng nhập không chính xác."));
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new UnauthorizedException("Thông tin đăng nhập không chính xác.");
         }
 
@@ -346,6 +353,13 @@ public class AuthServiceImpl implements AuthService {
 
     private String normalizePhone(String phone) {
         return phone == null ? null : phone.trim();
+    }
+
+    private String normalizePassword(String password) {
+        if (password == null) {
+            return null;
+        }
+        return password.strip();
     }
 
     private String defaultAvatarUrl() {

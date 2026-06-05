@@ -56,7 +56,7 @@ public class RegistrationController {
                 result.put("url", imageUrl);
 
                 return ResponseEntity.ok(response(
-                                "Upload ảnh địa điểm shop thành công.",
+                                "Upload ảnh địa điểm nhà cung cấp thành công.",
                                 result));
         }
 

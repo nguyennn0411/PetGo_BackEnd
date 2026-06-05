@@ -24,7 +24,7 @@ import java.util.Map;
 public class RegistrationNotificationService {
 
     private static final String ADMIN_PARTNER_REVIEW_URL = "/admin/partners";
-    private static final String PARTNER_REGISTRATION_URL = "/partner-registration/shop";
+    private static final String PARTNER_REGISTRATION_URL = "/partner-registration/provider";
     private static final String PARTNER_DASHBOARD_URL = "/partner/dashboard";
 
     private final NotificationRepository notificationRepository;
@@ -71,7 +71,8 @@ public class RegistrationNotificationService {
                 application.getReviewer(),
                 List.of(application.getUser()),
                 "Hồ sơ đã được duyệt",
-                String.format("Hồ sơ của bạn đã được duyệt. Bạn có thể vào Partner Dashboard để vận hành shop.%s",
+                String.format(
+                        "Hồ sơ của bạn đã được duyệt. Bạn có thể vào Partner Dashboard để vận hành nhà cung cấp.%s",
                         note == null ? "" : "\n\nGhi chú admin: " + truncate(note, 700)),
                 NotificationPriority.HIGH,
                 PARTNER_DASHBOARD_URL);
