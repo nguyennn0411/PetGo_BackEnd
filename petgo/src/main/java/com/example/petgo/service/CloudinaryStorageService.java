@@ -9,4 +9,6 @@ public interface CloudinaryStorageService {
     String uploadPartnerLocationImage(MultipartFile file);
 
     String uploadPartnerServiceImage(MultipartFile file);
+
+    String uploadChatImage(MultipartFile file);
 }

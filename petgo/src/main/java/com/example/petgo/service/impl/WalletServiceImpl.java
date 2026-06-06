@@ -42,6 +42,7 @@ public class WalletServiceImpl implements WalletService {
     private static final DateTimeFormatter DATE_TIME_VIEW = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final BigDecimal MIN_TOP_UP_AMOUNT = new BigDecimal("50000.00");
     private static final BigDecimal MIN_WITHDRAW_AMOUNT = new BigDecimal("50000.00");
+    private static final long TOP_UP_PAYMENT_TTL_MINUTES = 5;
     private static final String WALLET_ACTIVE = "ACTIVE";
     private static final String WALLET_INBOUND_LOCKED = "INBOUND_LOCKED";
     private static final String WALLET_OUTBOUND_LOCKED = "OUTBOUND_LOCKED";
@@ -101,13 +102,22 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public WalletTransactionResponse verifyTopUp(Long transactionId) {
+    public WalletTransactionResponse verifyTopUp(HttpServletRequest request, Long transactionId) {
+        AuthenticatedUser current = authService.requireAccessUser(request);
         WalletTransaction tx = transactionRepository.findDetailedById(transactionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giao dịch ví."));
+        ensureOwnerOrAdmin(current.userId(), tx);
         if (!"TOP_UP".equalsIgnoreCase(tx.getType()))
             throw new BadRequestException("Giao dịch không phải nạp ví.");
         if (!"PAYMENT_PENDING".equalsIgnoreCase(tx.getStatus()))
             return mapTransaction(tx);
+        if (isTopUpPaymentExpired(tx)) {
+            tx.setStatus("FAILED");
+            tx.setReviewNote(
+                    "Mã thanh toán nạp ví đã hết hạn sau 5 phút. Vui lòng tạo yêu cầu nạp mới hoặc liên hệ admin nếu đã chuyển tiền.");
+            transactionRepository.save(tx);
+            return mapTransaction(tx);
+        }
         try {
             PaymentLinkData data = payOS.getPaymentLinkInformation(extractOrderCode(tx.getGatewayTransactionId()));
             if ("PAID".equalsIgnoreCase(data.getStatus()))
@@ -168,6 +178,10 @@ public class WalletServiceImpl implements WalletService {
         if (wallet.getBalance().compareTo(amount) < 0)
             throw new BadRequestException("Số dư ví không đủ để tạo yêu cầu rút tiền.");
 
+        BigDecimal before = wallet.getBalance();
+        wallet.setBalance(before.subtract(amount));
+        walletRepository.save(wallet);
+
         WalletTransaction tx = new WalletTransaction();
         tx.setTransactionCode(generateCode("WITHDRAW"));
         tx.setWallet(wallet);
@@ -175,6 +189,8 @@ public class WalletServiceImpl implements WalletService {
         tx.setType("WITHDRAW");
         tx.setStatus("PENDING_ADMIN_APPROVAL");
         tx.setAmount(amount);
+        tx.setBalanceBefore(before);
+        tx.setBalanceAfter(wallet.getBalance());
         tx.setBankName(withdrawRequest.bankName().trim());
         tx.setBankAccountNumber(withdrawRequest.bankAccountNumber().trim());
         tx.setBankAccountHolder(withdrawRequest.bankAccountHolder().trim());
@@ -226,6 +242,13 @@ public class WalletServiceImpl implements WalletService {
         WalletTransaction tx = transactionRepository.findByGatewayTransactionId(String.valueOf(orderCode)).orElse(null);
         if (tx == null || !"TOP_UP".equalsIgnoreCase(tx.getType()))
             return;
+        if (isTopUpPaymentExpired(tx)) {
+            tx.setStatus("FAILED");
+            tx.setReviewNote(
+                    "Webhook PayOS đến sau khi mã nạp ví hết hạn 5 phút. User cần liên hệ admin nếu đã chuyển tiền.");
+            transactionRepository.save(tx);
+            return;
+        }
         if ("PAYMENT_PENDING".equalsIgnoreCase(tx.getStatus())) {
             markTopUpPaid(tx);
             transactionRepository.save(tx);
@@ -253,7 +276,7 @@ public class WalletServiceImpl implements WalletService {
         if ("APPROVE".equals(action))
             approveTransaction(tx);
         else if ("REJECT".equals(action))
-            tx.setStatus("REJECTED");
+            rejectTransaction(tx);
         else
             throw new BadRequestException("action phải là APPROVE hoặc REJECT.");
         tx.setReviewedByAdmin(admin);
@@ -277,16 +300,29 @@ public class WalletServiceImpl implements WalletService {
             ensureCanReceive(wallet);
             wallet.setBalance(before.add(tx.getAmount()));
         } else if ("WITHDRAW".equalsIgnoreCase(tx.getType())) {
-            ensureCanSend(wallet);
-            if (before.compareTo(tx.getAmount()) < 0)
-                throw new BadRequestException("Số dư ví không đủ để duyệt rút tiền.");
-            wallet.setBalance(before.subtract(tx.getAmount()));
+            tx.setBalanceBefore(tx.getBalanceBefore() != null ? tx.getBalanceBefore() : before.add(tx.getAmount()));
+            tx.setBalanceAfter(tx.getBalanceAfter() != null ? tx.getBalanceAfter() : before);
+            tx.setStatus("COMPLETED");
+            return;
         } else
             throw new BadRequestException("Loại giao dịch không hỗ trợ duyệt thủ công.");
         walletRepository.save(wallet);
         tx.setBalanceBefore(before);
         tx.setBalanceAfter(wallet.getBalance());
         tx.setStatus("COMPLETED");
+    }
+
+    private void rejectTransaction(WalletTransaction tx) {
+        if ("WITHDRAW".equalsIgnoreCase(tx.getType())) {
+            Wallet wallet = walletRepository.findWithLockByUserId(tx.getUser().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Ví chưa được khởi tạo."));
+            BigDecimal before = wallet.getBalance();
+            wallet.setBalance(before.add(tx.getAmount()));
+            walletRepository.save(wallet);
+            tx.setBalanceBefore(before);
+            tx.setBalanceAfter(wallet.getBalance());
+        }
+        tx.setStatus("REJECTED");
     }
 
     private void markTopUpPaid(WalletTransaction tx) {
@@ -304,6 +340,12 @@ public class WalletServiceImpl implements WalletService {
                 .map(WalletSetting::getSettingValue)
                 .map(Boolean::parseBoolean)
                 .orElse(false);
+    }
+
+    private boolean isTopUpPaymentExpired(WalletTransaction tx) {
+        if (tx.getCreatedAt() == null)
+            return false;
+        return LocalDateTime.now(APP_ZONE).isAfter(tx.getCreatedAt().plusMinutes(TOP_UP_PAYMENT_TTL_MINUTES));
     }
 
     private Wallet getOrCreateWallet(Long userId) {
@@ -326,6 +368,8 @@ public class WalletServiceImpl implements WalletService {
         if (request.recipientUserId() != null)
             return userRepository.findById(request.recipientUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người nhận."));
+        if (request.recipientAccount() == null || request.recipientAccount().isBlank())
+            throw new BadRequestException("Vui lòng nhập mã tài khoản/email/số điện thoại người nhận.");
         String account = request.recipientAccount().trim();
         if (account.contains("@"))
             return userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(account)
@@ -337,13 +381,25 @@ public class WalletServiceImpl implements WalletService {
 
     private User requireAdmin(HttpServletRequest request) {
         AuthenticatedUser current = authService.requireAccessUser(request);
-        boolean isAdmin = userRoleRepository.findByUser_Id(current.userId()).stream()
-                .anyMatch(ur -> ur.getRole() != null && ur.getRole().getCode() != null
-                        && "ADMIN".equalsIgnoreCase(ur.getRole().getCode().getCode()));
-        if (!isAdmin)
+        if (!isAdmin(current.userId()))
             throw new UnauthorizedException("Bạn không có quyền admin để thực hiện thao tác này.");
         return userRepository.findById(current.userId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy admin."));
+    }
+
+    private void ensureOwnerOrAdmin(Long currentUserId, WalletTransaction tx) {
+        if (tx.getUser() != null && currentUserId.equals(tx.getUser().getId()))
+            return;
+        if (isAdmin(currentUserId))
+            return;
+        throw new UnauthorizedException("Bạn không có quyền đồng bộ giao dịch ví này.");
+    }
+
+    private boolean isAdmin(Long userId) {
+        boolean isAdmin = userRoleRepository.findByUser_Id(userId).stream()
+                .anyMatch(ur -> ur.getRole() != null && ur.getRole().getCode() != null
+                        && "ADMIN".equalsIgnoreCase(ur.getRole().getCode().getCode()));
+        return isAdmin;
     }
 
     private WalletTransaction completedTx(Wallet wallet, User user, User counterparty, String type, BigDecimal amount,
