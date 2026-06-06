@@ -398,7 +398,7 @@ public class WalletServiceImpl implements WalletService {
     private boolean isAdmin(Long userId) {
         boolean isAdmin = userRoleRepository.findByUser_Id(userId).stream()
                 .anyMatch(ur -> ur.getRole() != null && ur.getRole().getCode() != null
-                        && "ADMIN".equalsIgnoreCase(ur.getRole().getCode().getCode()));
+                        && "ADMIN".equalsIgnoreCase(ur.getRole().getCode()));
         return isAdmin;
     }
 
