@@ -4,14 +4,11 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Entity
 @Table(name = "service_categories")
 @Getter
 @Setter
-public class ServiceCategory {
+public class ServiceCategory extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,15 +18,20 @@ public class ServiceCategory {
     @JoinColumn(name = "parent_id")
     private ServiceCategory parent;
 
-    @OneToMany(mappedBy = "parent")
-    @OrderBy("name ASC, id ASC")
-    private List<ServiceCategory> children = new ArrayList<>();
-
     @Column(nullable = false, length = 120)
     private String name;
 
+    @Column(nullable = false, length = 120)
+    private String slug;
+
+    @Column(name = "icon_key", length = 80)
+    private String iconKey;
+
     @Column(length = 255)
     private String description;
+
+    @Column(name = "sort_order", nullable = false)
+    private Integer sortOrder;
 
     @Column(name = "is_active", nullable = false)
     private Boolean active;

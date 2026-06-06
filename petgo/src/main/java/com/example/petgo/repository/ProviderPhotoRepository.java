@@ -9,14 +9,12 @@ import java.util.List;
 
 public interface ProviderPhotoRepository extends JpaRepository<ProviderPhoto, Long> {
 
-  @Query("""
-      select pp
-      from ProviderPhoto pp
-      where pp.provider.id = :providerId
-        and pp.mediaType = 'IMAGE'
-      order by pp.primary desc, pp.sortOrder asc, pp.id asc
-      """)
-  List<ProviderPhoto> findImagesByProviderId(@Param("providerId") Long providerId);
-
-  void deleteByProvider_Id(Long providerId);
+    @Query("""
+            select pp
+            from ProviderPhoto pp
+            where pp.provider.id = :providerId
+              and pp.mediaType = 'IMAGE'
+            order by pp.primary desc, pp.sortOrder asc, pp.id asc
+            """)
+    List<ProviderPhoto> findImagesByProviderId(@Param("providerId") Long providerId);
 }

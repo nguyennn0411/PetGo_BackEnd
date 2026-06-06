@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 spring:
   servlet:
@@ -8,25 +8,26 @@ spring:
       max-request-size: 6MB
 
   datasource:
-    url: jdbc:mysql://localhost:3306/petgo_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
-    username: root
-    password: root
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: update
     open-in-view: false
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
-    show-sql: false
 
   mail:
     host: smtp.gmail.com
     port: 587
-    username: nvna2705@gmail.com
-    password: ylrr ckeb pbky qspg
-
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -40,6 +41,7 @@ app:
     nearby-limit: 6
     review-limit: 6
     membership-limit: 3
+
   providers:
     slot-lookahead-days: 7
     card-slot-limit: 3
@@ -55,26 +57,29 @@ app:
   booking-management:
     reschedule-lookahead-days: 14
 
-
   auth:
     access-token-expiration-minutes: 120
     refresh-token-expiration-days: 30
     issuer: petgo-backend
-    jwt-secret: change-this-secret-key-change-this-secret-key-2026
+    jwt-secret: ${JWT_SECRET}
 
   upload:
     root-dir: uploads
     pet-avatar-dir: uploads/pets
     pet-avatar-public-path: /uploads/pets
 
-payos:
-  client-id: e2918732-3fa1-4d7e-8be9-a4e3b42eb6a4
-  api-key: 556763fe-64ba-4b75-aa80-904aee2b396e
-  checksum-key: e5607adc68354292c0e7e4bd79ea9e9e1c29c8fb4160def81921582743861d21
-  return-url: ${PAYOS_RETURN_URL:http://localhost:5173/payment/success}
-  cancel-url: ${PAYOS_CANCEL_URL:http://localhost:5173/payment/cancel}
+  payos:
+    client-id: ${PAYOS_CLIENT_ID}
+    api-key: ${PAYOS_API_KEY}
+    checksum-key: ${PAYOS_CHECKSUM_KEY}
+    return-url: ${PAYOS_RETURN_URL:https://petgo.website/payment/success}
+    cancel-url: ${PAYOS_CANCEL_URL:https://petgo.website/payment/cancel}
 
-cloudinary:
-  cloud-name: dxaok6qzg
-  api-key: 754418163343834
-  api-secret: QmNTv-DNsMrC6D6NKmXVse_4i04
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME}
+    api-key: ${CLOUDINARY_API_KEY}
+    api-secret: ${CLOUDINARY_API_SECRET}
+
+  gemini:
+    api-key: ${GEMINI_API_KEY}
+    model: gemini-2.5-flash

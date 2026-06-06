@@ -2,7 +2,6 @@ package com.example.petgo.service.impl;
 
 import com.example.petgo.dto.UserResponse;
 import com.example.petgo.dto.UserStatusRequest;
-import com.example.petgo.entity.RoleType;
 import com.example.petgo.entity.User;
 import com.example.petgo.repository.UserRepository;
 import com.example.petgo.repository.UserRoleRepository;
@@ -10,9 +9,10 @@ import com.example.petgo.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.time.format.DateTimeFormatter;
+import java.util.stream.Collectors;
+import java.util.List;
 import java.util.List;
 import org.springframework.transaction.annotation.Transactional;
-
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -33,11 +33,10 @@ public class UserServiceImpl implements UserService {
 
             // Lấy roles từ bảng trung gian
             List<String> roles = userRoleRepository.findByUser_Id(user.getId()).stream()
-                    .map(ur -> ur.getRole().getCode().getCode()) // Bây giờ Session vẫn mở nên lấy được code ngon lành
+                    .map(ur -> ur.getRole().getCode()) // Bây giờ Session vẫn mở nên lấy được code ngon lành
                     .toList();
 
-            if (roles.isEmpty())
-                roles = List.of(RoleType.USER.getCode());
+            if (roles.isEmpty()) roles = List.of("CUSTOMER");
 
             return UserResponse.builder()
                     .id(user.getId())
@@ -59,7 +58,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(request.userId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         boolean isAdmin = userRoleRepository.findByUser_Id(user.getId()).stream()
-                .anyMatch(ur -> RoleType.ADMIN.equals(ur.getRole().getCode()));
+                .anyMatch(ur -> "ADMIN".equalsIgnoreCase(ur.getRole().getCode()));
         if (isAdmin) {
             throw new RuntimeException("Không được phép thay đổi trạng thái tài khoản ADMIN.");
         }

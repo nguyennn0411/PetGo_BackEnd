@@ -29,19 +29,4 @@ public class MailServiceImpl implements MailService {
             // throw new RuntimeException("Không thể gửi mail xác nhận.");
         }
     }
-
-    @Override
-    public void sendPasswordResetOtpEmail(String to, String otp) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
-        message.setSubject("Mã OTP đặt lại mật khẩu PetGo");
-        message.setText("Chào bạn,\n\nMã OTP đặt lại mật khẩu PetGo của bạn là: " + otp
-                + "\n\nMã này sẽ hết hạn sau 10 phút. Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.\n\nCảm ơn bạn đã sử dụng PetGo!");
-
-        try {
-            mailSender.send(message);
-        } catch (Exception e) {
-            log.error("Lỗi khi gửi mail đặt lại mật khẩu tới {}: {}", to, e.getMessage());
-        }
-    }
 }

@@ -6,11 +6,11 @@ import java.util.List;
 
 @Builder
 public record HomePageResponse(
-                List<HomeSliderResponse> sliders,
-                List<HomeCategoryResponse> categories,
-                List<HomeProviderResponse> nearbyProviders,
-                List<HomeProviderResponse> featuredProviders,
-                List<HomeMembershipPlanResponse> membershipPlans,
-                List<HomeReviewResponse> reviews,
-                HomeStatsResponse stats) {
+        List<HomeCategoryResponse> categories,
+        List<HomeProviderResponse> nearbyProviders,
+        List<HomeProviderResponse> featuredProviders,
+        List<HomeMembershipPlanResponse> membershipPlans,
+        List<HomeReviewResponse> reviews,
+        HomeStatsResponse stats
+) {
 }
