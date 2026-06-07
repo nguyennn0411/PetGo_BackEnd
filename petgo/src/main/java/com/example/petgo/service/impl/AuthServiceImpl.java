@@ -55,11 +55,44 @@ public class AuthServiceImpl implements AuthService {
         String normalizedEmail = normalizeEmail(request.email());
         String normalizedPhone = normalizePhone(request.phoneNumber());
 
-        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
-            throw new BadRequestException("Email đã tồn tại.");
+        Optional<User> existingUserOpt = userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(normalizedEmail);
+        Optional<User> existingPhoneOpt = (normalizedPhone != null && !normalizedPhone.isBlank())
+                ? userRepository.findByPhoneNumberAndDeletedAtIsNull(normalizedPhone)
+                : Optional.empty();
+
+        if (existingUserOpt.isPresent()) {
+            User u = existingUserOpt.get();
+            if (u.getEmailVerifiedAt() == null) {
+                if (u.getOtpExpiryTime() == null || u.getOtpExpiryTime().isBefore(LocalDateTime.now())) {
+                    List<UserRole> userRoles = userRoleRepository.findByUser_Id(u.getId());
+                    userRoleRepository.deleteAll(userRoles);
+                    userRepository.delete(u);
+                    userRepository.flush();
+                } else {
+                    throw new BadRequestException("Email đã đăng ký và đang chờ xác thực OTP.");
+                }
+            } else {
+                throw new BadRequestException("Email đã tồn tại.");
+            }
         }
-        if (normalizedPhone != null && !normalizedPhone.isBlank() && userRepository.existsByPhoneNumber(normalizedPhone)) {
-            throw new BadRequestException("Số điện thoại đã tồn tại.");
+
+        if (existingPhoneOpt.isPresent()) {
+            User u = existingPhoneOpt.get();
+            boolean alreadyDeleted = existingUserOpt.isPresent() && existingUserOpt.get().getId().equals(u.getId());
+            if (!alreadyDeleted) {
+                if (u.getEmailVerifiedAt() == null) {
+                    if (u.getOtpExpiryTime() == null || u.getOtpExpiryTime().isBefore(LocalDateTime.now())) {
+                        List<UserRole> userRoles = userRoleRepository.findByUser_Id(u.getId());
+                        userRoleRepository.deleteAll(userRoles);
+                        userRepository.delete(u);
+                        userRepository.flush();
+                    } else {
+                        throw new BadRequestException("Số điện thoại đã đăng ký và đang chờ xác thực OTP.");
+                    }
+                } else {
+                    throw new BadRequestException("Số điện thoại đã tồn tại.");
+                }
+            }
         }
 
         User user = new User();
@@ -136,7 +169,14 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (user.getEmailVerifiedAt() == null) {
-            throw new UnauthorizedException("Tài khoản chưa được xác thực email.");
+            if (user.getOtpExpiryTime() != null && user.getOtpExpiryTime().isAfter(LocalDateTime.now())) {
+                throw new UnauthorizedException("Tài khoản chưa xác thực OTP.");
+            } else {
+                List<UserRole> userRoles = userRoleRepository.findByUser_Id(user.getId());
+                userRoleRepository.deleteAll(userRoles);
+                userRepository.delete(user);
+                throw new UnauthorizedException("Mã OTP đã hết hạn. Tài khoản đã bị xóa, vui lòng đăng ký lại từ đầu.");
+            }
         }
 
         user.setLastLoginAt(LocalDateTime.now());
