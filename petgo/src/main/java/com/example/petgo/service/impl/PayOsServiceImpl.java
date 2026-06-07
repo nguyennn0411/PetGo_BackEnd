@@ -8,6 +8,8 @@ import com.example.petgo.entity.Invoice;
 import com.example.petgo.entity.Payment;
 import com.example.petgo.entity.MembershipSubscription;
 import com.example.petgo.entity.MembershipPlan;
+import com.example.petgo.entity.ShopOrder;
+import com.example.petgo.entity.ShopOrderStatusHistory;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.repository.BookingRepository;
@@ -15,6 +17,8 @@ import com.example.petgo.repository.BookingStatusHistoryRepository;
 import com.example.petgo.repository.InvoiceRepository;
 import com.example.petgo.repository.PaymentRepository;
 import com.example.petgo.repository.MembershipSubscriptionRepository;
+import com.example.petgo.repository.ShopOrderRepository;
+import com.example.petgo.repository.ShopOrderStatusHistoryRepository;
 import com.example.petgo.service.PayOsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +53,8 @@ public class PayOsServiceImpl implements PayOsService {
     private final BookingRepository bookingRepository;
     private final BookingStatusHistoryRepository bookingStatusHistoryRepository;
     private final MembershipSubscriptionRepository membershipSubscriptionRepository;
+    private final ShopOrderRepository shopOrderRepository;
+    private final ShopOrderStatusHistoryRepository shopOrderStatusHistoryRepository;
 
     @Override
     @Transactional
@@ -71,8 +77,8 @@ public class PayOsServiceImpl implements PayOsService {
         int amountInt = totalAmount.setScale(0, java.math.RoundingMode.HALF_UP).intValue();
         String description = buildDescription(invoice);
 
-        String returnUrl = resolveUrl(request.returnUrl(), "http://localhost:3000/payment/success");
-        String cancelUrl = resolveUrl(request.cancelUrl(), "http://localhost:3000/payment/cancel");
+        String returnUrl = resolveUrl(request.returnUrl(), "http://localhost:5173/payment/success");
+        String cancelUrl = resolveUrl(request.cancelUrl(), "http://localhost:5173/payment/cancel");
 
         int randomSuffix = 1000 + new java.util.Random().nextInt(9000);
         long orderCodeId = (invoice.getId() * 10000) + randomSuffix;
@@ -352,6 +358,19 @@ public class PayOsServiceImpl implements PayOsService {
                 subscription.setNextBillingAt(subscription.getExpiresAt());
                 membershipSubscriptionRepository.save(subscription);
             }
+        } else if ("SHOP_ORDER".equalsIgnoreCase(invoice.getInvoiceType()) && invoice.getShopOrder() != null) {
+            ShopOrder order = invoice.getShopOrder();
+            if (!"PAID".equalsIgnoreCase(order.getStatus())) {
+                order.setStatus("PAID");
+                shopOrderRepository.save(order);
+
+                ShopOrderStatusHistory history = new ShopOrderStatusHistory();
+                history.setShopOrder(order);
+                history.setFromStatus("PENDING_PAYMENT");
+                history.setToStatus("PAID");
+                history.setNote("Thanh toán thành công qua PayOS (VietQR)");
+                shopOrderStatusHistoryRepository.save(history);
+            }
         }
     }
 
@@ -375,6 +394,19 @@ public class PayOsServiceImpl implements PayOsService {
                 subscription.setStatus("CANCELLED");
                 subscription.setCancelReason("Hủy thanh toán PayOS");
                 membershipSubscriptionRepository.save(subscription);
+            }
+        } else if ("SHOP_ORDER".equalsIgnoreCase(invoice.getInvoiceType()) && invoice.getShopOrder() != null) {
+            ShopOrder order = invoice.getShopOrder();
+            if (!"CANCELLED".equalsIgnoreCase(order.getStatus())) {
+                order.setStatus("CANCELLED");
+                shopOrderRepository.save(order);
+
+                ShopOrderStatusHistory history = new ShopOrderStatusHistory();
+                history.setShopOrder(order);
+                history.setFromStatus("PENDING_PAYMENT");
+                history.setToStatus("CANCELLED");
+                history.setNote("Hủy thanh toán PayOS");
+                shopOrderStatusHistoryRepository.save(history);
             }
         }
     }

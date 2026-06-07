@@ -1,5 +1,7 @@
 package com.example.petgo.service;
 
+import com.example.petgo.dto.PaymentRequestDTO;
+import com.example.petgo.dto.PaymentResponseDTO;
 import com.example.petgo.dto.shop.ShopDtos.*;
 import com.example.petgo.entity.*;
 import com.example.petgo.exception.BadRequestException;
@@ -31,6 +33,7 @@ public class ShopStoreService {
     private final InvoiceRepository invoiceRepository;
     private final InvoiceItemRepository invoiceItemRepository;
     private final PaymentRepository paymentRepository;
+    private final PayOsService payOsService;
 
     @Transactional(readOnly = true)
     public List<CategoryResponse> getCategories() {
@@ -166,7 +169,24 @@ public class ShopStoreService {
         ShopOrder savedOrder = shopOrderRepository.save(order);
         createInvoiceAndPayment(user, savedOrder);
         cartItemRepository.deleteByUser_Id(user.getId());
-        return toOrderResponse(savedOrder);
+
+        String checkoutUrl = null;
+        if ("PAYOS".equals(savedOrder.getPaymentMethod())) {
+            Invoice invoice = invoiceRepository.findByShopOrderId(savedOrder.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hóa đơn cho đơn hàng"));
+            PaymentRequestDTO payosRequest = new PaymentRequestDTO(
+                    invoice.getId(),
+                    null,
+                    null,
+                    "PAYOS",
+                    "http://localhost:5173/payment/success",
+                    "http://localhost:5173/payment/cancel"
+            );
+            PaymentResponseDTO payosResponse = payOsService.createPayment(payosRequest);
+            checkoutUrl = payosResponse.checkoutUrl();
+        }
+
+        return toOrderResponse(savedOrder, checkoutUrl);
     }
 
     @Transactional(readOnly = true)
@@ -274,15 +294,17 @@ public class ShopStoreService {
             invoiceItemRepository.save(shipping);
         }
 
-        Payment payment = new Payment();
-        payment.setPaymentCode("PAY-SHOP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT));
-        payment.setInvoice(savedInvoice);
-        payment.setPayerUser(user);
-        payment.setAmount(order.getTotalAmount());
-        payment.setCurrencyCode("VND");
-        payment.setPaymentMethod(order.getPaymentMethod());
-        payment.setStatus("COD".equals(order.getPaymentMethod()) ? "PENDING" : "PENDING");
-        paymentRepository.save(payment);
+        if (!"PAYOS".equals(order.getPaymentMethod())) {
+            Payment payment = new Payment();
+            payment.setPaymentCode("PAY-SHOP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT));
+            payment.setInvoice(savedInvoice);
+            payment.setPayerUser(user);
+            payment.setAmount(order.getTotalAmount());
+            payment.setCurrencyCode("VND");
+            payment.setPaymentMethod(order.getPaymentMethod());
+            payment.setStatus("COD".equals(order.getPaymentMethod()) ? "PENDING" : "PENDING");
+            paymentRepository.save(payment);
+        }
     }
 
     private void applyProductRequest(Product product, ProductUpsertRequest request) {
@@ -339,7 +361,11 @@ public class ShopStoreService {
     }
 
     private OrderResponse toOrderResponse(ShopOrder order) {
+        return toOrderResponse(order, null);
+    }
+
+    private OrderResponse toOrderResponse(ShopOrder order, String checkoutUrl) {
         List<OrderItemResponse> items = order.getItems().stream().map(i -> new OrderItemResponse(i.getId(), i.getProduct() == null ? null : i.getProduct().getId(), i.getProductNameSnapshot(), i.getProductSkuSnapshot(), i.getProductImageSnapshot(), i.getQuantity(), i.getUnitPrice(), i.getLineTotal())).toList();
-        return new OrderResponse(order.getId(), order.getOrderCode(), order.getCustomerUser() == null ? null : order.getCustomerUser().getId(), order.getReceiverName(), order.getReceiverPhone(), order.getReceiverEmail(), order.getShippingAddress(), order.getWard(), order.getDistrict(), order.getCity(), order.getProvince(), order.getStatus(), order.getPaymentMethod(), order.getSubtotalAmount(), order.getShippingFeeAmount(), order.getDiscountAmount(), order.getTaxAmount(), order.getTotalAmount(), order.getCurrencyCode(), order.getCreatedAt(), items);
+        return new OrderResponse(order.getId(), order.getOrderCode(), order.getCustomerUser() == null ? null : order.getCustomerUser().getId(), order.getReceiverName(), order.getReceiverPhone(), order.getReceiverEmail(), order.getShippingAddress(), order.getWard(), order.getDistrict(), order.getCity(), order.getProvince(), order.getStatus(), order.getPaymentMethod(), order.getSubtotalAmount(), order.getShippingFeeAmount(), order.getDiscountAmount(), order.getTaxAmount(), order.getTotalAmount(), order.getCurrencyCode(), order.getCreatedAt(), items, checkoutUrl);
     }
 }
