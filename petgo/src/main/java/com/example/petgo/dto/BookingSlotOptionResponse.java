@@ -12,6 +12,8 @@ public record BookingSlotOptionResponse(
         String endTime,
         String label,
         Integer capacityRemaining,
-        Boolean selected
+        Boolean selected,
+        String status,
+        String reason
 ) {
 }

@@ -37,6 +37,26 @@ public class Review extends BaseEntity {
     @Column(nullable = false, length = 20)
     private String status;
 
+    @Column(name = "provider_reply", columnDefinition = "TEXT")
+    private String providerReply;
+
+    @Column(name = "provider_replied_at")
+    private LocalDateTime providerRepliedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "provider_replied_by")
+    private User providerRepliedBy;
+
+    @Column(name = "admin_note", columnDefinition = "TEXT")
+    private String adminNote;
+
+    @Column(name = "admin_reviewed_at")
+    private LocalDateTime adminReviewedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "admin_reviewed_by")
+    private User adminReviewedBy;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 }

@@ -1,15 +1,18 @@
 package com.example.petgo.service.impl;
 
 import com.example.petgo.dto.*;
+import com.example.petgo.entity.CatalogService;
 import com.example.petgo.entity.ProviderAvailabilitySlot;
 import com.example.petgo.entity.ProviderBusinessHour;
 import com.example.petgo.entity.ProviderProfile;
 import com.example.petgo.entity.ProviderService;
+import com.example.petgo.entity.ServiceCategory;
 import com.example.petgo.repository.*;
 import com.example.petgo.service.ProviderDiscoveryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,6 +43,7 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
     private int cardSlotLimit;
 
     @Override
+    @Transactional(readOnly = true)
     public ProviderListResponse findProviders(ProviderSearchCriteria criteria) {
         ProviderSearchCriteria safeCriteria = normalizeCriteria(criteria);
         List<ProviderProfile> providers = providerProfileRepository.findActiveProviders();
@@ -48,19 +52,25 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
         }
 
         List<Long> providerIds = providers.stream().map(ProviderProfile::getId).toList();
-        Map<Long, List<ProviderService>> providerServicesMap = providerServiceRepository.findActiveByProviderIds(providerIds).stream()
-                .collect(Collectors.groupingBy(ps -> ps.getProvider().getId(), LinkedHashMap::new, Collectors.toList()));
+        Map<Long, List<ProviderService>> providerServicesMap = providerServiceRepository
+                .findActiveByProviderIds(providerIds).stream()
+                .collect(
+                        Collectors.groupingBy(ps -> ps.getProvider().getId(), LinkedHashMap::new, Collectors.toList()));
 
         LocalDate today = LocalDate.now(APP_ZONE);
         LocalDate toDate = today.plusDays(Math.max(slotLookaheadDays, 1));
         Map<Long, List<ProviderAvailabilitySlot>> providerSlotsMap = providerAvailabilitySlotRepository
                 .findUpcomingAvailableSlots(providerIds, today, toDate).stream()
-                .collect(Collectors.groupingBy(slot -> slot.getProvider().getId(), LinkedHashMap::new, Collectors.toList()));
+                .collect(Collectors.groupingBy(slot -> slot.getProvider().getId(), LinkedHashMap::new,
+                        Collectors.toList()));
 
-        Map<Long, List<ProviderBusinessHour>> providerHoursMap = providerBusinessHourRepository.findByProvider_IdIn(providerIds).stream()
-                .collect(Collectors.groupingBy(hour -> hour.getProvider().getId(), LinkedHashMap::new, Collectors.toList()));
+        Map<Long, List<ProviderBusinessHour>> providerHoursMap = providerBusinessHourRepository
+                .findByProvider_IdIn(providerIds).stream()
+                .collect(Collectors.groupingBy(hour -> hour.getProvider().getId(), LinkedHashMap::new,
+                        Collectors.toList()));
 
         List<ProviderView> filteredViews = providers.stream()
+                .filter(provider -> providerServicesMap.containsKey(provider.getId()))
                 .map(provider -> toProviderView(provider,
                         providerServicesMap.getOrDefault(provider.getId(), List.of()),
                         providerSlotsMap.getOrDefault(provider.getId(), List.of()),
@@ -89,15 +99,10 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProviderFilterOptionsResponse getFilterOptions() {
-        List<ProviderCategoryOptionResponse> categories = serviceCategoryRepository.findByActiveTrueOrderBySortOrderAscIdAsc()
-                .stream()
-                .map(category -> ProviderCategoryOptionResponse.builder()
-                        .id(category.getId())
-                        .name(category.getName())
-                        .slug(category.getSlug())
-                        .build())
-                .toList();
+        List<ServiceCategory> allCategories = serviceCategoryRepository.findByActiveTrueOrderByNameAscIdAsc();
+        List<ProviderCategoryOptionResponse> categories = buildProviderCategoryTree(allCategories, null);
 
         List<String> cities = providerProfileRepository.findDistinctActiveCities();
 
@@ -109,19 +114,139 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
                 .build();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProviderDetailServiceItemResponse> findActiveServices(ProviderSearchCriteria criteria) {
+        ProviderSearchCriteria safeCriteria = normalizeCriteria(criteria);
+        return providerServiceRepository.findAllActiveDetails().stream()
+                .filter(service -> matchesServiceFilters(service, safeCriteria))
+                .sorted(buildServiceComparator(safeCriteria.sortBy()))
+                .skip((long) safeCriteria.page() * safeCriteria.size())
+                .limit(safeCriteria.size())
+                .map(this::mapProviderServiceItem)
+                .toList();
+    }
+
+    private boolean matchesServiceFilters(ProviderService service, ProviderSearchCriteria criteria) {
+        ProviderProfile provider = service.getProvider();
+        ServiceCategory category = service.getService() != null ? service.getService().getCategory() : null;
+        List<Long> categoryIds = collectCategoryIds(category);
+        if (criteria.query() != null
+                && !buildServiceSearchableText(service, provider, category).contains(criteria.query())) {
+            return false;
+        }
+        if (criteria.city() != null) {
+            String cityValue = Optional.ofNullable(provider.getCity()).orElse("").toLowerCase(Locale.ROOT);
+            String provinceValue = Optional.ofNullable(provider.getProvince()).orElse("").toLowerCase(Locale.ROOT);
+            if (!cityValue.contains(criteria.city()) && !provinceValue.contains(criteria.city())) {
+                return false;
+            }
+        }
+        if (!criteria.serviceCategoryIds().isEmpty()
+                && Collections.disjoint(categoryIds, criteria.serviceCategoryIds())) {
+            return false;
+        }
+        BigDecimal price = service.getPriceAmount();
+        if (criteria.minPrice() != null && (price == null || price.compareTo(criteria.minPrice()) < 0)) {
+            return false;
+        }
+        if (criteria.maxPrice() != null && (price == null || price.compareTo(criteria.maxPrice()) > 0)) {
+            return false;
+        }
+        if (criteria.minRating() != null
+                && (provider.getAverageRating() == null
+                        || provider.getAverageRating().compareTo(criteria.minRating()) < 0)) {
+            return false;
+        }
+        if (criteria.featuredOnly() && !Boolean.TRUE.equals(provider.getFeatured())
+                && !Boolean.TRUE.equals(service.getFeatured())) {
+            return false;
+        }
+        return true;
+    }
+
+    private ProviderDetailServiceItemResponse mapProviderServiceItem(ProviderService providerService) {
+        ProviderProfile provider = providerService.getProvider();
+        CatalogService catalogService = providerService.getService();
+        ServiceCategory category = resolveServiceCategory(providerService);
+        String serviceName = firstNonBlank(providerService.getCustomName(),
+                catalogService != null ? catalogService.getName() : null,
+                "Dịch vụ");
+        String description = firstNonBlank(providerService.getShortDescription(), providerService.getDescription(),
+                catalogService != null ? catalogService.getShortDescription() : null,
+                catalogService != null ? catalogService.getDescription() : null);
+        return ProviderDetailServiceItemResponse.builder()
+                .id(providerService.getId())
+                .name(serviceName)
+                .desc(description)
+                .price(providerService.getPriceAmount())
+                .priceDisplay(formatMoney(providerService.getPriceAmount()))
+                .currencyCode(firstNonBlank(providerService.getCurrencyCode(),
+                        catalogService != null ? catalogService.getCurrencyCode() : null, "VND"))
+                .priceUnit(providerService.getPriceUnit())
+                .durationMinutes(providerService.getDurationMinutes())
+                .duration(formatDuration(providerService.getDurationMinutes()))
+                .featured(Boolean.TRUE.equals(providerService.getFeatured()))
+                .categoryId(category != null ? category.getId() : null)
+                .categoryName(category != null ? category.getName() : null)
+                .providerId(provider.getId())
+                .providerName(provider.getBusinessName())
+                .providerImage(resolveProviderImage(provider))
+                .providerAddress(buildAddress(provider))
+                .build();
+    }
+
+    private String buildServiceSearchableText(ProviderService service, ProviderProfile provider,
+            ServiceCategory category) {
+        return Stream.of(
+                service.getCustomName(),
+                service.getShortDescription(),
+                service.getDescription(),
+                service.getService() != null ? service.getService().getName() : null,
+                service.getService() != null ? service.getService().getShortDescription() : null,
+                service.getService() != null ? service.getService().getDescription() : null,
+                category != null ? category.getName() : null,
+                provider.getBusinessName(),
+                provider.getHeadline(),
+                provider.getCity(),
+                provider.getProvince(),
+                provider.getDistrict())
+                .filter(Objects::nonNull)
+                .map(value -> value.toLowerCase(Locale.ROOT))
+                .collect(Collectors.joining(" | "));
+    }
+
+    private List<ProviderCategoryOptionResponse> buildProviderCategoryTree(List<ServiceCategory> categories,
+            Long parentId) {
+        return categories.stream()
+                .filter(category -> Objects.equals(parentIdOf(category), parentId))
+                .map(category -> ProviderCategoryOptionResponse.builder()
+                        .id(category.getId())
+                        .name(category.getName())
+                        .parentId(parentIdOf(category))
+                        .description(category.getDescription())
+                        .children(buildProviderCategoryTree(categories, category.getId()))
+                        .build())
+                .toList();
+    }
+
+    private Long parentIdOf(ServiceCategory category) {
+        return category.getParent() != null ? category.getParent().getId() : null;
+    }
+
     private ProviderSearchCriteria normalizeCriteria(ProviderSearchCriteria criteria) {
         int safePage = criteria.page() == null || criteria.page() < 0 ? 0 : criteria.page();
         int safeSize = criteria.size() == null || criteria.size() <= 0 ? 12 : Math.min(criteria.size(), 50);
-        String sortBy = criteria.sortBy() == null || criteria.sortBy().isBlank() ? "FEATURED" : criteria.sortBy().trim().toUpperCase(Locale.ROOT);
+        String sortBy = criteria.sortBy() == null || criteria.sortBy().isBlank() ? "FEATURED"
+                : criteria.sortBy().trim().toUpperCase(Locale.ROOT);
         return ProviderSearchCriteria.builder()
                 .query(normalize(criteria.query()))
                 .city(normalize(criteria.city()))
-                .serviceCategorySlugs(criteria.serviceCategorySlugs() == null ? List.of() : criteria.serviceCategorySlugs().stream()
-                        .filter(Objects::nonNull)
-                        .map(value -> value.trim().toLowerCase(Locale.ROOT))
-                        .filter(value -> !value.isBlank())
-                        .distinct()
-                        .toList())
+                .serviceCategoryIds(criteria.serviceCategoryIds() == null ? List.of()
+                        : criteria.serviceCategoryIds().stream()
+                                .filter(Objects::nonNull)
+                                .distinct()
+                                .toList())
                 .minPrice(criteria.minPrice())
                 .maxPrice(criteria.maxPrice())
                 .minRating(criteria.minRating())
@@ -142,14 +267,19 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
             List<ProviderAvailabilitySlot> slots,
             List<ProviderBusinessHour> businessHours,
             Double userLat,
-            Double userLng
-    ) {
+            Double userLng) {
         BigDecimal lowestPrice = resolveLowestPrice(provider, providerServices);
         String currencyCode = resolveCurrencyCode(provider, providerServices);
-        List<String> categorySlugs = providerServices.stream()
-                .map(service -> service.getService().getCategory().getSlug())
+        List<Long> categoryIds = providerServices.stream()
+                .flatMap(service -> collectCategoryIds(resolveServiceCategory(service)).stream())
                 .filter(Objects::nonNull)
-                .map(value -> value.toLowerCase(Locale.ROOT))
+                .distinct()
+                .toList();
+        List<String> categoryNames = providerServices.stream()
+                .map(service -> resolveServiceCategory(service))
+                .filter(Objects::nonNull)
+                .map(ServiceCategory::getName)
+                .filter(Objects::nonNull)
                 .distinct()
                 .toList();
 
@@ -160,8 +290,9 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
                 .toList();
 
         Double distanceKm = calculateDistanceKm(userLat, userLng, provider.getLatitude(), provider.getLongitude());
-        boolean openNow = isOpenNow(businessHours, LocalDateTime.now(APP_ZONE).toLocalTime(), LocalDate.now(APP_ZONE).getDayOfWeek());
-        String searchableText = buildSearchableText(provider, providerServices, categorySlugs);
+        boolean openNow = isOpenNow(businessHours, LocalDateTime.now(APP_ZONE).toLocalTime(),
+                LocalDate.now(APP_ZONE).getDayOfWeek());
+        String searchableText = buildSearchableText(provider, providerServices, categoryNames);
 
         return ProviderView.builder()
                 .id(provider.getId())
@@ -186,7 +317,8 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
                 .instantBooking(Boolean.TRUE.equals(provider.getAcceptsInstantBooking()))
                 .openNow(openNow)
                 .verificationStatus(provider.getVerificationStatus())
-                .categorySlugs(categorySlugs)
+                .categoryIds(categoryIds)
+                .categoryNames(categoryNames)
                 .searchableText(searchableText)
                 .build();
     }
@@ -202,16 +334,20 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
                 return false;
             }
         }
-        if (!criteria.serviceCategorySlugs().isEmpty() && Collections.disjoint(view.categorySlugs(), criteria.serviceCategorySlugs())) {
+        if (!criteria.serviceCategoryIds().isEmpty()
+                && Collections.disjoint(view.categoryIds(), criteria.serviceCategoryIds())) {
             return false;
         }
-        if (criteria.minPrice() != null && (view.priceFrom() == null || view.priceFrom().compareTo(criteria.minPrice()) < 0)) {
+        if (criteria.minPrice() != null
+                && (view.priceFrom() == null || view.priceFrom().compareTo(criteria.minPrice()) < 0)) {
             return false;
         }
-        if (criteria.maxPrice() != null && (view.priceFrom() == null || view.priceFrom().compareTo(criteria.maxPrice()) > 0)) {
+        if (criteria.maxPrice() != null
+                && (view.priceFrom() == null || view.priceFrom().compareTo(criteria.maxPrice()) > 0)) {
             return false;
         }
-        if (criteria.minRating() != null && (view.rating() == null || view.rating().compareTo(criteria.minRating()) < 0)) {
+        if (criteria.minRating() != null
+                && (view.rating() == null || view.rating().compareTo(criteria.minRating()) < 0)) {
             return false;
         }
         if (criteria.maxDistanceKm() != null) {
@@ -222,27 +358,67 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
         if (criteria.featuredOnly() && !view.featured()) {
             return false;
         }
-        if (criteria.timeOfDay() != null && view.availableSlotTimes().stream().noneMatch(time -> matchesTimeOfDay(time, criteria.timeOfDay()))) {
+        if (criteria.timeOfDay() != null
+                && view.availableSlotTimes().stream().noneMatch(time -> matchesTimeOfDay(time, criteria.timeOfDay()))) {
             return false;
         }
         return true;
     }
 
     private Comparator<ProviderView> buildComparator(String sortBy) {
-        Comparator<ProviderView> featuredComparator = Comparator.comparing((ProviderView view) -> Boolean.TRUE.equals(view.featured())).reversed()
+        Comparator<ProviderView> featuredComparator = Comparator
+                .comparing((ProviderView view) -> Boolean.TRUE.equals(view.featured())).reversed()
                 .thenComparing((ProviderView view) -> Boolean.TRUE.equals(view.hot()), Comparator.reverseOrder());
-        Comparator<ProviderView> ratingComparator = Comparator.comparing(ProviderView::rating, Comparator.nullsLast(Comparator.reverseOrder()))
+        Comparator<ProviderView> ratingComparator = Comparator
+                .comparing(ProviderView::rating, Comparator.nullsLast(Comparator.reverseOrder()))
                 .thenComparing(ProviderView::totalReviews, Comparator.nullsLast(Comparator.reverseOrder()));
-        Comparator<ProviderView> priceComparator = Comparator.comparing(ProviderView::priceFrom, Comparator.nullsLast(Comparator.naturalOrder()));
-        Comparator<ProviderView> distanceComparator = Comparator.comparing(ProviderView::distanceKm, Comparator.nullsLast(Comparator.naturalOrder()));
+        Comparator<ProviderView> priceComparator = Comparator.comparing(ProviderView::priceFrom,
+                Comparator.nullsLast(Comparator.naturalOrder()));
+        Comparator<ProviderView> distanceComparator = Comparator.comparing(ProviderView::distanceKm,
+                Comparator.nullsLast(Comparator.naturalOrder()));
         Comparator<ProviderView> fallback = Comparator.comparing(ProviderView::id);
 
         return switch (sortBy) {
             case "NEAREST" -> distanceComparator.thenComparing(ratingComparator).thenComparing(fallback);
             case "TOP_RATED" -> ratingComparator.thenComparing(featuredComparator).thenComparing(fallback);
             case "LOWEST_PRICE" -> priceComparator.thenComparing(ratingComparator).thenComparing(fallback);
-            case "FEATURED" -> featuredComparator.thenComparing(ratingComparator).thenComparing(distanceComparator).thenComparing(fallback);
+            case "FEATURED" -> featuredComparator.thenComparing(ratingComparator).thenComparing(distanceComparator)
+                    .thenComparing(fallback);
             default -> featuredComparator.thenComparing(ratingComparator).thenComparing(fallback);
+        };
+    }
+
+    private Comparator<ProviderService> buildServiceComparator(String sortBy) {
+        Comparator<ProviderService> featuredComparator = Comparator
+                .comparing((ProviderService service) -> Boolean.TRUE.equals(service.getFeatured())).reversed();
+        Comparator<ProviderService> providerFeaturedComparator = Comparator
+                .comparing((ProviderService service) -> service.getProvider() != null
+                        && Boolean.TRUE.equals(service.getProvider().getFeatured()))
+                .reversed();
+        Comparator<ProviderService> ratingComparator = Comparator
+                .comparing(
+                        (ProviderService service) -> service.getProvider() != null
+                                ? service.getProvider().getAverageRating()
+                                : null,
+                        Comparator.nullsLast(Comparator.reverseOrder()));
+        Comparator<ProviderService> priceComparator = Comparator.comparing(ProviderService::getPriceAmount,
+                Comparator.nullsLast(Comparator.naturalOrder()));
+        Comparator<ProviderService> fallback = Comparator.comparing(ProviderService::getId,
+                Comparator.nullsLast(Comparator.naturalOrder()));
+        Comparator<ProviderService> providerIdFallback = Comparator.comparing(
+                (ProviderService service) -> service.getProvider() != null ? service.getProvider().getId() : null,
+                Comparator.nullsLast(Comparator.naturalOrder()));
+
+        return switch (sortBy) {
+            case "LOWEST_PRICE" -> priceComparator.thenComparing(ratingComparator).thenComparing(providerIdFallback)
+                    .thenComparing(fallback);
+            case "TOP_RATED", "NEAREST" -> ratingComparator.thenComparing(featuredComparator)
+                    .thenComparing(providerIdFallback).thenComparing(fallback);
+            case "FEATURED" ->
+                featuredComparator.thenComparing(providerFeaturedComparator).thenComparing(ratingComparator)
+                        .thenComparing(providerIdFallback).thenComparing(fallback);
+            default -> featuredComparator.thenComparing(ratingComparator).thenComparing(providerIdFallback)
+                    .thenComparing(fallback);
         };
     }
 
@@ -270,7 +446,8 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
                 .instantBooking(view.instantBooking())
                 .openNow(view.openNow())
                 .verificationStatus(view.verificationStatus())
-                .categorySlugs(view.categorySlugs())
+                .categoryIds(view.categoryIds())
+                .categoryNames(view.categoryNames())
                 .build();
     }
 
@@ -278,7 +455,7 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
         return ProviderAppliedFiltersResponse.builder()
                 .query(criteria.query())
                 .city(criteria.city())
-                .serviceCategorySlugs(criteria.serviceCategorySlugs())
+                .serviceCategoryIds(criteria.serviceCategoryIds())
                 .minPrice(criteria.minPrice())
                 .maxPrice(criteria.maxPrice())
                 .minRating(criteria.minRating())
@@ -328,7 +505,10 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
 
     private String resolveFeaturedService(List<ProviderService> providerServices) {
         return providerServices.stream()
-                .sorted(Comparator.comparing((ProviderService providerService) -> Boolean.TRUE.equals(providerService.getFeatured())).reversed()
+                .sorted(Comparator
+                        .comparing(
+                                (ProviderService providerService) -> Boolean.TRUE.equals(providerService.getFeatured()))
+                        .reversed()
                         .thenComparing(ProviderService::getDisplayOrder)
                         .thenComparing(ProviderService::getId))
                 .map(this::resolveServiceDisplayName)
@@ -341,14 +521,46 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
         if (providerService.getCustomName() != null && !providerService.getCustomName().isBlank()) {
             return providerService.getCustomName();
         }
-        if (providerService.getService() != null && providerService.getService().getName() != null && !providerService.getService().getName().isBlank()) {
+        if (providerService.getService() != null && providerService.getService().getName() != null
+                && !providerService.getService().getName().isBlank()) {
             return providerService.getService().getName();
         }
         return providerService.getShortDescription();
     }
 
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        return Arrays.stream(values)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String formatMoney(BigDecimal amount) {
+        if (amount == null) {
+            return null;
+        }
+        return amount.setScale(0, RoundingMode.HALF_UP).toPlainString();
+    }
+
+    private String formatDuration(Integer minutes) {
+        if (minutes == null || minutes <= 0) {
+            return null;
+        }
+        if (minutes % 60 == 0) {
+            return (minutes / 60) + " giờ";
+        }
+        return minutes + " phút";
+    }
+
     private String buildAddress(ProviderProfile provider) {
-        return Stream.of(provider.getPrimaryAddressLine1(), provider.getDistrict(), provider.getCity(), provider.getProvince())
+        return Stream
+                .of(provider.getPrimaryAddressLine1(), provider.getDistrict(), provider.getCity(),
+                        provider.getProvince())
                 .filter(Objects::nonNull)
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
@@ -356,26 +568,46 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
                 .collect(Collectors.joining(", "));
     }
 
-    private String buildSearchableText(ProviderProfile provider, List<ProviderService> providerServices, List<String> categorySlugs) {
+    private String buildSearchableText(ProviderProfile provider, List<ProviderService> providerServices,
+            List<String> categoryNames) {
         List<String> serviceTexts = providerServices.stream()
                 .flatMap(providerService -> Stream.of(
                         providerService.getCustomName(),
                         providerService.getShortDescription(),
                         providerService.getDescription(),
                         providerService.getService() != null ? providerService.getService().getName() : null,
-                        providerService.getService() != null ? providerService.getService().getShortDescription() : null,
-                        providerService.getService() != null && providerService.getService().getCategory() != null ? providerService.getService().getCategory().getName() : null,
-                        providerService.getService() != null && providerService.getService().getCategory() != null ? providerService.getService().getCategory().getSlug() : null
-                ))
+                        providerService.getService() != null ? providerService.getService().getShortDescription()
+                                : null,
+                        providerService.getService() != null && providerService.getService().getCategory() != null
+                                ? providerService.getService().getCategory().getName()
+                                : null))
                 .filter(Objects::nonNull)
                 .toList();
 
         return Stream.concat(
-                        Stream.of(provider.getBusinessName(), provider.getHeadline(), provider.getDescription(), provider.getCity(), provider.getProvince(), provider.getDistrict()),
-                        Stream.concat(serviceTexts.stream(), categorySlugs.stream()))
+                Stream.of(provider.getBusinessName(), provider.getHeadline(), provider.getDescription(),
+                        provider.getCity(), provider.getProvince(), provider.getDistrict()),
+                Stream.concat(serviceTexts.stream(), categoryNames.stream()))
                 .filter(Objects::nonNull)
                 .map(value -> value.toLowerCase(Locale.ROOT))
                 .collect(Collectors.joining(" | "));
+    }
+
+    private List<Long> collectCategoryIds(ServiceCategory category) {
+        List<Long> ids = new ArrayList<>();
+        ServiceCategory cursor = category;
+        while (cursor != null) {
+            ids.add(cursor.getId());
+            cursor = cursor.getParent();
+        }
+        return ids;
+    }
+
+    private ServiceCategory resolveServiceCategory(ProviderService providerService) {
+        if (providerService == null || providerService.getService() == null) {
+            return null;
+        }
+        return providerService.getService().getCategory();
     }
 
     private String resolveProviderImage(ProviderProfile provider) {
@@ -385,7 +617,7 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
         if (provider.getCoverImageUrl() != null && !provider.getCoverImageUrl().isBlank()) {
             return provider.getCoverImageUrl();
         }
-        return "https://placehold.co/800x600?text=PetGo+Provider";
+        return null;
     }
 
     private String formatDistance(Double distanceKm) {
@@ -408,7 +640,7 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
         double dLng = Math.toRadians(providerLng.doubleValue() - userLng);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                 + Math.cos(Math.toRadians(userLat)) * Math.cos(Math.toRadians(providerLat.doubleValue()))
-                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                        * Math.sin(dLng / 2) * Math.sin(dLng / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return earthRadiusKm * c;
     }
@@ -487,9 +719,9 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
             Boolean instantBooking,
             Boolean openNow,
             String verificationStatus,
-            List<String> categorySlugs,
-            String searchableText
-    ) {
+            List<Long> categoryIds,
+            List<String> categoryNames,
+            String searchableText) {
         public static Builder builder() {
             return new Builder();
         }
@@ -517,38 +749,141 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
             private Boolean instantBooking;
             private Boolean openNow;
             private String verificationStatus;
-            private List<String> categorySlugs = List.of();
+            private List<Long> categoryIds = List.of();
+            private List<String> categoryNames = List.of();
             private String searchableText;
 
-            private Builder id(Long id) { this.id = id; return this; }
-            private Builder name(String name) { this.name = name; return this; }
-            private Builder slug(String slug) { this.slug = slug; return this; }
-            private Builder headline(String headline) { this.headline = headline; return this; }
-            private Builder providerType(String providerType) { this.providerType = providerType; return this; }
-            private Builder rating(BigDecimal rating) { this.rating = rating; return this; }
-            private Builder totalReviews(Integer totalReviews) { this.totalReviews = totalReviews; return this; }
-            private Builder address(String address) { this.address = address; return this; }
-            private Builder city(String city) { this.city = city; return this; }
-            private Builder province(String province) { this.province = province; return this; }
-            private Builder priceFrom(BigDecimal priceFrom) { this.priceFrom = priceFrom; return this; }
-            private Builder currencyCode(String currencyCode) { this.currencyCode = currencyCode; return this; }
-            private Builder distanceKm(Double distanceKm) { this.distanceKm = distanceKm; return this; }
-            private Builder image(String image) { this.image = image; return this; }
-            private Builder featuredService(String featuredService) { this.featuredService = featuredService; return this; }
-            private Builder availableSlots(List<String> availableSlots) { this.availableSlots = availableSlots; return this; }
-            private Builder availableSlotTimes(List<LocalTime> availableSlotTimes) { this.availableSlotTimes = availableSlotTimes; return this; }
-            private Builder hot(Boolean hot) { this.hot = hot; return this; }
-            private Builder featured(Boolean featured) { this.featured = featured; return this; }
-            private Builder instantBooking(Boolean instantBooking) { this.instantBooking = instantBooking; return this; }
-            private Builder openNow(Boolean openNow) { this.openNow = openNow; return this; }
-            private Builder verificationStatus(String verificationStatus) { this.verificationStatus = verificationStatus; return this; }
-            private Builder categorySlugs(List<String> categorySlugs) { this.categorySlugs = categorySlugs; return this; }
-            private Builder searchableText(String searchableText) { this.searchableText = searchableText; return this; }
+            private Builder id(Long id) {
+                this.id = id;
+                return this;
+            }
+
+            private Builder name(String name) {
+                this.name = name;
+                return this;
+            }
+
+            private Builder slug(String slug) {
+                this.slug = slug;
+                return this;
+            }
+
+            private Builder headline(String headline) {
+                this.headline = headline;
+                return this;
+            }
+
+            private Builder providerType(String providerType) {
+                this.providerType = providerType;
+                return this;
+            }
+
+            private Builder rating(BigDecimal rating) {
+                this.rating = rating;
+                return this;
+            }
+
+            private Builder totalReviews(Integer totalReviews) {
+                this.totalReviews = totalReviews;
+                return this;
+            }
+
+            private Builder address(String address) {
+                this.address = address;
+                return this;
+            }
+
+            private Builder city(String city) {
+                this.city = city;
+                return this;
+            }
+
+            private Builder province(String province) {
+                this.province = province;
+                return this;
+            }
+
+            private Builder priceFrom(BigDecimal priceFrom) {
+                this.priceFrom = priceFrom;
+                return this;
+            }
+
+            private Builder currencyCode(String currencyCode) {
+                this.currencyCode = currencyCode;
+                return this;
+            }
+
+            private Builder distanceKm(Double distanceKm) {
+                this.distanceKm = distanceKm;
+                return this;
+            }
+
+            private Builder image(String image) {
+                this.image = image;
+                return this;
+            }
+
+            private Builder featuredService(String featuredService) {
+                this.featuredService = featuredService;
+                return this;
+            }
+
+            private Builder availableSlots(List<String> availableSlots) {
+                this.availableSlots = availableSlots;
+                return this;
+            }
+
+            private Builder availableSlotTimes(List<LocalTime> availableSlotTimes) {
+                this.availableSlotTimes = availableSlotTimes;
+                return this;
+            }
+
+            private Builder hot(Boolean hot) {
+                this.hot = hot;
+                return this;
+            }
+
+            private Builder featured(Boolean featured) {
+                this.featured = featured;
+                return this;
+            }
+
+            private Builder instantBooking(Boolean instantBooking) {
+                this.instantBooking = instantBooking;
+                return this;
+            }
+
+            private Builder openNow(Boolean openNow) {
+                this.openNow = openNow;
+                return this;
+            }
+
+            private Builder verificationStatus(String verificationStatus) {
+                this.verificationStatus = verificationStatus;
+                return this;
+            }
+
+            private Builder categoryIds(List<Long> categoryIds) {
+                this.categoryIds = categoryIds;
+                return this;
+            }
+
+            private Builder categoryNames(List<String> categoryNames) {
+                this.categoryNames = categoryNames;
+                return this;
+            }
+
+            private Builder searchableText(String searchableText) {
+                this.searchableText = searchableText;
+                return this;
+            }
 
             private ProviderView build() {
-                return new ProviderView(id, name, slug, headline, providerType, rating, totalReviews, address, city, province,
+                return new ProviderView(id, name, slug, headline, providerType, rating, totalReviews, address, city,
+                        province,
                         priceFrom, currencyCode, distanceKm, image, featuredService, availableSlots, availableSlotTimes,
-                        hot, featured, instantBooking, openNow, verificationStatus, categorySlugs, searchableText);
+                        hot, featured, instantBooking, openNow, verificationStatus, categoryIds, categoryNames,
+                        searchableText);
             }
         }
     }
