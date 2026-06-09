@@ -264,6 +264,14 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<WalletTransactionResponse> getFailedTopUpTransactions(HttpServletRequest request) {
+        requireAdmin(request);
+        return transactionRepository.findByTypeAndStatusOrderByCreatedAtDescIdDesc("TOP_UP", "FAILED").stream()
+                .map(this::mapTransaction).toList();
+    }
+
+    @Override
     @Transactional
     public WalletTransactionResponse reviewAdminTransaction(HttpServletRequest request, Long transactionId,
             WalletAdminReviewRequest reviewRequest) {
@@ -279,6 +287,30 @@ public class WalletServiceImpl implements WalletService {
             rejectTransaction(tx);
         else
             throw new BadRequestException("action phải là APPROVE hoặc REJECT.");
+        tx.setReviewedByAdmin(admin);
+        tx.setReviewNote(reviewRequest.reviewNote());
+        tx.setReviewedAt(LocalDateTime.now(APP_ZONE));
+        transactionRepository.save(tx);
+        return mapTransaction(tx);
+    }
+
+    @Override
+    @Transactional
+    public WalletTransactionResponse resolveFailedTopUp(HttpServletRequest request, Long transactionId,
+            WalletAdminReviewRequest reviewRequest) {
+        User admin = requireAdmin(request);
+        WalletTransaction tx = transactionRepository.findDetailedById(transactionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giao dịch ví."));
+        if (!"TOP_UP".equalsIgnoreCase(tx.getType()) || !"FAILED".equalsIgnoreCase(tx.getStatus()))
+            throw new BadRequestException("Chỉ có thể xử lý giao dịch nạp ví thất bại.");
+        String action = reviewRequest.action().trim().toUpperCase();
+        if ("APPROVE".equals(action)) {
+            approveTransaction(tx);
+        } else if ("REJECT".equals(action)) {
+            tx.setStatus("REJECTED");
+        } else {
+            throw new BadRequestException("action phải là APPROVE hoặc REJECT.");
+        }
         tx.setReviewedByAdmin(admin);
         tx.setReviewNote(reviewRequest.reviewNote());
         tx.setReviewedAt(LocalDateTime.now(APP_ZONE));

@@ -270,7 +270,8 @@ public class PartnerMappingSupport {
     }
 
     public boolean canConfirm(Booking booking) {
-        return booking != null && "PENDING_CONFIRMATION".equalsIgnoreCase(firstNonBlank(booking.getStatus(), ""));
+        String status = booking != null ? firstNonBlank(booking.getStatus(), "").toUpperCase(Locale.ROOT) : "";
+        return List.of("PENDING_PROVIDER_CONFIRMATION", "PENDING_CONFIRMATION").contains(status);
     }
 
     public boolean canStart(Booking booking) {
@@ -278,7 +279,9 @@ public class PartnerMappingSupport {
     }
 
     public boolean canComplete(Booking booking) {
-        return booking != null && "IN_PROGRESS".equalsIgnoreCase(firstNonBlank(booking.getStatus(), ""));
+        String status = booking != null ? firstNonBlank(booking.getStatus(), "").toUpperCase(Locale.ROOT) : "";
+        return List.of("CONFIRMED", "IN_PROGRESS", "AWAITING_COMPLETION_CONFIRMATION", "COMPLETED_BY_USER")
+                .contains(status);
     }
 
     public boolean canPartnerCancel(Booking booking) {
@@ -290,7 +293,7 @@ public class PartnerMappingSupport {
 
     public boolean isPending(String status) {
         String normalized = firstNonBlank(status, "").toUpperCase(Locale.ROOT);
-        return List.of("PENDING_PAYMENT", "PENDING_CONFIRMATION").contains(normalized);
+        return List.of("PENDING_PAYMENT", "PENDING_CONFIRMATION", "PENDING_PROVIDER_CONFIRMATION").contains(normalized);
     }
 
     public boolean isUpcoming(Booking booking) {
@@ -317,8 +320,14 @@ public class PartnerMappingSupport {
         return switch (status.toUpperCase(Locale.ROOT)) {
             case "PENDING_PAYMENT" -> "Chờ thanh toán";
             case "PENDING_CONFIRMATION" -> "Chờ xác nhận";
+            case "PENDING_PROVIDER_CONFIRMATION" -> "Chờ provider xác nhận";
             case "CONFIRMED" -> "Đã xác nhận";
             case "IN_PROGRESS" -> "Đang phục vụ";
+            case "AWAITING_COMPLETION_CONFIRMATION" -> "Chờ xác nhận hoàn tất";
+            case "COMPLETED_BY_USER" -> "User đã xác nhận hoàn tất";
+            case "COMPLETED_BY_PROVIDER" -> "Provider đã xác nhận hoàn tất";
+            case "REJECTED" -> "Provider từ chối";
+            case "DISPUTED" -> "Đang tranh chấp";
             case "COMPLETED" -> "Hoàn thành";
             case "CANCELLED" -> "Đã hủy";
             case "NO_SHOW" -> "Không đến";

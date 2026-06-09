@@ -38,11 +38,15 @@ public class BookingManagementServiceImpl implements BookingManagementService {
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
     private final ReviewRepository reviewRepository;
+    private final BookingAvailabilityServiceImpl bookingAvailabilityService;
+    private final WalletRepository walletRepository;
+    private final WalletTransactionRepository walletTransactionRepository;
 
     @Override
     @Transactional(readOnly = true)
     public BookingListResponse getMyBookings(Long ownerUserId, String status) {
-        userRepository.findById(ownerUserId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+        userRepository.findById(ownerUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         String normalizedStatus = normalizeStatusFilter(status);
 
         List<Booking> bookings = bookingRepository.findDetailedByOwnerUserId(ownerUserId);
@@ -71,8 +75,11 @@ public class BookingManagementServiceImpl implements BookingManagementService {
     public BookingDetailResponse getBookingDetail(Long ownerUserId, Long bookingId) {
         Booking booking = getOwnedBooking(ownerUserId, bookingId);
         Invoice invoice = invoiceRepository.findByBookingId(bookingId).orElse(null);
-        Payment payment = invoice != null ? paymentRepository.findTopByInvoiceIdOrderByCreatedAtDesc(invoice.getId()).orElse(null) : null;
-        List<BookingTimelineItemResponse> timeline = bookingStatusHistoryRepository.findByBookingIdOrderByCreatedAtAscIdAsc(bookingId).stream()
+        Payment payment = invoice != null
+                ? paymentRepository.findTopByInvoiceIdOrderByCreatedAtDesc(invoice.getId()).orElse(null)
+                : null;
+        List<BookingTimelineItemResponse> timeline = bookingStatusHistoryRepository
+                .findByBookingIdOrderByCreatedAtAscIdAsc(bookingId).stream()
                 .map(this::mapTimeline)
                 .toList();
 
@@ -113,7 +120,9 @@ public class BookingManagementServiceImpl implements BookingManagementService {
                 .paymentStatus(payment != null ? payment.getStatus() : null)
                 .paymentMethod(payment != null ? payment.getPaymentMethod() : null)
                 .rescheduleCount(Optional.ofNullable(booking.getRescheduleCount()).orElse(0))
-                .cancellationFreeHours(booking.getProvider() != null ? Optional.ofNullable(booking.getProvider().getCancellationFreeHours()).orElse(24) : 24)
+                .cancellationFreeHours(booking.getProvider() != null
+                        ? Optional.ofNullable(booking.getProvider().getCancellationFreeHours()).orElse(24)
+                        : 24)
                 .cancellationDeadline(buildCancellationDeadline(booking))
                 .estimatedRefundAmount(estimatedRefund)
                 .estimatedRefundDisplay(formatMoney(estimatedRefund))
@@ -133,24 +142,32 @@ public class BookingManagementServiceImpl implements BookingManagementService {
         }
 
         LocalDate today = LocalDate.now(APP_ZONE);
-        List<ProviderAvailabilitySlot> slots = providerAvailabilitySlotRepository.findUpcomingAvailableSlotsForProvider(
-                booking.getProvider().getId(),
-                today,
-                today.plusDays(14)
-        ).stream()
-                .filter(slot -> slot.getProviderService() != null && booking.getProviderService() != null && Objects.equals(slot.getProviderService().getId(), booking.getProviderService().getId()))
-                .filter(slot -> !Objects.equals(slot.getId(), booking.getAvailabilitySlot() != null ? booking.getAvailabilitySlot().getId() : null))
-                .toList();
+        Long providerId = booking.getProvider() != null ? booking.getProvider().getId() : null;
+        Long providerServiceId = booking.getProviderService() != null ? booking.getProviderService().getId() : null;
+        Integer durationMinutes = Optional.ofNullable(booking.getServiceDurationMinutesSnapshot()).orElse(30);
+        List<BookingSlotOptionResponse> slotResponses = new ArrayList<>();
+        for (int i = 0; i < 14; i++) {
+            LocalDate date = today.plusDays(i);
+            BookingAvailabilityResponse availability = bookingAvailabilityService.getAvailability(providerId,
+                    providerServiceId, date, durationMinutes);
+            if (availability.slots() != null) {
+                slotResponses.addAll(availability.slots().stream()
+                        .filter(slot -> "AVAILABLE".equalsIgnoreCase(firstNonBlank(slot.status(), "")))
+                        .filter(slot -> !Objects.equals(formatIsoDate(booking.getAppointmentDate()), slot.date())
+                                || !Objects.equals(
+                                        booking.getStartTime() != null ? booking.getStartTime().format(TIME_VIEW)
+                                                : null,
+                                        slot.startTime()))
+                        .toList());
+            }
+        }
 
-        List<String> availableDates = slots.stream()
-                .map(ProviderAvailabilitySlot::getSlotDate)
+        List<String> availableDates = slotResponses.stream()
+                .map(BookingSlotOptionResponse::date)
                 .filter(Objects::nonNull)
                 .distinct()
                 .sorted()
-                .map(ISO_DATE::format)
                 .toList();
-
-        List<BookingSlotOptionResponse> slotResponses = slots.stream().map(this::mapSlot).toList();
 
         return BookingRescheduleContextResponse.builder()
                 .bookingId(booking.getId())
@@ -175,7 +192,8 @@ public class BookingManagementServiceImpl implements BookingManagementService {
 
     @Override
     @Transactional
-    public BookingMutationResponse rescheduleBooking(Long ownerUserId, Long bookingId, BookingRescheduleRequest request) {
+    public BookingMutationResponse rescheduleBooking(Long ownerUserId, Long bookingId,
+            BookingRescheduleRequest request) {
         if (!Objects.equals(ownerUserId, request.ownerUserId())) {
             throw new BadRequestException("ownerUserId không khớp với đường dẫn");
         }
@@ -184,7 +202,7 @@ public class BookingManagementServiceImpl implements BookingManagementService {
             throw new BadRequestException("Booking hiện không thể đổi lịch");
         }
 
-        ProviderAvailabilitySlot newSlot = resolveNewSlot(booking, request);
+        BookingSlotOptionResponse newSlot = resolveNewAvailabilitySlot(booking, request);
         LocalDate oldDate = booking.getAppointmentDate();
         LocalTime oldStart = booking.getStartTime();
         LocalTime oldEnd = booking.getEndTime();
@@ -193,12 +211,10 @@ public class BookingManagementServiceImpl implements BookingManagementService {
         if (oldSlot != null) {
             releaseSlot(oldSlot);
         }
-        occupySlot(newSlot);
-
-        booking.setAvailabilitySlot(newSlot);
-        booking.setAppointmentDate(newSlot.getSlotDate());
-        booking.setStartTime(newSlot.getStartTime());
-        booking.setEndTime(newSlot.getEndTime());
+        booking.setAvailabilitySlot(null);
+        booking.setAppointmentDate(parseDate(newSlot.date()));
+        booking.setStartTime(parseTime(newSlot.startTime()));
+        booking.setEndTime(parseTime(newSlot.endTime()));
         booking.setRescheduleCount(Optional.ofNullable(booking.getRescheduleCount()).orElse(0) + 1);
         bookingRepository.save(booking);
 
@@ -208,9 +224,9 @@ public class BookingManagementServiceImpl implements BookingManagementService {
         reschedule.setOldAppointmentDate(oldDate);
         reschedule.setOldStartTime(oldStart);
         reschedule.setOldEndTime(oldEnd);
-        reschedule.setNewAppointmentDate(newSlot.getSlotDate());
-        reschedule.setNewStartTime(newSlot.getStartTime());
-        reschedule.setNewEndTime(newSlot.getEndTime());
+        reschedule.setNewAppointmentDate(booking.getAppointmentDate());
+        reschedule.setNewStartTime(booking.getStartTime());
+        reschedule.setNewEndTime(booking.getEndTime());
         reschedule.setFeeAmount(BigDecimal.ZERO);
         reschedule.setStatus("APPLIED");
         reschedule.setNote(normalizeBlank(request.note()));
@@ -222,7 +238,8 @@ public class BookingManagementServiceImpl implements BookingManagementService {
         history.setToStatus(booking.getStatus());
         history.setChangedByUser(booking.getCustomerUser());
         history.setNote("Đổi lịch từ " + formatDate(oldDate) + " " + formatTimeRange(oldStart, oldEnd)
-                + " sang " + formatDate(newSlot.getSlotDate()) + " " + formatTimeRange(newSlot.getStartTime(), newSlot.getEndTime()));
+                + " sang " + formatDate(booking.getAppointmentDate()) + " "
+                + formatTimeRange(booking.getStartTime(), booking.getEndTime()));
         bookingStatusHistoryRepository.save(history);
 
         return BookingMutationResponse.builder()
@@ -233,7 +250,7 @@ public class BookingManagementServiceImpl implements BookingManagementService {
                 .appointmentDate(formatIsoDate(booking.getAppointmentDate()))
                 .appointmentDateDisplay(formatDate(booking.getAppointmentDate()))
                 .appointmentTime(formatTimeRange(booking.getStartTime(), booking.getEndTime()))
-                .slotId(newSlot.getId())
+                .slotId(null)
                 .message("Đổi lịch thành công")
                 .build();
     }
@@ -256,9 +273,19 @@ public class BookingManagementServiceImpl implements BookingManagementService {
         BigDecimal refundAmount = estimateRefundAmount(booking);
         String refundStatus = refundAmount.compareTo(BigDecimal.ZERO) > 0 ? "FULL" : "NOT_REQUIRED";
         String previousStatus = booking.getStatus();
+        WalletTransaction refundedHoldTx = null;
 
         if (booking.getAvailabilitySlot() != null) {
             releaseSlot(booking.getAvailabilitySlot());
+        }
+
+        if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+            refundedHoldTx = refundBookingEscrowIfHeld(booking, refundAmount,
+                    "User hủy booking trong thời hạn miễn phí: " + request.reasonCode()
+                            + (normalizeBlank(request.reasonText()) != null
+                                    ? " - " + normalizeBlank(request.reasonText())
+                                    : ""));
+            refundStatus = refundedHoldTx != null ? "REFUNDED_TO_WALLET" : "REVIEW_REQUIRED";
         }
 
         booking.setStatus("CANCELLED");
@@ -279,7 +306,8 @@ public class BookingManagementServiceImpl implements BookingManagementService {
         history.setFromStatus(previousStatus);
         history.setToStatus("CANCELLED");
         history.setChangedByUser(booking.getCustomerUser());
-        history.setNote("Hủy booking. Lý do: " + request.reasonCode() + (normalizeBlank(request.reasonText()) != null ? " - " + normalizeBlank(request.reasonText()) : ""));
+        history.setNote("Hủy booking. Lý do: " + request.reasonCode()
+                + (normalizeBlank(request.reasonText()) != null ? " - " + normalizeBlank(request.reasonText()) : ""));
         bookingStatusHistoryRepository.save(history);
 
         return BookingMutationResponse.builder()
@@ -304,7 +332,8 @@ public class BookingManagementServiceImpl implements BookingManagementService {
     }
 
     private String normalizeStatusFilter(String status) {
-        if (status == null || status.isBlank()) return "ALL";
+        if (status == null || status.isBlank())
+            return "ALL";
         return status.trim().toUpperCase(Locale.ROOT);
     }
 
@@ -321,7 +350,8 @@ public class BookingManagementServiceImpl implements BookingManagementService {
 
     private boolean isUiPending(String status) {
         String normalized = status != null ? status.toUpperCase(Locale.ROOT) : "";
-        return List.of("PENDING_PAYMENT", "PENDING_CONFIRMATION").contains(normalized);
+        return List.of("PENDING_PAYMENT", "PENDING_CONFIRMATION", "PENDING_PROVIDER_CONFIRMATION", "ADMIN_REVIEW")
+                .contains(normalized);
     }
 
     private BookingListItemResponse mapListItem(Booking booking) {
@@ -349,7 +379,9 @@ public class BookingManagementServiceImpl implements BookingManagementService {
     }
 
     private BookingTimelineItemResponse mapTimeline(BookingStatusHistory item) {
-        String changedBy = item.getChangedByUser() != null ? firstNonBlank(item.getChangedByUser().getFullName(), item.getChangedByUser().getEmail()) : "PetGo";
+        String changedBy = item.getChangedByUser() != null
+                ? firstNonBlank(item.getChangedByUser().getFullName(), item.getChangedByUser().getEmail())
+                : "PetGo";
         return BookingTimelineItemResponse.builder()
                 .fromStatus(item.getFromStatus())
                 .fromStatusLabel(mapStatusLabel(item.getFromStatus()))
@@ -357,7 +389,8 @@ public class BookingManagementServiceImpl implements BookingManagementService {
                 .toStatusLabel(mapStatusLabel(item.getToStatus()))
                 .note(item.getNote())
                 .changedBy(changedBy)
-                .createdAt(item.getCreatedAt() != null ? item.getCreatedAt().atZone(APP_ZONE).format(DATE_TIME_VIEW) : null)
+                .createdAt(item.getCreatedAt() != null ? item.getCreatedAt().atZone(APP_ZONE).format(DATE_TIME_VIEW)
+                        : null)
                 .build();
     }
 
@@ -369,10 +402,13 @@ public class BookingManagementServiceImpl implements BookingManagementService {
         } else if (request.newAppointmentDate() != null && request.newStartTime() != null) {
             LocalDate date = parseDate(request.newAppointmentDate());
             LocalTime time = parseTime(request.newStartTime());
-            List<ProviderAvailabilitySlot> slots = providerAvailabilitySlotRepository.findUpcomingAvailableSlotsForProvider(
-                    booking.getProvider().getId(), LocalDate.now(APP_ZONE), LocalDate.now(APP_ZONE).plusDays(30));
+            List<ProviderAvailabilitySlot> slots = providerAvailabilitySlotRepository
+                    .findUpcomingAvailableSlotsForProvider(
+                            booking.getProvider().getId(), LocalDate.now(APP_ZONE),
+                            LocalDate.now(APP_ZONE).plusDays(30));
             newSlot = slots.stream()
-                    .filter(slot -> slot.getProviderService() != null && booking.getProviderService() != null && Objects.equals(slot.getProviderService().getId(), booking.getProviderService().getId()))
+                    .filter(slot -> slot.getProviderService() != null && booking.getProviderService() != null
+                            && Objects.equals(slot.getProviderService().getId(), booking.getProviderService().getId()))
                     .filter(slot -> Objects.equals(slot.getSlotDate(), date))
                     .filter(slot -> Objects.equals(slot.getStartTime(), time))
                     .findFirst()
@@ -382,19 +418,47 @@ public class BookingManagementServiceImpl implements BookingManagementService {
         if (newSlot == null) {
             throw new BadRequestException("Vui lòng chọn slot mới");
         }
-        if (booking.getProviderService() == null || newSlot.getProviderService() == null || !Objects.equals(newSlot.getProviderService().getId(), booking.getProviderService().getId())) {
+        if (booking.getProviderService() == null || newSlot.getProviderService() == null
+                || !Objects.equals(newSlot.getProviderService().getId(), booking.getProviderService().getId())) {
             throw new BadRequestException("Slot mới không thuộc dịch vụ hiện tại");
         }
         if (!Objects.equals(newSlot.getProvider().getId(), booking.getProvider().getId())) {
             throw new BadRequestException("Slot mới không thuộc nhà cung cấp hiện tại");
         }
-        if (!"AVAILABLE".equalsIgnoreCase(firstNonBlank(newSlot.getSlotStatus(), "AVAILABLE")) || Optional.ofNullable(newSlot.getCapacityBooked()).orElse(0) >= Optional.ofNullable(newSlot.getCapacityTotal()).orElse(1)) {
+        if (!"AVAILABLE".equalsIgnoreCase(firstNonBlank(newSlot.getSlotStatus(), "AVAILABLE"))
+                || Optional.ofNullable(newSlot.getCapacityBooked()).orElse(0) >= Optional
+                        .ofNullable(newSlot.getCapacityTotal()).orElse(1)) {
             throw new BadRequestException("Slot mới không còn khả dụng");
         }
-        if (Objects.equals(booking.getAvailabilitySlot() != null ? booking.getAvailabilitySlot().getId() : null, newSlot.getId())) {
+        if (Objects.equals(booking.getAvailabilitySlot() != null ? booking.getAvailabilitySlot().getId() : null,
+                newSlot.getId())) {
             throw new BadRequestException("Slot mới trùng với lịch hiện tại");
         }
         return newSlot;
+    }
+
+    private BookingSlotOptionResponse resolveNewAvailabilitySlot(Booking booking, BookingRescheduleRequest request) {
+        if (request.newAppointmentDate() == null || request.newStartTime() == null) {
+            throw new BadRequestException("Vui lòng chọn ngày và giờ mới");
+        }
+        if (booking.getProvider() == null || booking.getProviderService() == null) {
+            throw new BadRequestException("Booking thiếu thông tin provider/service để đổi lịch");
+        }
+        LocalDate date = parseDate(request.newAppointmentDate());
+        LocalTime startTime = parseTime(request.newStartTime());
+        BookingAvailabilityResponse availability = bookingAvailabilityService.getAvailability(
+                booking.getProvider().getId(),
+                booking.getProviderService().getId(),
+                date,
+                Optional.ofNullable(booking.getServiceDurationMinutesSnapshot()).orElse(30));
+        return Optional.ofNullable(availability.slots()).orElse(List.of()).stream()
+                .filter(slot -> Objects.equals(slot.date(), formatIsoDate(date)))
+                .filter(slot -> Objects.equals(slot.startTime(), startTime.format(TIME_VIEW)))
+                .filter(slot -> "AVAILABLE".equalsIgnoreCase(firstNonBlank(slot.status(), "")))
+                .filter(slot -> Optional.ofNullable(slot.capacityRemaining()).orElse(0) > 0)
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException(
+                        firstNonBlank(availability.reason(), "Slot mới không còn khả dụng")));
     }
 
     private void occupySlot(ProviderAvailabilitySlot slot) {
@@ -414,6 +478,52 @@ public class BookingManagementServiceImpl implements BookingManagementService {
         providerAvailabilitySlotRepository.save(slot);
     }
 
+    private WalletTransaction refundBookingEscrowIfHeld(Booking booking, BigDecimal refundAmount, String note) {
+        if (booking == null || booking.getId() == null || refundAmount == null
+                || refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        Optional<WalletTransaction> holdTxOpt = walletTransactionRepository
+                .findFirstByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
+                        "BOOKING:" + booking.getId(), "BOOKING_ESCROW_HOLD", "HELD_BY_ADMIN");
+        if (holdTxOpt.isEmpty()) {
+            return null;
+        }
+        User owner = booking.getCustomerUser();
+        if (owner == null) {
+            throw new BadRequestException("Booking thiếu thông tin user để hoàn tiền.");
+        }
+        WalletTransaction holdTx = holdTxOpt.get();
+        BigDecimal heldAmount = defaultMoney(holdTx.getAmount());
+        if (refundAmount.compareTo(heldAmount) > 0) {
+            throw new BadRequestException("Số tiền hoàn vượt quá escrow đang giữ.");
+        }
+        Wallet wallet = walletRepository.findWithLockByUserId(owner.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Ví user chưa được khởi tạo."));
+        BigDecimal before = defaultMoney(wallet.getBalance());
+        wallet.setBalance(before.add(refundAmount));
+        walletRepository.save(wallet);
+
+        holdTx.setStatus(refundAmount.compareTo(heldAmount) == 0 ? "REFUNDED_TO_USER" : "PARTIALLY_REFUNDED_TO_USER");
+        holdTx.setReviewNote(note);
+        walletTransactionRepository.save(holdTx);
+
+        WalletTransaction refundTx = new WalletTransaction();
+        refundTx.setTransactionCode("BOOKINGREFUND-" + UUID.randomUUID().toString().replace("-", "")
+                .substring(0, 12).toUpperCase(Locale.ROOT));
+        refundTx.setWallet(wallet);
+        refundTx.setUser(owner);
+        refundTx.setType("BOOKING_CANCEL_REFUND");
+        refundTx.setStatus("COMPLETED");
+        refundTx.setAmount(refundAmount);
+        refundTx.setGatewayTransactionId("BOOKING:" + booking.getId() + ":CANCEL_REFUND");
+        refundTx.setBalanceBefore(before);
+        refundTx.setBalanceAfter(wallet.getBalance());
+        refundTx.setNote(note);
+        walletTransactionRepository.save(refundTx);
+        return holdTx;
+    }
+
     private BookingSlotOptionResponse mapSlot(ProviderAvailabilitySlot slot) {
         int capacityTotal = Optional.ofNullable(slot.getCapacityTotal()).orElse(1);
         int capacityBooked = Optional.ofNullable(slot.getCapacityBooked()).orElse(0);
@@ -421,7 +531,9 @@ public class BookingManagementServiceImpl implements BookingManagementService {
         return BookingSlotOptionResponse.builder()
                 .slotId(slot.getId())
                 .providerServiceId(slot.getProviderService() != null ? slot.getProviderService().getId() : null)
-                .serviceName(slot.getProviderService() != null && slot.getProviderService().getService() != null ? slot.getProviderService().getService().getName() : null)
+                .serviceName(slot.getProviderService() != null && slot.getProviderService().getService() != null
+                        ? slot.getProviderService().getService().getName()
+                        : null)
                 .date(formatIsoDate(slot.getSlotDate()))
                 .startTime(slot.getStartTime() != null ? slot.getStartTime().format(TIME_VIEW) : null)
                 .endTime(slot.getEndTime() != null ? slot.getEndTime().format(TIME_VIEW) : null)
@@ -432,17 +544,23 @@ public class BookingManagementServiceImpl implements BookingManagementService {
     }
 
     private boolean canCancel(Booking booking) {
-        if (booking == null || booking.getAppointmentDate() == null || booking.getStartTime() == null) return false;
+        if (booking == null || booking.getAppointmentDate() == null || booking.getStartTime() == null)
+            return false;
         String status = firstNonBlank(booking.getStatus(), "").toUpperCase(Locale.ROOT);
-        if (List.of("CANCELLED", "COMPLETED", "NO_SHOW").contains(status)) return false;
-        return LocalDateTime.of(booking.getAppointmentDate(), booking.getStartTime()).isAfter(LocalDateTime.now(APP_ZONE));
+        if (List.of("CANCELLED", "COMPLETED", "NO_SHOW").contains(status))
+            return false;
+        return LocalDateTime.of(booking.getAppointmentDate(), booking.getStartTime())
+                .isAfter(LocalDateTime.now(APP_ZONE));
     }
 
     private boolean canReschedule(Booking booking) {
-        if (booking == null || booking.getAppointmentDate() == null || booking.getStartTime() == null) return false;
+        if (booking == null || booking.getAppointmentDate() == null || booking.getStartTime() == null)
+            return false;
         String status = firstNonBlank(booking.getStatus(), "").toUpperCase(Locale.ROOT);
-        if (!List.of("PENDING_CONFIRMATION", "CONFIRMED").contains(status)) return false;
-        return LocalDateTime.of(booking.getAppointmentDate(), booking.getStartTime()).isAfter(LocalDateTime.now(APP_ZONE));
+        if (!List.of("PENDING_PROVIDER_CONFIRMATION", "PENDING_CONFIRMATION", "CONFIRMED").contains(status))
+            return false;
+        return LocalDateTime.of(booking.getAppointmentDate(), booking.getStartTime())
+                .isAfter(LocalDateTime.now(APP_ZONE));
     }
 
     private boolean canReview(Booking booking) {
@@ -452,32 +570,49 @@ public class BookingManagementServiceImpl implements BookingManagementService {
     }
 
     private BigDecimal estimateRefundAmount(Booking booking) {
-        if (booking == null) return BigDecimal.ZERO;
+        if (booking == null)
+            return BigDecimal.ZERO;
         LocalDateTime appointmentAt = booking.getAppointmentDate() != null && booking.getStartTime() != null
                 ? LocalDateTime.of(booking.getAppointmentDate(), booking.getStartTime())
                 : null;
-        if (appointmentAt == null) return BigDecimal.ZERO;
-        int freeHours = booking.getProvider() != null ? Optional.ofNullable(booking.getProvider().getCancellationFreeHours()).orElse(24) : 24;
+        if (appointmentAt == null)
+            return BigDecimal.ZERO;
+        int freeHours = booking.getProvider() != null
+                ? Optional.ofNullable(booking.getProvider().getCancellationFreeHours()).orElse(24)
+                : 24;
         LocalDateTime deadline = appointmentAt.minusHours(freeHours);
-        if (LocalDateTime.now(APP_ZONE).isAfter(deadline)) return BigDecimal.ZERO;
+        if (LocalDateTime.now(APP_ZONE).isAfter(deadline))
+            return BigDecimal.ZERO;
         return defaultMoney(booking.getTotalAmount());
     }
 
     private String buildCancellationDeadline(Booking booking) {
-        if (booking == null || booking.getAppointmentDate() == null || booking.getStartTime() == null) return null;
-        int freeHours = booking.getProvider() != null ? Optional.ofNullable(booking.getProvider().getCancellationFreeHours()).orElse(24) : 24;
-        LocalDateTime deadline = LocalDateTime.of(booking.getAppointmentDate(), booking.getStartTime()).minusHours(freeHours);
+        if (booking == null || booking.getAppointmentDate() == null || booking.getStartTime() == null)
+            return null;
+        int freeHours = booking.getProvider() != null
+                ? Optional.ofNullable(booking.getProvider().getCancellationFreeHours()).orElse(24)
+                : 24;
+        LocalDateTime deadline = LocalDateTime.of(booking.getAppointmentDate(), booking.getStartTime())
+                .minusHours(freeHours);
         return deadline.format(DATE_TIME_VIEW);
     }
 
     private String mapStatusLabel(String status) {
-        if (status == null) return "Chưa rõ";
+        if (status == null)
+            return "Chưa rõ";
         return switch (status.toUpperCase(Locale.ROOT)) {
             case "PENDING_PAYMENT" -> "Chờ thanh toán";
             case "PENDING_CONFIRMATION" -> "Chờ xác nhận";
+            case "PENDING_PROVIDER_CONFIRMATION" -> "Chờ provider xác nhận";
             case "CONFIRMED" -> "Đã xác nhận";
             case "IN_PROGRESS" -> "Đang diễn ra";
+            case "AWAITING_COMPLETION_CONFIRMATION" -> "Chờ xác nhận hoàn tất";
+            case "COMPLETED_BY_USER" -> "User đã xác nhận hoàn tất";
+            case "COMPLETED_BY_PROVIDER" -> "Provider đã xác nhận hoàn tất";
             case "COMPLETED" -> "Hoàn thành";
+            case "DISPUTED" -> "Đang tranh chấp";
+            case "ADMIN_REVIEW" -> "Chờ admin xử lý";
+            case "REJECTED" -> "Provider từ chối";
             case "CANCELLED" -> "Đã hủy";
             case "NO_SHOW" -> "Không đến";
             default -> status;
@@ -485,12 +620,14 @@ public class BookingManagementServiceImpl implements BookingManagementService {
     }
 
     private String resolveProviderImage(Booking booking) {
-        if (booking.getProvider() == null) return null;
+        if (booking.getProvider() == null)
+            return null;
         return firstNonBlank(booking.getProvider().getMainImageUrl(), booking.getProvider().getCoverImageUrl());
     }
 
     private String buildPetLabel(Booking booking) {
-        if (booking == null) return "";
+        if (booking == null)
+            return "";
         if (booking.getPetBreedSnapshot() != null && !booking.getPetBreedSnapshot().isBlank()) {
             return booking.getPetNameSnapshot() + " (" + booking.getPetBreedSnapshot() + ")";
         }
@@ -502,7 +639,8 @@ public class BookingManagementServiceImpl implements BookingManagementService {
     }
 
     private String formatMoney(BigDecimal amount) {
-        if (amount == null) return "0 đ";
+        if (amount == null)
+            return "0 đ";
         return String.format(Locale.forLanguageTag("vi-VN"), "%,.0f đ", amount);
     }
 
@@ -515,7 +653,8 @@ public class BookingManagementServiceImpl implements BookingManagementService {
     }
 
     private String formatTimeRange(LocalTime start, LocalTime end) {
-        if (start == null) return null;
+        if (start == null)
+            return null;
         String startStr = start.format(TIME_VIEW);
         return end == null ? startStr : startStr + " - " + end.format(TIME_VIEW);
     }
@@ -537,15 +676,18 @@ public class BookingManagementServiceImpl implements BookingManagementService {
     }
 
     private String normalizeBlank(String value) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 
     private String firstNonBlank(String... values) {
-        if (values == null) return null;
+        if (values == null)
+            return null;
         for (String value : values) {
-            if (value != null && !value.isBlank()) return value.trim();
+            if (value != null && !value.isBlank())
+                return value.trim();
         }
         return null;
     }

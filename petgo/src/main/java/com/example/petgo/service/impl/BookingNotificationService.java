@@ -9,6 +9,7 @@ import com.example.petgo.entity.NotificationRecipient;
 import com.example.petgo.entity.User;
 import com.example.petgo.repository.NotificationRecipientRepository;
 import com.example.petgo.repository.NotificationRepository;
+import com.example.petgo.service.MailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +28,7 @@ public class BookingNotificationService {
 
     private final NotificationRepository notificationRepository;
     private final NotificationRecipientRepository notificationRecipientRepository;
+    private final MailService mailService;
 
     public void notifyProviderBookingCreated(Booking booking) {
         User providerUser = booking != null && booking.getProvider() != null ? booking.getProvider().getUser() : null;
@@ -38,6 +40,7 @@ public class BookingNotificationService {
                         customerName(booking), serviceName(booking), petName(booking), appointmentText(booking)),
                 NotificationPriority.HIGH,
                 "/partner/bookings");
+        sendMail(providerUser, "CREATED", booking, "Vui lòng kiểm tra và xác nhận booking mới.");
     }
 
     public void notifyOwnerBookingConfirmed(Booking booking) {
@@ -49,6 +52,65 @@ public class BookingNotificationService {
                         providerName(booking), serviceName(booking), petName(booking), appointmentText(booking)),
                 NotificationPriority.HIGH,
                 booking != null && booking.getId() != null ? "/bookings/" + booking.getId() : "/my-bookings");
+        sendMail(booking != null ? booking.getCustomerUser() : null, "CONFIRMED", booking,
+                "Provider đã xác nhận lịch hẹn của bạn.");
+    }
+
+    public void notifyOwnerBookingRejected(Booking booking, String reason) {
+        User owner = booking != null ? booking.getCustomerUser() : null;
+        createNotification(
+                booking != null && booking.getProvider() != null ? booking.getProvider().getUser() : null,
+                List.of(owner),
+                "Booking đã bị từ chối",
+                String.format("%s đã từ chối lịch %s cho %s. Tiền sẽ được hoàn về ví PetGo.",
+                        providerName(booking), serviceName(booking), petName(booking)),
+                NotificationPriority.HIGH,
+                booking != null && booking.getId() != null ? "/bookings/" + booking.getId() : "/my-bookings");
+        sendMail(owner, "REJECTED", booking, reason);
+    }
+
+    public void notifyBookingDisputed(Booking booking, String reason) {
+        User providerUser = booking != null && booking.getProvider() != null ? booking.getProvider().getUser() : null;
+        createNotification(
+                booking != null ? booking.getCustomerUser() : null,
+                List.of(providerUser),
+                "Booking đang được khiếu nại",
+                String.format("User đã tạo khiếu nại cho booking %s. Admin sẽ tham gia xử lý.",
+                        booking != null ? booking.getBookingCode() : ""),
+                NotificationPriority.HIGH,
+                booking != null && booking.getId() != null ? "/partner/bookings/" + booking.getId() : "/partner/bookings");
+        sendMail(providerUser, "DISPUTED", booking, reason);
+    }
+
+    public void notifyBookingAdminReview(Booking booking, String reason) {
+        User owner = booking != null ? booking.getCustomerUser() : null;
+        User providerUser = booking != null && booking.getProvider() != null ? booking.getProvider().getUser() : null;
+        createNotification(null, List.of(owner, providerUser), "Booking chuyển admin review",
+                String.format("Booking %s cần admin xem xét: %s", booking != null ? booking.getBookingCode() : "", reason),
+                NotificationPriority.HIGH,
+                booking != null && booking.getId() != null ? "/bookings/" + booking.getId() : "/my-bookings");
+        sendMail(owner, "ADMIN_REVIEW", booking, reason);
+        sendMail(providerUser, "ADMIN_REVIEW", booking, reason);
+    }
+
+    public void notifyDisputeResolved(Booking booking, String detail) {
+        User owner = booking != null ? booking.getCustomerUser() : null;
+        User providerUser = booking != null && booking.getProvider() != null ? booking.getProvider().getUser() : null;
+        createNotification(null, List.of(owner, providerUser), "Khiếu nại booking đã được xử lý",
+                String.format("Admin đã xử lý khiếu nại booking %s.", booking != null ? booking.getBookingCode() : ""),
+                NotificationPriority.HIGH,
+                booking != null && booking.getId() != null ? "/bookings/" + booking.getId() : "/my-bookings");
+        sendMail(owner, "RESOLVED", booking, detail);
+        sendMail(providerUser, "RESOLVED", booking, detail);
+    }
+
+    public void notifyEscrowReleased(Booking booking, String detail) {
+        User providerUser = booking != null && booking.getProvider() != null ? booking.getProvider().getUser() : null;
+        createNotification(null, List.of(providerUser), "Escrow booking đã giải ngân",
+                String.format("Escrow booking %s đã được chuyển vào ví provider.", booking != null ? booking.getBookingCode() : ""),
+                NotificationPriority.NORMAL,
+                "/partner/bookings");
+        sendMail(providerUser, "ESCROW_RELEASED", booking, detail);
     }
 
     private void createNotification(User actor,
@@ -88,6 +150,12 @@ public class BookingNotificationService {
         notificationRecipient.setRecipient(recipient);
         notificationRecipient.setDeliveredAt(deliveredAt);
         return notificationRecipient;
+    }
+
+    private void sendMail(User recipient, String eventType, Booking booking, String detail) {
+        if (recipient != null && recipient.getEmail() != null && !recipient.getEmail().isBlank()) {
+            mailService.sendBookingWorkflowEmail(recipient.getEmail(), eventType, booking, detail);
+        }
     }
 
     private List<User> deduplicateRecipients(List<User> recipients) {

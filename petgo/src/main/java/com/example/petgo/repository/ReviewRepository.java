@@ -79,4 +79,13 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
   BigDecimal averageVisibleRatingByProviderId(@Param("providerId") Long providerId);
 
   long countByCustomerUser_IdAndDeletedAtIsNull(Long ownerUserId);
+
+  @EntityGraph(attributePaths = { "customerUser", "provider", "booking", "booking.pet", "booking.providerService" })
+  @Query("""
+      select r
+      from Review r
+      where r.deletedAt is null
+      order by r.createdAt desc, r.id desc
+      """)
+  List<Review> findAllActiveDetailed();
 }

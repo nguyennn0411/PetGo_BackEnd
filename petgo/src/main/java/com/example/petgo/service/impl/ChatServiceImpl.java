@@ -10,6 +10,7 @@ import com.example.petgo.entity.ChatConversation;
 import com.example.petgo.entity.ChatMessage;
 import com.example.petgo.entity.ChatParticipant;
 import com.example.petgo.entity.ProviderProfile;
+import com.example.petgo.entity.RoleType;
 import com.example.petgo.entity.User;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
@@ -19,6 +20,7 @@ import com.example.petgo.repository.ChatConversationRepository;
 import com.example.petgo.repository.ChatMessageRepository;
 import com.example.petgo.repository.ChatParticipantRepository;
 import com.example.petgo.repository.ProviderProfileRepository;
+import com.example.petgo.repository.UserRoleRepository;
 import com.example.petgo.repository.UserRepository;
 import com.example.petgo.service.AuthService;
 import com.example.petgo.service.ChatService;
@@ -56,6 +58,7 @@ public class ChatServiceImpl implements ChatService {
     private final ChatParticipantRepository chatParticipantRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final CloudinaryStorageService cloudinaryStorageService;
+    private final UserRoleRepository userRoleRepository;
 
     @Override
     @Transactional
@@ -105,16 +108,23 @@ public class ChatServiceImpl implements ChatService {
         ensureBookingChatAccess(user, booking);
 
         ChatConversation conversation = chatConversationRepository.findBookingConversation(booking.getId())
-                .orElseGet(() -> {
-                    ChatConversation created = createConversation(TYPE_BOOKING_GROUP,
-                            "Booking " + booking.getBookingCode(), booking.getProvider(), booking, user);
-                    addParticipant(created, booking.getCustomerUser(), "CUSTOMER");
-                    if (booking.getProvider() != null && booking.getProvider().getUser() != null) {
-                        addParticipant(created, booking.getProvider().getUser(), "PROVIDER");
-                    }
-                    return created;
-                });
+                .orElseGet(() -> createBookingConversation(booking, user));
         return toConversationResponse(conversation);
+    }
+
+    @Override
+    @Transactional
+    public ChatConversationResponse ensureAdminBookingDisputeChat(Long bookingId) {
+        Booking booking = bookingRepository.findDetailedById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking."));
+        ChatConversation conversation = chatConversationRepository.findBookingConversation(booking.getId())
+                .orElseGet(() -> createBookingConversation(booking, booking.getCustomerUser()));
+        userRoleRepository.findActiveUsersByRoleCodes(List.of(RoleType.ADMIN))
+                .forEach(admin -> addParticipant(conversation, admin, "ADMIN"));
+        conversation.setStatus(STATUS_OPEN);
+        conversation.setLastMessagePreview("Admin đã được thêm vào chat dispute booking.");
+        conversation.setLastMessageAt(LocalDateTime.now());
+        return toConversationResponse(chatConversationRepository.save(conversation));
     }
 
     @Override
@@ -242,6 +252,16 @@ public class ChatServiceImpl implements ChatService {
         return chatConversationRepository.save(conversation);
     }
 
+    private ChatConversation createBookingConversation(Booking booking, User createdBy) {
+        ChatConversation created = createConversation(TYPE_BOOKING_GROUP,
+                "Booking " + booking.getBookingCode(), booking.getProvider(), booking, createdBy);
+        addParticipant(created, booking.getCustomerUser(), "CUSTOMER");
+        if (booking.getProvider() != null && booking.getProvider().getUser() != null) {
+            addParticipant(created, booking.getProvider().getUser(), "PROVIDER");
+        }
+        return created;
+    }
+
     private void addParticipant(ChatConversation conversation, User user, String roleInChat) {
         if (user == null || chatParticipantRepository
                 .existsByConversation_IdAndUser_IdAndLeftAtIsNull(conversation.getId(), user.getId())) {
@@ -274,7 +294,9 @@ public class ChatServiceImpl implements ChatService {
                 && booking.getCustomerUser().getId().equals(user.getId());
         boolean isProviderOwner = booking.getProvider() != null && booking.getProvider().getUser() != null
                 && booking.getProvider().getUser().getId().equals(user.getId());
-        if (!isCustomer && !isProviderOwner) {
+        boolean isAdmin = userRoleRepository.findByUser_Id(user.getId()).stream()
+                .anyMatch(userRole -> userRole.getRole() != null && userRole.getRole().getCode() == RoleType.ADMIN);
+        if (!isCustomer && !isProviderOwner && !isAdmin) {
             throw new UnauthorizedException("Bạn không có quyền mở chat booking này.");
         }
     }

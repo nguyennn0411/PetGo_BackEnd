@@ -21,7 +21,7 @@ SET @@SESSION.SQL_LOG_BIN= 0;
 -- GTID state at the beginning of the backup 
 --
 
-SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ 'b80684da-b284-11f0-b076-e65896217b68:1-1930';
+SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ 'b80684da-b284-11f0-b076-e65896217b68:1-2738';
 
 --
 -- Table structure for table `booking_cancellations`
@@ -44,7 +44,7 @@ CREATE TABLE `booking_cancellations` (
   KEY `FKk60p6uraj6qhnxvk4p6oqh50j` (`cancelled_by_user_id`),
   CONSTRAINT `FKk60p6uraj6qhnxvk4p6oqh50j` FOREIGN KEY (`cancelled_by_user_id`) REFERENCES `users` (`id`),
   CONSTRAINT `FKkv5apxsn243tesnsh87iihl32` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -53,6 +53,7 @@ CREATE TABLE `booking_cancellations` (
 
 LOCK TABLES `booking_cancellations` WRITE;
 /*!40000 ALTER TABLE `booking_cancellations` DISABLE KEYS */;
+INSERT INTO `booking_cancellations` VALUES (1,'2026-06-08 11:51:24.000000','USER_CHANGED_PLAN','Seed demo: user đổi lịch cá nhân.',300000.00,'COMPLETED',10,1);
 /*!40000 ALTER TABLE `booking_cancellations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -123,7 +124,7 @@ CREATE TABLE `booking_reschedules` (
   KEY `FKmca10wwvqe9n8obka2dik70bf` (`requested_by_user_id`),
   CONSTRAINT `FKimp26pnv97ebokeo15s323ja7` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`),
   CONSTRAINT `FKmca10wwvqe9n8obka2dik70bf` FOREIGN KEY (`requested_by_user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -132,6 +133,7 @@ CREATE TABLE `booking_reschedules` (
 
 LOCK TABLES `booking_reschedules` WRITE;
 /*!40000 ALTER TABLE `booking_reschedules` DISABLE KEYS */;
+INSERT INTO `booking_reschedules` VALUES (1,NULL,NULL,0.00,'2026-06-16','11:00:00','10:00:00','Seed demo: user đổi lịch sang khung giờ mới.','2026-06-14','10:00:00','09:00:00','APPROVED',2,1);
 /*!40000 ALTER TABLE `booking_reschedules` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -156,7 +158,7 @@ CREATE TABLE `booking_status_history` (
   KEY `FKaiby68yx1eddb0rrhlu40ris8` (`changed_by_user_id`),
   CONSTRAINT `FKaiby68yx1eddb0rrhlu40ris8` FOREIGN KEY (`changed_by_user_id`) REFERENCES `users` (`id`),
   CONSTRAINT `FKqpj6h79qfscwluo5embxdap7c` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -165,6 +167,7 @@ CREATE TABLE `booking_status_history` (
 
 LOCK TABLES `booking_status_history` WRITE;
 /*!40000 ALTER TABLE `booking_status_history` DISABLE KEYS */;
+INSERT INTO `booking_status_history` VALUES (1,NULL,NULL,NULL,'Seed demo: user tạo booking và hệ thống giữ tiền ví.','PENDING_PROVIDER_CONFIRMATION',1,1),(2,NULL,NULL,NULL,'Seed demo: user tạo booking và hệ thống giữ tiền ví.','PENDING_PROVIDER_CONFIRMATION',2,1),(3,NULL,NULL,NULL,'Seed demo: user tạo booking và hệ thống giữ tiền ví.','PENDING_PROVIDER_CONFIRMATION',3,1),(4,NULL,NULL,NULL,'Seed demo: user tạo booking và hệ thống giữ tiền ví.','PENDING_PROVIDER_CONFIRMATION',4,1),(5,NULL,NULL,NULL,'Seed demo: user tạo booking và hệ thống giữ tiền ví.','PENDING_PROVIDER_CONFIRMATION',5,1),(6,NULL,NULL,NULL,'Seed demo: user tạo booking và hệ thống giữ tiền ví.','PENDING_PROVIDER_CONFIRMATION',6,1),(7,NULL,NULL,NULL,'Seed demo: user tạo booking và hệ thống giữ tiền ví.','PENDING_PROVIDER_CONFIRMATION',7,1),(8,NULL,NULL,NULL,'Seed demo: user tạo booking và hệ thống giữ tiền ví.','PENDING_PROVIDER_CONFIRMATION',8,1),(9,NULL,NULL,NULL,'Seed demo: user tạo booking và hệ thống giữ tiền ví.','PENDING_PROVIDER_CONFIRMATION',9,1),(10,NULL,NULL,NULL,'Seed demo: user tạo booking và hệ thống giữ tiền ví.','PENDING_PROVIDER_CONFIRMATION',10,1),(11,NULL,NULL,NULL,'Seed demo: user tạo booking và hệ thống giữ tiền ví.','PENDING_PROVIDER_CONFIRMATION',11,1),(16,NULL,NULL,'PENDING_PROVIDER_CONFIRMATION','Seed demo: chuyển sang trạng thái COMPLETED_BY_USER','COMPLETED_BY_USER',1,2),(17,NULL,NULL,'PENDING_PROVIDER_CONFIRMATION','Seed demo: chuyển sang trạng thái CONFIRMED','CONFIRMED',2,2),(18,NULL,NULL,'PENDING_PROVIDER_CONFIRMATION','Seed demo: chuyển sang trạng thái COMPLETED_BY_PROVIDER','COMPLETED_BY_PROVIDER',4,2),(19,NULL,NULL,'PENDING_PROVIDER_CONFIRMATION','Seed demo: chuyển sang trạng thái PENDING_PAYMENT','PENDING_PAYMENT',5,2),(20,NULL,NULL,'PENDING_PROVIDER_CONFIRMATION','Seed demo: chuyển sang trạng thái CONFIRMED','CONFIRMED',6,2),(21,NULL,NULL,'PENDING_PROVIDER_CONFIRMATION','Seed demo: chuyển sang trạng thái DISPUTED','DISPUTED',7,2),(22,NULL,NULL,'PENDING_PROVIDER_CONFIRMATION','Seed demo: chuyển sang trạng thái REJECTED','REJECTED',8,2),(23,NULL,NULL,'PENDING_PROVIDER_CONFIRMATION','Seed demo: chuyển sang trạng thái COMPLETED','COMPLETED',9,2),(24,NULL,NULL,'PENDING_PROVIDER_CONFIRMATION','Seed demo: chuyển sang trạng thái CANCELLED','CANCELLED',10,2),(25,NULL,NULL,'PENDING_PROVIDER_CONFIRMATION','Seed demo: chuyển sang trạng thái IN_PROGRESS','IN_PROGRESS',11,2),(31,NULL,NULL,NULL,'User đặt lịch, tiền ví đã được giữ trong escrow/admin hold, chờ provider xác nhận nhận lịch','PENDING_PROVIDER_CONFIRMATION',16,1);
 /*!40000 ALTER TABLE `booking_status_history` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -219,7 +222,7 @@ CREATE TABLE `bookings` (
   CONSTRAINT `FKkpkp0em9elo7pbty3iyaxw2ty` FOREIGN KEY (`availability_slot_id`) REFERENCES `provider_availability_slots` (`id`),
   CONSTRAINT `FKtmuymbx6nj0bjb7jqgfn9o56h` FOREIGN KEY (`provider_id`) REFERENCES `provider_profiles` (`id`),
   CONSTRAINT `FKtqiynyn86mqebi3mcwfn4ecvl` FOREIGN KEY (`pet_id`) REFERENCES `pets` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -228,6 +231,7 @@ CREATE TABLE `bookings` (
 
 LOCK TABLES `bookings` WRITE;
 /*!40000 ALTER TABLE `bookings` DISABLE KEYS */;
+INSERT INTO `bookings` VALUES (1,NULL,NULL,'2026-06-06','BK-DEMO-USERDONE-001',NULL,'VND','User xác nhận xong, chờ provider xác nhận đối soát.','16:00:00',NULL,0.00,'British Shorthair','Milo',0.00,'123 PetGo Demo Street, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh','PetGo Sample Provider','0919000002',0,'Tắm sấy cơ bản cho chó mèo nhỏ/vừa.',60,'Gói tắm sấy nhanh PetGo','15:00:00','COMPLETED_BY_USER',180000.00,0.00,'Asia/Ho_Chi_Minh',180000.00,NULL,1,2,1,2),(2,NULL,NULL,'2026-06-16','BK-DEMO-RESCHED-001',NULL,'VND','Booking đã đổi lịch một lần.','11:00:00','Đã reschedule từ ngày cũ sang ngày mới.',0.00,'Poodle','Coco',0.00,'123 PetGo Demo Street, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh','PetGo Sample Provider','0919000002',1,'Tắm sấy cơ bản cho chó mèo nhỏ/vừa.',60,'Gói tắm sấy nhanh PetGo','10:00:00','CONFIRMED',180000.00,0.00,'Asia/Ho_Chi_Minh',180000.00,NULL,1,1,1,2),(3,NULL,NULL,'2026-06-09','BK-DEMO-PENDING-001',NULL,'VND','User vừa đặt lịch, chờ provider xác nhận.','10:00:00',NULL,0.00,'Poodle','Coco',0.00,'123 PetGo Demo Street, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh','PetGo Sample Provider','0919000002',0,'Tắm sấy cơ bản cho chó mèo nhỏ/vừa.',60,'Gói tắm sấy nhanh PetGo','09:00:00','PENDING_PROVIDER_CONFIRMATION',180000.00,0.00,'Asia/Ho_Chi_Minh',180000.00,NULL,1,1,1,2),(4,NULL,NULL,'2026-06-07','BK-DEMO-PROVDONE-001',NULL,'VND','Provider báo đã hoàn tất, chờ user xác nhận.','12:30:00',NULL,0.00,'Poodle','Coco',0.00,'123 PetGo Demo Street, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh','PetGo Sample Provider','0919000002',0,'Cắt tỉa tạo kiểu theo giống.',90,'Grooming tạo kiểu premium','11:00:00','COMPLETED_BY_PROVIDER',350000.00,0.00,'Asia/Ho_Chi_Minh',350000.00,NULL,1,1,1,3),(5,NULL,NULL,'2026-06-17','BK-DEMO-PAYPEND-001',NULL,'VND','Booking checkout ngoài ví đang chờ thanh toán.','11:00:00',NULL,0.00,'British Shorthair','Milo',0.00,'123 PetGo Demo Street, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh','PetGo Sample Provider','0919000002',0,'Cắt tỉa tạo kiểu theo giống.',90,'Grooming tạo kiểu premium','09:30:00','PENDING_PAYMENT',350000.00,0.00,'Asia/Ho_Chi_Minh',350000.00,NULL,1,2,1,3),(6,NULL,NULL,'2026-06-10','BK-DEMO-CONFIRM-001',NULL,'VND','Đã thống nhất kiểu cắt teddy.','15:30:00',NULL,0.00,'Poodle','Coco',0.00,'123 PetGo Demo Street, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh','PetGo Sample Provider','0919000002',0,'Cắt tỉa tạo kiểu theo giống.',90,'Grooming tạo kiểu premium','14:00:00','CONFIRMED',350000.00,0.00,'Asia/Ho_Chi_Minh',350000.00,NULL,1,1,1,3),(7,NULL,NULL,'2026-06-05','BK-DEMO-DISPUTE-001',NULL,'VND','User khiếu nại vì thời gian bàn giao trễ.','17:00:00','[USER_DISPUTE] Bàn giao trễ và thiếu ảnh cập nhật.',0.00,'Poodle','Coco',0.00,'123 PetGo Demo Street, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh','PetGo Sample Provider','0919000002',0,'Lưu trú qua đêm có cập nhật ảnh.',480,'Khách sạn chó qua đêm','09:00:00','DISPUTED',450000.00,0.00,'Asia/Ho_Chi_Minh',450000.00,NULL,1,1,1,4),(8,NULL,NULL,'2026-06-14','BK-DEMO-REJECT-001',NULL,'VND','Provider từ chối do bác sĩ nghỉ.','13:45:00','Provider từ chối booking.',0.00,'British Shorthair','Milo',0.00,'123 PetGo Demo Street, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh','PetGo Sample Provider','0919000002',0,'Kiểm tra sức khỏe cơ bản.',45,'Khám tổng quát tại PetGo','13:00:00','REJECTED',250000.00,0.00,'Asia/Ho_Chi_Minh',250000.00,NULL,1,2,1,5),(9,NULL,NULL,'2026-06-03','BK-DEMO-COMPLETED-001',NULL,'VND','Khám tổng quát cho Milo.','10:45:00','Đã giải ngân cho provider sau khi hoàn tất.',0.00,'British Shorthair','Milo',0.00,'123 PetGo Demo Street, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh','PetGo Sample Provider','0919000002',0,'Kiểm tra sức khỏe cơ bản.',45,'Khám tổng quát tại PetGo','10:00:00','COMPLETED',250000.00,0.00,'Asia/Ho_Chi_Minh',250000.00,NULL,1,2,1,5),(10,NULL,NULL,'2026-06-12','BK-DEMO-CANCEL-001',NULL,'VND','User hủy do đổi lịch cá nhân.','17:15:00','Đã hoàn tiền demo vào ví user.',0.00,'Poodle','Coco',0.00,'123 PetGo Demo Street, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh','PetGo Sample Provider','0919000002',0,'Huấn luyện kỹ năng cơ bản cho chó.',75,'Buổi huấn luyện lệnh cơ bản','16:00:00','CANCELLED',300000.00,0.00,'Asia/Ho_Chi_Minh',300000.00,NULL,1,1,1,6),(11,NULL,NULL,'2026-06-08','BK-DEMO-INPROG-001',NULL,'VND','Đang thực hiện dịch vụ đi dạo.','09:30:00',NULL,0.00,'Poodle','Coco',0.00,'123 PetGo Demo Street, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh','PetGo Sample Provider','0919000002',0,'Đi dạo 60 phút kèm cập nhật.',60,'Dắt chó đi dạo khu vực Quận 1','08:30:00','IN_PROGRESS',120000.00,0.00,'Asia/Ho_Chi_Minh',120000.00,NULL,1,1,1,7),(16,NULL,NULL,'2026-06-09','BKIDER0001CD2504',NULL,'VND',NULL,'09:00:00',NULL,0.00,'British Shorthair','Milo',0.00,'123 PetGo Demo Street, Phường Bến Nghé, Quận 1, Hồ Chí Minh, Hồ Chí Minh','PetGo Sample Provider','0919000002',0,'Đi dạo 60 phút kèm cập nhật.',60,'Dắt chó đi dạo khu vực Quận 1','08:00:00','PENDING_PROVIDER_CONFIRMATION',120000.00,0.00,'Asia/Ho_Chi_Minh',120000.00,NULL,1,2,1,7);
 /*!40000 ALTER TABLE `bookings` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -388,7 +392,7 @@ CREATE TABLE `favorites` (
   KEY `FK3pn2r7wypdvufuliqfmrt1noh` (`provider_id`),
   CONSTRAINT `FK3pn2r7wypdvufuliqfmrt1noh` FOREIGN KEY (`provider_id`) REFERENCES `provider_profiles` (`id`),
   CONSTRAINT `FKk7du8b8ewipawnnpg76d55fus` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -397,6 +401,7 @@ CREATE TABLE `favorites` (
 
 LOCK TABLES `favorites` WRITE;
 /*!40000 ALTER TABLE `favorites` DISABLE KEYS */;
+INSERT INTO `favorites` VALUES (1,NULL,1,1);
 /*!40000 ALTER TABLE `favorites` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -453,7 +458,7 @@ CREATE TABLE `invoice_items` (
   PRIMARY KEY (`id`),
   KEY `FK46ae0lhu1oqs7cv91fn6y9n7w` (`invoice_id`),
   CONSTRAINT `FK46ae0lhu1oqs7cv91fn6y9n7w` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -462,6 +467,7 @@ CREATE TABLE `invoice_items` (
 
 LOCK TABLES `invoice_items` WRITE;
 /*!40000 ALTER TABLE `invoice_items` DISABLE KEYS */;
+INSERT INTO `invoice_items` VALUES (1,NULL,NULL,'06/06/2026 • 15:00 - 16:00','Gói tắm sấy nhanh PetGo','BOOKING_SERVICE',180000.00,1,1,180000.00,1),(2,NULL,NULL,'16/06/2026 • 10:00 - 11:00','Gói tắm sấy nhanh PetGo','BOOKING_SERVICE',180000.00,1,1,180000.00,2),(3,NULL,NULL,'09/06/2026 • 09:00 - 10:00','Gói tắm sấy nhanh PetGo','BOOKING_SERVICE',180000.00,1,1,180000.00,3),(4,NULL,NULL,'07/06/2026 • 11:00 - 12:30','Grooming tạo kiểu premium','BOOKING_SERVICE',350000.00,1,1,350000.00,4),(5,NULL,NULL,'17/06/2026 • 09:30 - 11:00','Grooming tạo kiểu premium','BOOKING_SERVICE',350000.00,1,1,350000.00,5),(6,NULL,NULL,'10/06/2026 • 14:00 - 15:30','Grooming tạo kiểu premium','BOOKING_SERVICE',350000.00,1,1,350000.00,6),(7,NULL,NULL,'05/06/2026 • 09:00 - 17:00','Khách sạn chó qua đêm','BOOKING_SERVICE',450000.00,1,1,450000.00,7),(8,NULL,NULL,'14/06/2026 • 13:00 - 13:45','Khám tổng quát tại PetGo','BOOKING_SERVICE',250000.00,1,1,250000.00,8),(9,NULL,NULL,'03/06/2026 • 10:00 - 10:45','Khám tổng quát tại PetGo','BOOKING_SERVICE',250000.00,1,1,250000.00,9),(10,NULL,NULL,'12/06/2026 • 16:00 - 17:15','Buổi huấn luyện lệnh cơ bản','BOOKING_SERVICE',300000.00,1,1,300000.00,10),(11,NULL,NULL,'08/06/2026 • 08:30 - 09:30','Dắt chó đi dạo khu vực Quận 1','BOOKING_SERVICE',120000.00,1,1,120000.00,11);
 /*!40000 ALTER TABLE `invoice_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -505,7 +511,7 @@ CREATE TABLE `invoices` (
   CONSTRAINT `FKbwr4d4vyqf2bkoetxtt8j9dx7` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
   CONSTRAINT `FKlsc8a4g4j6fpuaiaeuv8aqovo` FOREIGN KEY (`membership_subscription_id`) REFERENCES `membership_subscriptions` (`id`),
   CONSTRAINT `FKnf9gye2fx8fwi9cx5i9hjnvlj` FOREIGN KEY (`shop_order_id`) REFERENCES `shop_orders` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -514,6 +520,7 @@ CREATE TABLE `invoices` (
 
 LOCK TABLES `invoices` WRITE;
 /*!40000 ALTER TABLE `invoices` DISABLE KEYS */;
+INSERT INTO `invoices` VALUES (1,NULL,NULL,'Hồ Chí Minh, Hồ Chí Minh','user@petgo.local','PetGo Sample User','0919000001','VND',0.00,'2026-06-09 11:51:24.000000','INV-BK-DEMO-USERDONE-001','BOOKING','2026-06-08 11:51:24.000000','Seed demo invoice cho booking BK-DEMO-USERDONE-001','2026-06-08 11:51:24.000000','PAID',180000.00,0.00,180000.00,1,NULL,NULL,1),(2,NULL,NULL,'Hồ Chí Minh, Hồ Chí Minh','user@petgo.local','PetGo Sample User','0919000001','VND',0.00,'2026-06-09 11:51:24.000000','INV-BK-DEMO-RESCHED-001','BOOKING','2026-06-08 11:51:24.000000','Seed demo invoice cho booking BK-DEMO-RESCHED-001','2026-06-08 11:51:24.000000','PAID',180000.00,0.00,180000.00,2,NULL,NULL,1),(3,NULL,NULL,'Hồ Chí Minh, Hồ Chí Minh','user@petgo.local','PetGo Sample User','0919000001','VND',0.00,'2026-06-09 11:51:24.000000','INV-BK-DEMO-PENDING-001','BOOKING','2026-06-08 11:51:24.000000','Seed demo invoice cho booking BK-DEMO-PENDING-001',NULL,'ISSUED',180000.00,0.00,180000.00,3,NULL,NULL,1),(4,NULL,NULL,'Hồ Chí Minh, Hồ Chí Minh','user@petgo.local','PetGo Sample User','0919000001','VND',0.00,'2026-06-09 11:51:24.000000','INV-BK-DEMO-PROVDONE-001','BOOKING','2026-06-08 11:51:24.000000','Seed demo invoice cho booking BK-DEMO-PROVDONE-001','2026-06-08 11:51:24.000000','PAID',350000.00,0.00,350000.00,4,NULL,NULL,1),(5,NULL,NULL,'Hồ Chí Minh, Hồ Chí Minh','user@petgo.local','PetGo Sample User','0919000001','VND',0.00,'2026-06-09 11:51:24.000000','INV-BK-DEMO-PAYPEND-001','BOOKING','2026-06-08 11:51:24.000000','Seed demo invoice cho booking BK-DEMO-PAYPEND-001',NULL,'ISSUED',350000.00,0.00,350000.00,5,NULL,NULL,1),(6,NULL,NULL,'Hồ Chí Minh, Hồ Chí Minh','user@petgo.local','PetGo Sample User','0919000001','VND',0.00,'2026-06-09 11:51:24.000000','INV-BK-DEMO-CONFIRM-001','BOOKING','2026-06-08 11:51:24.000000','Seed demo invoice cho booking BK-DEMO-CONFIRM-001','2026-06-08 11:51:24.000000','PAID',350000.00,0.00,350000.00,6,NULL,NULL,1),(7,NULL,NULL,'Hồ Chí Minh, Hồ Chí Minh','user@petgo.local','PetGo Sample User','0919000001','VND',0.00,'2026-06-09 11:51:24.000000','INV-BK-DEMO-DISPUTE-001','BOOKING','2026-06-08 11:51:24.000000','Seed demo invoice cho booking BK-DEMO-DISPUTE-001','2026-06-08 11:51:24.000000','PAID',450000.00,0.00,450000.00,7,NULL,NULL,1),(8,NULL,NULL,'Hồ Chí Minh, Hồ Chí Minh','user@petgo.local','PetGo Sample User','0919000001','VND',0.00,'2026-06-09 11:51:24.000000','INV-BK-DEMO-REJECT-001','BOOKING','2026-06-08 11:51:24.000000','Seed demo invoice cho booking BK-DEMO-REJECT-001',NULL,'VOID',250000.00,0.00,250000.00,8,NULL,NULL,1),(9,NULL,NULL,'Hồ Chí Minh, Hồ Chí Minh','user@petgo.local','PetGo Sample User','0919000001','VND',0.00,'2026-06-09 11:51:24.000000','INV-BK-DEMO-COMPLETED-001','BOOKING','2026-06-08 11:51:24.000000','Seed demo invoice cho booking BK-DEMO-COMPLETED-001','2026-06-08 11:51:24.000000','PAID',250000.00,0.00,250000.00,9,NULL,NULL,1),(10,NULL,NULL,'Hồ Chí Minh, Hồ Chí Minh','user@petgo.local','PetGo Sample User','0919000001','VND',0.00,'2026-06-09 11:51:24.000000','INV-BK-DEMO-CANCEL-001','BOOKING','2026-06-08 11:51:24.000000','Seed demo invoice cho booking BK-DEMO-CANCEL-001',NULL,'VOID',300000.00,0.00,300000.00,10,NULL,NULL,1),(11,NULL,NULL,'Hồ Chí Minh, Hồ Chí Minh','user@petgo.local','PetGo Sample User','0919000001','VND',0.00,'2026-06-09 11:51:24.000000','INV-BK-DEMO-INPROG-001','BOOKING','2026-06-08 11:51:24.000000','Seed demo invoice cho booking BK-DEMO-INPROG-001','2026-06-08 11:51:24.000000','PAID',120000.00,0.00,120000.00,11,NULL,NULL,1);
 /*!40000 ALTER TABLE `invoices` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -643,7 +650,7 @@ CREATE TABLE `notification_recipients` (
   KEY `idx_notification_recipients_notification` (`notification_id`),
   CONSTRAINT `FK4ju76iqqracsb8gllihpk2ujd` FOREIGN KEY (`recipient_user_id`) REFERENCES `users` (`id`),
   CONSTRAINT `FKiuf5qgbttjq6ry57u1dni7qn4` FOREIGN KEY (`notification_id`) REFERENCES `notifications` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -652,6 +659,7 @@ CREATE TABLE `notification_recipients` (
 
 LOCK TABLES `notification_recipients` WRITE;
 /*!40000 ALTER TABLE `notification_recipients` DISABLE KEYS */;
+INSERT INTO `notification_recipients` VALUES (1,NULL,NULL,'2026-06-08 19:18:03.173840',NULL,1,2);
 /*!40000 ALTER TABLE `notification_recipients` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -682,7 +690,7 @@ CREATE TABLE `notifications` (
   KEY `idx_notifications_expires_at` (`expires_at`),
   KEY `FKj3isy3gatyxolmh0eyhoefwl6` (`created_by_admin_id`),
   CONSTRAINT `FKj3isy3gatyxolmh0eyhoefwl6` FOREIGN KEY (`created_by_admin_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -691,6 +699,7 @@ CREATE TABLE `notifications` (
 
 LOCK TABLES `notifications` WRITE;
 /*!40000 ALTER TABLE `notifications` DISABLE KEYS */;
+INSERT INTO `notifications` VALUES (1,NULL,NULL,'/partner/bookings','INDIVIDUAL','BOOKING','PetGo Sample User đã đặt lịch Dắt chó đi dạo khu vực Quận 1 cho Milo vào 09/06/2026 lúc 08:00 - 09:00. Vui lòng kiểm tra và xác nhận booking.',NULL,'HIGH','2026-06-08 19:18:03.173840',NULL,'Booking mới chờ xác nhận',1);
 /*!40000 ALTER TABLE `notifications` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -722,7 +731,7 @@ CREATE TABLE `payments` (
   KEY `FKny36alosvbrn6r83arnwp0u3f` (`payer_user_id`),
   CONSTRAINT `FKny36alosvbrn6r83arnwp0u3f` FOREIGN KEY (`payer_user_id`) REFERENCES `users` (`id`),
   CONSTRAINT `FKrbqec6be74wab8iifh8g3i50i` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -731,6 +740,7 @@ CREATE TABLE `payments` (
 
 LOCK TABLES `payments` WRITE;
 /*!40000 ALTER TABLE `payments` DISABLE KEYS */;
+INSERT INTO `payments` VALUES (1,NULL,NULL,180000.00,'VND',NULL,'PetGo Wallet','DEMO-TXN-BK-DEMO-USERDONE-001','{\"source\": \"seed-demo\", \"bookingCode\": \"BK-DEMO-USERDONE-001\"}','2026-06-08 11:51:24.000000','PAY-BK-DEMO-USERDONE-001','WALLET','SUCCEEDED',1,1),(2,NULL,NULL,180000.00,'VND',NULL,'PetGo Wallet','DEMO-TXN-BK-DEMO-RESCHED-001','{\"source\": \"seed-demo\", \"bookingCode\": \"BK-DEMO-RESCHED-001\"}','2026-06-08 11:51:24.000000','PAY-BK-DEMO-RESCHED-001','WALLET','SUCCEEDED',2,1),(3,NULL,NULL,180000.00,'VND',NULL,'PetGo Wallet','DEMO-TXN-BK-DEMO-PENDING-001','{\"source\": \"seed-demo\", \"bookingCode\": \"BK-DEMO-PENDING-001\"}','2026-06-08 11:51:24.000000','PAY-BK-DEMO-PENDING-001','WALLET','SUCCEEDED',3,1),(4,NULL,NULL,350000.00,'VND',NULL,'PetGo Wallet','DEMO-TXN-BK-DEMO-PROVDONE-001','{\"source\": \"seed-demo\", \"bookingCode\": \"BK-DEMO-PROVDONE-001\"}','2026-06-08 11:51:24.000000','PAY-BK-DEMO-PROVDONE-001','WALLET','SUCCEEDED',4,1),(5,NULL,NULL,350000.00,'VND',NULL,'Bank Transfer','DEMO-TXN-BK-DEMO-PAYPEND-001','{\"source\": \"seed-demo\", \"bookingCode\": \"BK-DEMO-PAYPEND-001\"}',NULL,'PAY-BK-DEMO-PAYPEND-001','BANK_TRANSFER','PENDING',5,1),(6,NULL,NULL,350000.00,'VND',NULL,'PetGo Wallet','DEMO-TXN-BK-DEMO-CONFIRM-001','{\"source\": \"seed-demo\", \"bookingCode\": \"BK-DEMO-CONFIRM-001\"}','2026-06-08 11:51:24.000000','PAY-BK-DEMO-CONFIRM-001','WALLET','SUCCEEDED',6,1),(7,NULL,NULL,450000.00,'VND',NULL,'PetGo Wallet','DEMO-TXN-BK-DEMO-DISPUTE-001','{\"source\": \"seed-demo\", \"bookingCode\": \"BK-DEMO-DISPUTE-001\"}','2026-06-08 11:51:24.000000','PAY-BK-DEMO-DISPUTE-001','WALLET','SUCCEEDED',7,1),(8,NULL,NULL,250000.00,'VND','Provider từ chối booking, hoàn tiền ví.','PetGo Wallet','DEMO-TXN-BK-DEMO-REJECT-001','{\"source\": \"seed-demo\", \"bookingCode\": \"BK-DEMO-REJECT-001\"}','2026-06-08 11:51:24.000000','PAY-BK-DEMO-REJECT-001','WALLET','REFUNDED',8,1),(9,NULL,NULL,250000.00,'VND',NULL,'PetGo Wallet','DEMO-TXN-BK-DEMO-COMPLETED-001','{\"source\": \"seed-demo\", \"bookingCode\": \"BK-DEMO-COMPLETED-001\"}','2026-06-08 11:51:24.000000','PAY-BK-DEMO-COMPLETED-001','WALLET','SUCCEEDED',9,1),(10,NULL,NULL,300000.00,'VND',NULL,'PetGo Wallet','DEMO-TXN-BK-DEMO-CANCEL-001','{\"source\": \"seed-demo\", \"bookingCode\": \"BK-DEMO-CANCEL-001\"}','2026-06-08 11:51:24.000000','PAY-BK-DEMO-CANCEL-001','WALLET','REFUNDED',10,1),(11,NULL,NULL,120000.00,'VND',NULL,'PetGo Wallet','DEMO-TXN-BK-DEMO-INPROG-001','{\"source\": \"seed-demo\", \"bookingCode\": \"BK-DEMO-INPROG-001\"}','2026-06-08 11:51:24.000000','PAY-BK-DEMO-INPROG-001','WALLET','SUCCEEDED',11,1);
 /*!40000 ALTER TABLE `payments` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -761,7 +771,7 @@ CREATE TABLE `pet_photos` (
 
 LOCK TABLES `pet_photos` WRITE;
 /*!40000 ALTER TABLE `pet_photos` DISABLE KEYS */;
-INSERT INTO `pet_photos` VALUES (1,NULL,NULL,'https://res.cloudinary.com/dxaok6qzg/image/upload/v1780555706/petgo/pets/avatar/f0b9a5fa89174a5d8e73792752c24cb1.png',_binary '',0,1),(2,NULL,NULL,'https://res.cloudinary.com/dxaok6qzg/image/upload/v1780561209/petgo/pets/avatar/a3f83c310ed642938c12f490d941acdb.png',_binary '',0,2);
+INSERT INTO `pet_photos` VALUES (1,NULL,NULL,'https://images.unsplash.com/photo-1588421357574-87938a86fa28?auto=format&fit=crop&q=80&w=500',_binary '',0,1),(2,NULL,NULL,'https://images.unsplash.com/photo-1574158622682-e40e69881006?auto=format&fit=crop&q=80&w=500',_binary '',0,2);
 /*!40000 ALTER TABLE `pet_photos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -806,7 +816,7 @@ CREATE TABLE `pets` (
 
 LOCK TABLES `pets` WRITE;
 /*!40000 ALTER TABLE `pets` DISABLE KEYS */;
-INSERT INTO `pets` VALUES (1,NULL,NULL,NULL,NULL,'https://res.cloudinary.com/dxaok6qzg/image/upload/v1780555706/petgo/pets/avatar/f0b9a5fa89174a5d8e73792752c24cb1.png',NULL,NULL,NULL,NULL,'2026-06-04 15:19:48.389747','UNKNOWN',NULL,'hhh','PET-E9E406E1D2','UNKNOWN','DOG','INACTIVE',NULL,NULL,1),(2,NULL,NULL,NULL,NULL,'https://res.cloudinary.com/dxaok6qzg/image/upload/v1780561209/petgo/pets/avatar/a3f83c310ed642938c12f490d941acdb.png',NULL,NULL,NULL,NULL,NULL,'UNKNOWN',NULL,'777','PET-2CD3E61638','UNKNOWN','DOG','ACTIVE',NULL,NULL,1);
+INSERT INTO `pets` VALUES (1,NULL,NULL,'2 tuổi',NULL,'https://images.unsplash.com/photo-1588421357574-87938a86fa28?auto=format&fit=crop&q=80&w=500','Thân thiện, hơi sợ máy sấy.','Poodle',NULL,NULL,NULL,'FEMALE','Sức khỏe tốt.','Coco','PET-DEMO-COCO','SMALL','DOG','ACTIVE','Đã tiêm phòng định kỳ.',5.40,1),(2,NULL,NULL,'3 tuổi',NULL,'https://images.unsplash.com/photo-1574158622682-e40e69881006?auto=format&fit=crop&q=80&w=500','Hiền, không thích tiếng ồn lớn.','British Shorthair',NULL,NULL,NULL,'MALE','Dị ứng nhẹ với hải sản.','Milo','PET-DEMO-MILO','MEDIUM','CAT','ACTIVE','Đã tẩy giun.',4.80,1);
 /*!40000 ALTER TABLE `pets` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1024,7 +1034,7 @@ CREATE TABLE `provider_availability_slots` (
   KEY `FK169q5q8ny4wvv9e08ctulu3ru` (`provider_service_id`),
   CONSTRAINT `FK169q5q8ny4wvv9e08ctulu3ru` FOREIGN KEY (`provider_service_id`) REFERENCES `provider_services` (`id`),
   CONSTRAINT `FKf8ye92cni7e8ctxot2g5x7g70` FOREIGN KEY (`provider_id`) REFERENCES `provider_profiles` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1033,6 +1043,7 @@ CREATE TABLE `provider_availability_slots` (
 
 LOCK TABLES `provider_availability_slots` WRITE;
 /*!40000 ALTER TABLE `provider_availability_slots` DISABLE KEYS */;
+INSERT INTO `provider_availability_slots` VALUES (1,NULL,NULL,0,2,'15:00:00','Seed demo slot khả dụng','2026-06-09','AVAILABLE','14:00:00',1,2),(2,NULL,NULL,0,1,'15:30:00','Seed demo slot khả dụng','2026-06-09','AVAILABLE','14:00:00',1,3),(3,NULL,NULL,0,1,'14:45:00','Seed demo slot khả dụng','2026-06-09','AVAILABLE','14:00:00',1,5),(4,NULL,NULL,0,3,'15:00:00','Seed demo slot khả dụng','2026-06-09','AVAILABLE','14:00:00',1,7),(5,NULL,NULL,0,2,'10:00:00','Seed demo slot khả dụng','2026-06-09','AVAILABLE','09:00:00',1,2),(6,NULL,NULL,0,1,'10:30:00','Seed demo slot khả dụng','2026-06-09','AVAILABLE','09:00:00',1,3),(7,NULL,NULL,0,1,'09:45:00','Seed demo slot khả dụng','2026-06-09','AVAILABLE','09:00:00',1,5),(8,NULL,NULL,0,3,'10:00:00','Seed demo slot khả dụng','2026-06-09','AVAILABLE','09:00:00',1,7),(9,NULL,NULL,0,2,'15:00:00','Seed demo slot khả dụng','2026-06-10','AVAILABLE','14:00:00',1,2),(10,NULL,NULL,0,1,'15:30:00','Seed demo slot khả dụng','2026-06-10','AVAILABLE','14:00:00',1,3),(11,NULL,NULL,0,1,'14:45:00','Seed demo slot khả dụng','2026-06-10','AVAILABLE','14:00:00',1,5),(12,NULL,NULL,0,3,'15:00:00','Seed demo slot khả dụng','2026-06-10','AVAILABLE','14:00:00',1,7),(13,NULL,NULL,0,2,'10:00:00','Seed demo slot khả dụng','2026-06-10','AVAILABLE','09:00:00',1,2),(14,NULL,NULL,0,1,'10:30:00','Seed demo slot khả dụng','2026-06-10','AVAILABLE','09:00:00',1,3),(15,NULL,NULL,0,1,'09:45:00','Seed demo slot khả dụng','2026-06-10','AVAILABLE','09:00:00',1,5),(16,NULL,NULL,0,3,'10:00:00','Seed demo slot khả dụng','2026-06-10','AVAILABLE','09:00:00',1,7),(17,NULL,NULL,0,2,'15:00:00','Seed demo slot khả dụng','2026-06-11','AVAILABLE','14:00:00',1,2),(18,NULL,NULL,0,1,'15:30:00','Seed demo slot khả dụng','2026-06-11','AVAILABLE','14:00:00',1,3),(19,NULL,NULL,0,1,'14:45:00','Seed demo slot khả dụng','2026-06-11','AVAILABLE','14:00:00',1,5),(20,NULL,NULL,0,3,'15:00:00','Seed demo slot khả dụng','2026-06-11','AVAILABLE','14:00:00',1,7),(21,NULL,NULL,0,2,'10:00:00','Seed demo slot khả dụng','2026-06-11','AVAILABLE','09:00:00',1,2),(22,NULL,NULL,0,1,'10:30:00','Seed demo slot khả dụng','2026-06-11','AVAILABLE','09:00:00',1,3),(23,NULL,NULL,0,1,'09:45:00','Seed demo slot khả dụng','2026-06-11','AVAILABLE','09:00:00',1,5),(24,NULL,NULL,0,3,'10:00:00','Seed demo slot khả dụng','2026-06-11','AVAILABLE','09:00:00',1,7),(25,NULL,NULL,0,2,'15:00:00','Seed demo slot khả dụng','2026-06-13','AVAILABLE','14:00:00',1,2),(26,NULL,NULL,0,1,'15:30:00','Seed demo slot khả dụng','2026-06-13','AVAILABLE','14:00:00',1,3),(27,NULL,NULL,0,1,'14:45:00','Seed demo slot khả dụng','2026-06-13','AVAILABLE','14:00:00',1,5),(28,NULL,NULL,0,3,'15:00:00','Seed demo slot khả dụng','2026-06-13','AVAILABLE','14:00:00',1,7),(29,NULL,NULL,0,2,'10:00:00','Seed demo slot khả dụng','2026-06-13','AVAILABLE','09:00:00',1,2),(30,NULL,NULL,0,1,'10:30:00','Seed demo slot khả dụng','2026-06-13','AVAILABLE','09:00:00',1,3),(31,NULL,NULL,0,1,'09:45:00','Seed demo slot khả dụng','2026-06-13','AVAILABLE','09:00:00',1,5),(32,NULL,NULL,0,3,'10:00:00','Seed demo slot khả dụng','2026-06-13','AVAILABLE','09:00:00',1,7),(33,NULL,NULL,0,2,'15:00:00','Seed demo slot khả dụng','2026-06-15','AVAILABLE','14:00:00',1,2),(34,NULL,NULL,0,1,'15:30:00','Seed demo slot khả dụng','2026-06-15','AVAILABLE','14:00:00',1,3),(35,NULL,NULL,0,1,'14:45:00','Seed demo slot khả dụng','2026-06-15','AVAILABLE','14:00:00',1,5),(36,NULL,NULL,0,3,'15:00:00','Seed demo slot khả dụng','2026-06-15','AVAILABLE','14:00:00',1,7),(37,NULL,NULL,0,2,'10:00:00','Seed demo slot khả dụng','2026-06-15','AVAILABLE','09:00:00',1,2),(38,NULL,NULL,0,1,'10:30:00','Seed demo slot khả dụng','2026-06-15','AVAILABLE','09:00:00',1,3),(39,NULL,NULL,0,1,'09:45:00','Seed demo slot khả dụng','2026-06-15','AVAILABLE','09:00:00',1,5),(40,NULL,NULL,0,3,'10:00:00','Seed demo slot khả dụng','2026-06-15','AVAILABLE','09:00:00',1,7);
 /*!40000 ALTER TABLE `provider_availability_slots` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1059,7 +1070,7 @@ CREATE TABLE `provider_booking_policies` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `UKr50dyx9y5ntx57o5yc830vv34` (`provider_id`),
   CONSTRAINT `FKftxolhg13j4l5c7hkm75cmglv` FOREIGN KEY (`provider_id`) REFERENCES `provider_profiles` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1068,6 +1079,7 @@ CREATE TABLE `provider_booking_policies` (
 
 LOCK TABLES `provider_booking_policies` WRITE;
 /*!40000 ALTER TABLE `provider_booking_policies` DISABLE KEYS */;
+INSERT INTO `provider_booking_policies` VALUES (1,NULL,NULL,_binary '',50000.00,12,'FIXED',24,2,12,'Asia/Ho_Chi_Minh',1);
 /*!40000 ALTER TABLE `provider_booking_policies` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1133,7 +1145,7 @@ CREATE TABLE `provider_photos` (
 
 LOCK TABLES `provider_photos` WRITE;
 /*!40000 ALTER TABLE `provider_photos` DISABLE KEYS */;
-INSERT INTO `provider_photos` VALUES (2,NULL,NULL,'IMAGE','https://res.cloudinary.com/dxaok6qzg/image/upload/v1780554359/petgo/partner/services/d94d2e3c72fc480bbe3f398a749434f2.png',_binary '',0,1),(3,NULL,NULL,'IMAGE','https://res.cloudinary.com/dxaok6qzg/image/upload/v1780554391/petgo/partner/services/566869d0bc6b4b2ab6bffd3b0414d25d.png',_binary '\0',1,1);
+INSERT INTO `provider_photos` VALUES (1,NULL,NULL,'IMAGE','https://images.unsplash.com/photo-1601758124510-52d02ddb7cbd?auto=format&fit=crop&q=80&w=800',_binary '',0,1),(2,NULL,NULL,'IMAGE','https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=800',_binary '\0',1,1),(3,NULL,NULL,'IMAGE','https://images.unsplash.com/photo-1586816001966-79b736744398?auto=format&fit=crop&q=80&w=800',_binary '\0',2,1);
 /*!40000 ALTER TABLE `provider_photos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1194,7 +1206,7 @@ CREATE TABLE `provider_profiles` (
 
 LOCK TABLES `provider_profiles` WRITE;
 /*!40000 ALTER TABLE `provider_profiles` DISABLE KEYS */;
-INSERT INTO `provider_profiles` VALUES (1,NULL,NULL,_binary '',_binary '',4.80,'PetGo Provider',24,NULL,'VN','https://res.cloudinary.com/dxaok6qzg/image/upload/v1780553827/petgo/partner/services/93f26b8f96a9493f9fd71c3b42fdcb08.jpg','VND',NULL,'Tài khoản nhà cung cấp mẫu để kiểm thử luồng đối tác PetGo.',NULL,'0919000002',_binary '',NULL,_binary '',10.7769000,106.7009000,'https://res.cloudinary.com/dxaok6qzg/image/upload/v1780553812/petgo/partner/services/edab46f78d1843048e1745ca9967922e.jpg',200000.00,'HOLA',NULL,'PRV-SAMPLE-PROVIDER','BUSINESS',NULL,8.00,'petgo-sample-provider','ACTIVE',120,25,'VERIFIED','HALO',3,2);
+INSERT INTO `provider_profiles` VALUES (1,NULL,NULL,_binary '',_binary '',4.86,'PetGo Sample Provider',24,'Hồ Chí Minh','VN','https://images.unsplash.com/photo-1601758125946-6ec2ef64daf8?auto=format&fit=crop&q=80&w=1400','VND',NULL,'Tài khoản nhà cung cấp mẫu để kiểm thử luồng đối tác PetGo. Có dịch vụ đã duyệt để hiển thị đúng ở trang tìm kiếm.','Quận 1','0919000002',_binary '','Spa, grooming và chăm sóc thú cưng mẫu',_binary '',10.7769000,106.7009000,'https://images.unsplash.com/photo-1601758124510-52d02ddb7cbd?auto=format&fit=crop&q=80&w=800',120000.00,'123 PetGo Demo Street',NULL,'PRV-SAMPLE-PROVIDER','BUSINESS','Hồ Chí Minh',8.00,'petgo-sample-provider','ACTIVE',186,42,'VERIFIED','Phường Bến Nghé',3,2);
 /*!40000 ALTER TABLE `provider_profiles` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1264,7 +1276,7 @@ CREATE TABLE `provider_service_change_requests` (
   CONSTRAINT `FK405o2tol5tr7l0pk0tnhjroar` FOREIGN KEY (`reviewer_id`) REFERENCES `users` (`id`),
   CONSTRAINT `FKla02jy0g70p50t5xxlfr7sbie` FOREIGN KEY (`provider_service_id`) REFERENCES `provider_services` (`id`),
   CONSTRAINT `FKq0asn68boal9pfcsg8gtigrvj` FOREIGN KEY (`provider_id`) REFERENCES `provider_profiles` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1273,7 +1285,6 @@ CREATE TABLE `provider_service_change_requests` (
 
 LOCK TABLES `provider_service_change_requests` WRITE;
 /*!40000 ALTER TABLE `provider_service_change_requests` DISABLE KEYS */;
-INSERT INTO `provider_service_change_requests` VALUES (1,NULL,NULL,'Yêu cầu dịch vụ đã được duyệt.','21,1,7','VND','1','https://res.cloudinary.com/dxaok6qzg/image/upload/v1780511727/petgo/partner/services/019883bbb11442d8b9f3902988c1227a.jpg',1000.00,'SESSION','CREATE','2026-06-04 02:11:56.776682','sv1','APPROVED','2026-06-04 01:35:53.863822',1,1,3);
 /*!40000 ALTER TABLE `provider_service_change_requests` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1312,7 +1323,7 @@ CREATE TABLE `provider_services` (
   KEY `FKei4xs3227pwcwgkxkwwvdj70j` (`service_id`),
   CONSTRAINT `FKei4xs3227pwcwgkxkwwvdj70j` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`),
   CONSTRAINT `FKrl8vuw8tonb82kp6aq38i43dt` FOREIGN KEY (`provider_id`) REFERENCES `provider_profiles` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1321,7 +1332,7 @@ CREATE TABLE `provider_services` (
 
 LOCK TABLES `provider_services` WRITE;
 /*!40000 ALTER TABLE `provider_services` DISABLE KEYS */;
-INSERT INTO `provider_services` VALUES (1,NULL,NULL,_binary '','APPROVED',0,0,1,'21,1,7','VND','sv1','1',0,60,'FIXED',_binary '\0','https://res.cloudinary.com/dxaok6qzg/image/upload/v1780511727/petgo/partner/services/019883bbb11442d8b9f3902988c1227a.jpg',1000.00,'SESSION','1',1,1);
+INSERT INTO `provider_services` VALUES (1,NULL,NULL,_binary '','APPROVED',0,0,1,'6','VND','Gói tắm spa tiêu chuẩn','Dịch vụ mẫu đã được duyệt để provider demo xuất hiện đúng ở trang tìm kiếm và có thể đặt lịch thử.',1,60,'MINUTES',_binary '','https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=800',180000.00,'SESSION','Tắm, sấy, chải lông và vệ sinh tai móng cho chó mèo.',1,1),(2,NULL,NULL,_binary '','APPROVED',0,10,2,'19','VND','Gói tắm sấy nhanh PetGo','Bao gồm tắm, sấy, chải lông, vệ sinh tai móng nhẹ.',10,60,'MINUTES',_binary '','https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=800',180000.00,'SESSION','Tắm sấy cơ bản cho chó mèo nhỏ/vừa.',1,2),(3,NULL,NULL,_binary '','APPROVED',0,15,1,'21','VND','Grooming tạo kiểu premium','Tư vấn kiểu lông, cắt tỉa, sấy tạo phồng và hoàn thiện ngoại hình.',20,90,'MINUTES',_binary '','https://images.unsplash.com/photo-1560807707-8cc77767d783?auto=format&fit=crop&q=80&w=800',350000.00,'SESSION','Cắt tỉa tạo kiểu theo giống.',1,3),(4,NULL,NULL,_binary '','APPROVED',0,0,4,'23','VND','Khách sạn chó qua đêm','Lưu trú trong ngày có cập nhật ảnh. Dữ liệu demo dùng 480 phút để tránh TIME vượt 24:00 khi hiển thị dashboard.',30,480,'MINUTES',_binary '\0','https://images.unsplash.com/photo-1601758174114-e711c0cbaa69?auto=format&fit=crop&q=80&w=800',450000.00,'DAY','Lưu trú qua đêm có cập nhật ảnh.',1,4),(5,NULL,NULL,_binary '','APPROVED',0,10,1,'26','VND','Khám tổng quát tại PetGo','Khám thể trạng, da lông, cân nặng và tư vấn chăm sóc.',40,45,'MINUTES',_binary '\0','https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&q=80&w=800',250000.00,'SESSION','Kiểm tra sức khỏe cơ bản.',1,5),(6,NULL,NULL,_binary '','APPROVED',0,15,1,'29','VND','Buổi huấn luyện lệnh cơ bản','Dạy ngồi, nằm, gọi tên, đi dây dắt và phản hồi hiệu lệnh.',50,75,'MINUTES',_binary '\0','https://images.unsplash.com/photo-1601758123927-196fefb5b65e?auto=format&fit=crop&q=80&w=800',300000.00,'SESSION','Huấn luyện kỹ năng cơ bản cho chó.',1,6),(7,NULL,NULL,_binary '','APPROVED',0,5,3,'32','VND','Dắt chó đi dạo khu vực Quận 1','Đưa chó đi dạo, vận động nhẹ và gửi ghi chú sau buổi.',60,60,'MINUTES',_binary '\0','https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800',120000.00,'SESSION','Đi dạo 60 phút kèm cập nhật.',1,7);
 /*!40000 ALTER TABLE `provider_services` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1342,7 +1353,7 @@ CREATE TABLE `refresh_tokens` (
   PRIMARY KEY (`id`),
   KEY `FK1lih5y2npsf8u5o3vhdb9y0os` (`user_id`),
   CONSTRAINT `FK1lih5y2npsf8u5o3vhdb9y0os` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1351,7 +1362,7 @@ CREATE TABLE `refresh_tokens` (
 
 LOCK TABLES `refresh_tokens` WRITE;
 /*!40000 ALTER TABLE `refresh_tokens` DISABLE KEYS */;
-INSERT INTO `refresh_tokens` VALUES (1,NULL,'2026-07-04 01:33:51.000000','2026-06-04 12:47:06.519365','bc601dcaa96f1ae7b34806b3c4e8560cb5e18577cbaedda33beda6f13cd82ace',2),(2,NULL,'2026-07-04 01:39:43.000000',NULL,'40f37b9c8944613b72cd99b67abe5b2d07c0eba97f2626b4c87616676691886f',3),(3,NULL,'2026-07-04 12:37:29.000000',NULL,'fdd7544f50002c00207bcdadea9ee66843407cf4407c818847fc70070f239c46',1),(4,NULL,'2026-07-04 12:47:06.000000',NULL,'aca87d5a8b183c89de05370bfa1d8dc91b94afbe4c37c87f58e8d4b6837509ee',2),(5,NULL,'2026-07-04 12:47:06.000000',NULL,'cf99317b24b354cc8da87f1b6e76aadb365c8c525a1eaa63928fb0bbe6a5651b',2),(6,NULL,'2026-07-04 13:09:54.000000',NULL,'71f69f29cb00fbc322f195bceeef37290cf828083fa31b52f685aaff50502222',2),(7,NULL,'2026-07-04 13:10:41.000000',NULL,'38cbcbb5edf3167fb775e815d585dff4d036cefcf64b98b815c25ccaa57de363',2),(8,NULL,'2026-07-04 13:18:08.000000',NULL,'59209990135a13f0d946a403d823f4d0c2a613d1fb25b3edb2d55ca15636c40a',1),(9,NULL,'2026-07-04 13:37:01.000000',NULL,'c10c47a6be1cb1a355541921e9e8801578ad7a9e6ad6bcfb2304df1155db86ff',1),(10,NULL,'2026-07-04 13:56:02.000000','2026-06-04 17:44:33.328905','c069268ef1a88ca24296d2f04b698028bfd61d7b06dcd0af859e8e6be3a3cda8',1),(11,NULL,'2026-07-04 13:56:37.000000',NULL,'eaa4d2646cfbf7c3bdc762f8d25eff796c6bb0ef7fd21cece2e259f1d8a9f280',1),(12,NULL,'2026-07-04 14:03:20.000000',NULL,'78498fb6dbc50e27645bdc0ee08b92b7729adce9914d0874cadb25796e0745b6',1),(13,NULL,'2026-07-04 14:04:19.000000',NULL,'1aa7a52ca491f8040e88a415e8c80f512054672ead330122ee50ac0e548983bb',2),(14,NULL,'2026-07-04 15:16:24.000000',NULL,'00640594f45432e7824866f6bd2cdf4287c19082f3ef3cf4c39d77d42abb253c',1),(15,NULL,'2026-07-04 17:44:33.000000',NULL,'c8078a0bed327ca06abb9cf8daaf775e131d21ed0bce646658bf18e8c3a262aa',1),(16,NULL,'2026-07-04 17:44:33.000000',NULL,'f6f9b67fa7a17b00ec9091dc6adb169bf29d6c72b6cd319283d12bc70adb2653',1),(17,NULL,'2026-07-04 18:20:26.000000',NULL,'7a4b97fe84f300e7aea97175365c76f7b254012fe29dce3dd6143f118d2a0e0f',1),(18,NULL,'2026-07-06 14:43:43.000000',NULL,'06687eff66e3f2a5a8e1fe3390ee1816245edc721a4cbe2ea027dbd29ad384b7',1);
+INSERT INTO `refresh_tokens` VALUES (1,NULL,'2026-07-08 19:31:00.000000',NULL,'bc2f209793c318a8b56b1b4b35b971bcd8d19daaf06d5262100ee6999b72e80a',2),(2,NULL,'2026-07-09 01:14:01.000000',NULL,'9137aa6aa2af4b3deee39c90d676a1e3c0216c5d24dc81f5bb2e641afdaa20d2',1),(3,NULL,'2026-07-09 01:22:11.000000',NULL,'09f6215409b0679a2dcc1492dd06d43cdaff9d925fd9abb48b10d7a989eab6de',1);
 /*!40000 ALTER TABLE `refresh_tokens` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1419,7 +1430,7 @@ CREATE TABLE `review_photos` (
   PRIMARY KEY (`id`),
   KEY `FKunrlxq8kevetatdevbd9xbp1` (`review_id`),
   CONSTRAINT `FKunrlxq8kevetatdevbd9xbp1` FOREIGN KEY (`review_id`) REFERENCES `reviews` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1428,6 +1439,7 @@ CREATE TABLE `review_photos` (
 
 LOCK TABLES `review_photos` WRITE;
 /*!40000 ALTER TABLE `review_photos` DISABLE KEYS */;
+INSERT INTO `review_photos` VALUES (1,NULL,'https://images.unsplash.com/photo-1601758124510-52d02ddb7cbd?auto=format&fit=crop&q=80&w=800',0,1);
 /*!40000 ALTER TABLE `review_photos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1449,14 +1461,24 @@ CREATE TABLE `reviews` (
   `booking_id` bigint NOT NULL,
   `customer_user_id` bigint NOT NULL,
   `provider_id` bigint NOT NULL,
+  `admin_note` text,
+  `admin_reviewed_at` datetime(6) DEFAULT NULL,
+  `provider_replied_at` datetime(6) DEFAULT NULL,
+  `provider_reply` text,
+  `admin_reviewed_by` bigint DEFAULT NULL,
+  `provider_replied_by` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `FK28an517hrxtt2bsg93uefugrm` (`booking_id`),
   KEY `FKecvyhigqvrf2vaag56ug4hfoo` (`customer_user_id`),
   KEY `FK34m2xmuydjfidk0o8rtcfllqs` (`provider_id`),
+  KEY `FK4wrj8rvmyq8jxnfdnumk9syoq` (`admin_reviewed_by`),
+  KEY `FKt1a2yw6ed71apvnnukd2tpwsj` (`provider_replied_by`),
   CONSTRAINT `FK28an517hrxtt2bsg93uefugrm` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`),
   CONSTRAINT `FK34m2xmuydjfidk0o8rtcfllqs` FOREIGN KEY (`provider_id`) REFERENCES `provider_profiles` (`id`),
-  CONSTRAINT `FKecvyhigqvrf2vaag56ug4hfoo` FOREIGN KEY (`customer_user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CONSTRAINT `FK4wrj8rvmyq8jxnfdnumk9syoq` FOREIGN KEY (`admin_reviewed_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `FKecvyhigqvrf2vaag56ug4hfoo` FOREIGN KEY (`customer_user_id`) REFERENCES `users` (`id`),
+  CONSTRAINT `FKt1a2yw6ed71apvnnukd2tpwsj` FOREIGN KEY (`provider_replied_by`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1465,6 +1487,7 @@ CREATE TABLE `reviews` (
 
 LOCK TABLES `reviews` WRITE;
 /*!40000 ALTER TABLE `reviews` DISABLE KEYS */;
+INSERT INTO `reviews` VALUES (1,NULL,NULL,'Dịch vụ rất tốt, provider chăm sóc bé kỹ và cập nhật rõ ràng.',NULL,5,'APPROVED',9,1,1,NULL,NULL,NULL,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `reviews` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1551,7 +1574,7 @@ CREATE TABLE `services` (
   PRIMARY KEY (`id`),
   KEY `FKfffr4emayc2n4uq3yv618d9j0` (`category_id`),
   CONSTRAINT `FKfffr4emayc2n4uq3yv618d9j0` FOREIGN KEY (`category_id`) REFERENCES `service_categories` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1560,7 +1583,7 @@ CREATE TABLE `services` (
 
 LOCK TABLES `services` WRITE;
 /*!40000 ALTER TABLE `services` DISABLE KEYS */;
-INSERT INTO `services` VALUES (1,NULL,NULL,_binary '',1000.00,'VND',60,'1','sv1','SESSION',_binary '\0','CSV-7352C8CC','1','sv1',7);
+INSERT INTO `services` VALUES (1,NULL,NULL,_binary '',180000.00,'VND',60,'Dịch vụ mẫu dùng cho tài khoản provider demo, phù hợp kiểm thử tìm kiếm, booking và quản lý dịch vụ partner.','Tắm spa thú cưng mẫu','SESSION',_binary '\0','SVC-SAMPLE-GROOMING','Tắm, sấy, vệ sinh tai móng và chăm sóc lông cơ bản.','tam-spa-thu-cung-mau',6),(2,NULL,NULL,_binary '',180000.00,'VND',60,'Gói tắm sấy phổ biến cho chó mèo kích thước nhỏ/vừa.','Tắm sấy cơ bản','SESSION',_binary '\0','SVC-DEMO-BATH-BASIC','Tắm, sấy, chải lông và vệ sinh nhẹ.','tam-say-co-ban',19),(3,NULL,NULL,_binary '',350000.00,'VND',90,'Gói grooming chuyên sâu cho thú cưng cần làm đẹp ngoại hình.','Cắt tỉa tạo kiểu theo giống','SESSION',_binary '\0','SVC-DEMO-GROOMING-STYLE','Cắt tỉa lông, tạo kiểu theo giống và yêu cầu.','cat-tia-tao-kieu-theo-giong',21),(4,NULL,NULL,_binary '',450000.00,'VND',1440,'Dịch vụ khách sạn qua đêm dành cho chó.','Lưu trú chó qua đêm','DAY',_binary '','SVC-DEMO-HOTEL-DOG','Phòng lưu trú, cho ăn và cập nhật tình trạng.','luu-tru-cho-qua-dem',23),(5,NULL,NULL,_binary '',250000.00,'VND',45,'Dịch vụ khám tổng quát cơ bản cho chó mèo.','Khám tổng quát thú cưng','SESSION',_binary '\0','SVC-DEMO-VET-CHECKUP','Kiểm tra thể trạng và tư vấn chăm sóc.','kham-tong-quat-thu-cung',26),(6,NULL,NULL,_binary '',300000.00,'VND',75,'Buổi huấn luyện kỹ năng cơ bản cho chó.','Huấn luyện lệnh cơ bản','SESSION',_binary '','SVC-DEMO-TRAINING-BASIC','Dạy ngồi, nằm, gọi tên và đi dây dắt.','huan-luyen-lenh-co-ban',29),(7,NULL,NULL,_binary '',120000.00,'VND',60,'Dịch vụ hỗ trợ vận động cho chó trong khu vực gần provider.','Dắt chó đi dạo 60 phút','SESSION',_binary '\0','SVC-DEMO-WALKING','Dắt chó đi dạo, vận động và gửi cập nhật.','dat-cho-di-dao-60-phut',32);
 /*!40000 ALTER TABLE `services` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1748,7 +1771,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,NULL,NULL,NULL,NULL,'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=400','Hồ Chí Minh','VN','https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=1600',NULL,NULL,NULL,'user@petgo.local','2026-06-03 18:32:17.000000','PetGo Sample User','2026-06-06 14:43:43.723151',NULL,NULL,'$2a$10$n89Petg/CbVQPxO1Hzra7ug9/MjwIM5gqQBM2iz9CDnh5ZT6yWwoy','0919000001','Hồ Chí Minh','ACTIVE','USR-SAMPLE-USER',NULL),(2,NULL,NULL,NULL,NULL,'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=400','Hồ Chí Minh','VN','https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=1600',NULL,NULL,NULL,'provider@petgo.local','2026-06-03 18:32:17.000000','PetGo Sample Provider Owner','2026-06-04 14:04:19.101463',NULL,NULL,'$2a$10$n89Petg/CbVQPxO1Hzra7ug9/MjwIM5gqQBM2iz9CDnh5ZT6yWwoy','0919000002','Hồ Chí Minh','ACTIVE','USR-SAMPLE-PROVIDER',NULL),(3,NULL,NULL,NULL,NULL,'https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&q=80&w=400','Hồ Chí Minh','VN','https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=1600',NULL,NULL,NULL,'admin@petgo.local','2026-06-03 18:32:17.000000','PetGo Sample Admin','2026-06-04 01:39:43.394633',NULL,NULL,'$2a$10$n89Petg/CbVQPxO1Hzra7ug9/MjwIM5gqQBM2iz9CDnh5ZT6yWwoy','0919000003','Hồ Chí Minh','ACTIVE','USR-SAMPLE-ADMIN',NULL);
+INSERT INTO `users` VALUES (1,NULL,NULL,NULL,NULL,'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=400','Hồ Chí Minh','VN','https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=1600',NULL,NULL,NULL,'user@petgo.local','2026-06-08 11:51:16.000000','PetGo Sample User','2026-06-09 01:22:11.000266',NULL,NULL,'$2a$10$n89Petg/CbVQPxO1Hzra7ug9/MjwIM5gqQBM2iz9CDnh5ZT6yWwoy','0919000001','Hồ Chí Minh','ACTIVE','USR-SAMPLE-USER',NULL),(2,NULL,NULL,NULL,NULL,'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=400','Hồ Chí Minh','VN','https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=1600',NULL,NULL,NULL,'provider@petgo.local','2026-06-08 11:51:16.000000','PetGo Sample Provider Owner','2026-06-08 19:30:59.938684',NULL,NULL,'$2a$10$n89Petg/CbVQPxO1Hzra7ug9/MjwIM5gqQBM2iz9CDnh5ZT6yWwoy','0919000002','Hồ Chí Minh','ACTIVE','USR-SAMPLE-PROVIDER',NULL),(3,NULL,NULL,NULL,NULL,'https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&q=80&w=400','Hồ Chí Minh','VN','https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=1600',NULL,NULL,NULL,'admin@petgo.local','2026-06-08 11:51:16.000000','PetGo Sample Admin',NULL,NULL,NULL,'$2a$10$n89Petg/CbVQPxO1Hzra7ug9/MjwIM5gqQBM2iz9CDnh5ZT6yWwoy','0919000003','Hồ Chí Minh','ACTIVE','USR-SAMPLE-ADMIN',NULL);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1801,6 +1824,7 @@ CREATE TABLE `wallet_transactions` (
   `gateway_name` varchar(50) DEFAULT NULL,
   `gateway_transaction_id` varchar(120) DEFAULT NULL,
   `note` varchar(500) DEFAULT NULL,
+  `payment_content` varchar(255) DEFAULT NULL,
   `qr_code_text` varchar(2000) DEFAULT NULL,
   `review_note` varchar(500) DEFAULT NULL,
   `reviewed_at` datetime(6) DEFAULT NULL,
@@ -1811,7 +1835,6 @@ CREATE TABLE `wallet_transactions` (
   `reviewed_by_admin_id` bigint DEFAULT NULL,
   `user_id` bigint NOT NULL,
   `wallet_id` bigint NOT NULL,
-  `payment_content` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UKpviaukmpulq57esrtiqqii4ra` (`transaction_code`),
   KEY `FKq81bxcnoybccq58n4u57cd7dp` (`counterparty_user_id`),
@@ -1822,7 +1845,7 @@ CREATE TABLE `wallet_transactions` (
   CONSTRAINT `FK8seu7b87ifqi09ghhssusmb0x` FOREIGN KEY (`wallet_id`) REFERENCES `wallets` (`id`),
   CONSTRAINT `FKq81bxcnoybccq58n4u57cd7dp` FOREIGN KEY (`counterparty_user_id`) REFERENCES `users` (`id`),
   CONSTRAINT `FKrtsa3qtjhd0rn4xb92na03vd` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1831,7 +1854,7 @@ CREATE TABLE `wallet_transactions` (
 
 LOCK TABLES `wallet_transactions` WRITE;
 /*!40000 ALTER TABLE `wallet_transactions` DISABLE KEYS */;
-INSERT INTO `wallet_transactions` VALUES (1,NULL,NULL,50000.00,NULL,NULL,NULL,NULL,NULL,'https://pay.payos.vn/web/619c056729aa496c81b6c5eefed953c5','PayOS','1780572331868616','','00020101021238570010A000000727012700069704220113VQRQAJMBU20840208QRIBFTTA53037045405500005802VN62210817PetGo Wallet null6304CE62',NULL,NULL,'PAYMENT_PENDING','TOPUP-A9F4E87C0D29','TOP_UP',NULL,NULL,1,1,NULL);
+INSERT INTO `wallet_transactions` VALUES (1,NULL,NULL,1000000000.00,1000000000.00,0.00,NULL,NULL,NULL,NULL,NULL,NULL,'Seed demo: nạp 1 tỷ vào ví admin.',NULL,NULL,NULL,'2026-06-08 11:51:24.000000','COMPLETED','DEMO-TOPUP-ADMIN-1B','TOP_UP',NULL,3,3,3),(2,NULL,NULL,10000000.00,10000000.00,0.00,NULL,NULL,NULL,NULL,NULL,NULL,'Seed demo: nạp 10 triệu vào ví user.',NULL,NULL,NULL,'2026-06-08 11:51:24.000000','COMPLETED','DEMO-TOPUP-USER-10M','TOP_UP',NULL,3,1,1),(3,NULL,NULL,180000.00,9820000.00,10000000.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:1','Seed demo escrow cho booking BK-DEMO-USERDONE-001',NULL,NULL,NULL,NULL,'HELD_BY_ADMIN','DEMO-ESCROW-BK-DEMO-USERDONE-001','BOOKING_ESCROW_HOLD',2,NULL,1,1),(4,NULL,NULL,180000.00,9820000.00,10000000.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:2','Seed demo escrow cho booking BK-DEMO-RESCHED-001',NULL,NULL,NULL,NULL,'HELD_BY_ADMIN','DEMO-ESCROW-BK-DEMO-RESCHED-001','BOOKING_ESCROW_HOLD',2,NULL,1,1),(5,NULL,NULL,180000.00,9820000.00,10000000.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:3','Seed demo escrow cho booking BK-DEMO-PENDING-001',NULL,NULL,NULL,NULL,'HELD_BY_ADMIN','DEMO-ESCROW-BK-DEMO-PENDING-001','BOOKING_ESCROW_HOLD',2,NULL,1,1),(6,NULL,NULL,350000.00,9650000.00,10000000.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:4','Seed demo escrow cho booking BK-DEMO-PROVDONE-001',NULL,NULL,NULL,NULL,'HELD_BY_ADMIN','DEMO-ESCROW-BK-DEMO-PROVDONE-001','BOOKING_ESCROW_HOLD',2,NULL,1,1),(7,NULL,NULL,350000.00,9650000.00,10000000.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:6','Seed demo escrow cho booking BK-DEMO-CONFIRM-001',NULL,NULL,NULL,NULL,'HELD_BY_ADMIN','DEMO-ESCROW-BK-DEMO-CONFIRM-001','BOOKING_ESCROW_HOLD',2,NULL,1,1),(8,NULL,NULL,450000.00,9550000.00,10000000.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:7','Seed demo escrow cho booking BK-DEMO-DISPUTE-001',NULL,NULL,NULL,NULL,'HELD_BY_ADMIN','DEMO-ESCROW-BK-DEMO-DISPUTE-001','BOOKING_ESCROW_HOLD',2,NULL,1,1),(9,NULL,NULL,250000.00,9750000.00,10000000.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:8','Seed demo escrow cho booking BK-DEMO-REJECT-001',NULL,NULL,NULL,NULL,'REFUNDED','DEMO-ESCROW-BK-DEMO-REJECT-001','BOOKING_ESCROW_HOLD',2,NULL,1,1),(10,NULL,NULL,250000.00,9750000.00,10000000.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:9','Seed demo escrow cho booking BK-DEMO-COMPLETED-001',NULL,NULL,NULL,NULL,'RELEASED','DEMO-ESCROW-BK-DEMO-COMPLETED-001','BOOKING_ESCROW_HOLD',2,NULL,1,1),(11,NULL,NULL,300000.00,9700000.00,10000000.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:10','Seed demo escrow cho booking BK-DEMO-CANCEL-001',NULL,NULL,NULL,NULL,'REFUNDED','DEMO-ESCROW-BK-DEMO-CANCEL-001','BOOKING_ESCROW_HOLD',2,NULL,1,1),(12,NULL,NULL,120000.00,9880000.00,10000000.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:11','Seed demo escrow cho booking BK-DEMO-INPROG-001',NULL,NULL,NULL,NULL,'HELD_BY_ADMIN','DEMO-ESCROW-BK-DEMO-INPROG-001','BOOKING_ESCROW_HOLD',2,NULL,1,1),(18,NULL,NULL,250000.00,250000.00,0.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:9','Seed demo: admin giải ngân tiền booking hoàn thành cho provider.',NULL,NULL,NULL,NULL,'COMPLETED','DEMO-SETTLE-BK-COMPLETED-001','BOOKING_ESCROW_RELEASE',1,NULL,2,2),(19,NULL,NULL,300000.00,10000000.00,9700000.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:10','Seed demo: hoàn tiền booking đã hủy về ví user.',NULL,NULL,NULL,NULL,'COMPLETED','DEMO-REFUND-BK-CANCEL-001','BOOKING_REFUND',2,NULL,1,1),(20,NULL,NULL,200000.00,-200000.00,0.00,'PETGO SAMPLE PROVIDER OWNER','0123456789','VCB',NULL,NULL,NULL,'Seed demo: provider yêu cầu rút tiền chờ admin duyệt.',NULL,NULL,NULL,NULL,'PENDING_ADMIN_APPROVAL','DEMO-WITHDRAW-PROVIDER-PENDING','WITHDRAW',NULL,NULL,2,2),(21,NULL,NULL,150000.00,NULL,NULL,NULL,NULL,NULL,'https://pay.payos.vn/web/demo-failed','PayOS','DEMO-PAYOS-FAILED-001','Seed demo: giao dịch nạp ví thất bại để admin xử lý.',NULL,'DEMO-QR-CODE-TEXT','Mã thanh toán demo đã hết hạn.',NULL,'FAILED','DEMO-TOPUP-USER-FAILED','TOP_UP',NULL,NULL,1,1),(22,NULL,NULL,120000.00,9880000.00,10000000.00,NULL,NULL,NULL,NULL,NULL,'BOOKING:16','Giữ tiền booking trong escrow/admin hold, chờ provider xác nhận và hoàn tất dịch vụ.',NULL,NULL,NULL,NULL,'HELD_BY_ADMIN','BOOKINGESCROW-12B9FD886D70','BOOKING_ESCROW_HOLD',NULL,NULL,1,1);
 /*!40000 ALTER TABLE `wallet_transactions` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1862,7 +1885,7 @@ CREATE TABLE `wallets` (
 
 LOCK TABLES `wallets` WRITE;
 /*!40000 ALTER TABLE `wallets` DISABLE KEYS */;
-INSERT INTO `wallets` VALUES (1,NULL,NULL,0.00,'VND','ACTIVE',1),(2,NULL,NULL,0.00,'VND','ACTIVE',2),(3,NULL,NULL,0.00,'VND','ACTIVE',3);
+INSERT INTO `wallets` VALUES (1,NULL,NULL,9880000.00,'VND','ACTIVE',1),(2,NULL,NULL,0.00,'VND','ACTIVE',2),(3,NULL,NULL,1000000000.00,'VND','ACTIVE',3);
 /*!40000 ALTER TABLE `wallets` ENABLE KEYS */;
 UNLOCK TABLES;
 SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
@@ -1876,4 +1899,4 @@ SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-06-06 14:54:09
+-- Dump completed on 2026-06-09 20:41:26

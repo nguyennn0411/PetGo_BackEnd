@@ -13,5 +13,7 @@ public record BookingAvailabilityResponse(
         Integer durationMinutes,
         Integer bufferAfterMinutes,
         Integer maxConcurrent,
+        String status,
+        String reason,
         List<BookingSlotOptionResponse> slots) {
 }

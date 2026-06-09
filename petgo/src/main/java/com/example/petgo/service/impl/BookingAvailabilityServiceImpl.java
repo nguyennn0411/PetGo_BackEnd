@@ -45,15 +45,22 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
     @Value("${app.bookings.lock-minutes:5}")
     private int lockMinutes;
 
+    @Value("${app.bookings.minimum-lead-time-minutes:60}")
+    private int minimumLeadTimeMinutes;
+
     @Override
     @Transactional(readOnly = true)
     public BookingAvailabilityResponse getAvailability(Long providerId, Long providerServiceId, LocalDate date,
             Integer durationMinutes) {
+        int duration = 30;
+        int buffer = 0;
         ProviderProfile provider = providerProfileRepository.findActiveById(providerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà cung cấp"));
         ProviderService service = providerServiceRepository.findActiveDetailById(providerServiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ"));
         validateServiceBelongsToProvider(provider, service);
+        duration = resolveDuration(service, durationMinutes);
+        buffer = resolveBufferAfter(service);
         ZoneId providerZone = resolveZone(provider);
         LocalDate today = LocalDate.now(providerZone);
         LocalDate resolvedDate = Optional.ofNullable(date).orElse(today);
@@ -63,9 +70,11 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
                     .providerServiceId(service.getId())
                     .date(resolvedDate.format(ISO_DATE))
                     .timezone(providerZone.getId())
-                    .durationMinutes(resolveDuration(service, durationMinutes))
-                    .bufferAfterMinutes(resolveBufferAfter(service))
+                    .durationMinutes(duration)
+                    .bufferAfterMinutes(buffer)
                     .maxConcurrent(0)
+                    .status("PAST")
+                    .reason("Ngày đã qua, vui lòng chọn ngày khác")
                     .slots(List.of())
                     .build();
         }
@@ -75,23 +84,23 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
             return cached.response();
         }
         ProviderBusinessHour hour = resolveBusinessHour(provider.getId(), resolvedDate);
-        int duration = resolveDuration(service, durationMinutes);
-        int buffer = resolveBufferAfter(service);
         List<ProviderScheduleException> exceptions = providerScheduleExceptionRepository
                 .findByProvider_IdAndLocalDateOrderByStartsAtLocalAscIdAsc(provider.getId(), resolvedDate);
-        int maxConcurrent = resolveMaxConcurrent(hour, exceptions, null);
+        int maxConcurrent = resolveMaxConcurrent(service, exceptions, null);
 
         List<BookingSlotOptionResponse> slots = new ArrayList<>();
         LocalTime cursor = hour.getOpensAt();
         while (!cursor.plusMinutes(duration).isAfter(hour.getClosesAt())) {
             LocalTime serviceEnd = cursor.plusMinutes(duration);
             LocalTime occupiedEnd = serviceEnd.plusMinutes(buffer);
-            int slotMaxConcurrent = resolveMaxConcurrent(hour, exceptions, cursor);
+            int slotMaxConcurrent = resolveMaxConcurrent(service, exceptions, cursor);
             if (slotMaxConcurrent > 0 && !overlapsBreak(cursor, occupiedEnd, hour)
                     && !isBlockedByException(cursor, occupiedEnd, exceptions)) {
-                int occupied = countOccupied(provider.getId(), service.getId(), resolvedDate, cursor, occupiedEnd,
-                        null);
-                if (occupied < slotMaxConcurrent) {
+                boolean lockedByProvider = bookingLockRepository.findActiveOverlappingLocks(provider.getId(),
+                        service.getId(), resolvedDate, cursor, occupiedEnd, LocalDateTime.now(UTC)).stream()
+                        .anyMatch(lock -> lock.getUser() != null && provider.getUser() != null
+                                && Objects.equals(lock.getUser().getId(), provider.getUser().getId()));
+                if (lockedByProvider) {
                     slots.add(BookingSlotOptionResponse.builder()
                             .slotId(null)
                             .providerServiceId(service.getId())
@@ -101,8 +110,33 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
                             .startTime(cursor.format(TIME_VIEW))
                             .endTime(serviceEnd.format(TIME_VIEW))
                             .label(cursor.format(TIME_VIEW))
-                            .capacityRemaining(slotMaxConcurrent - occupied)
+                            .capacityRemaining(0)
                             .selected(false)
+                            .status("LOCKED_BY_PROVIDER")
+                            .reason("Provider đã khóa nhận booking trong khung giờ này")
+                            .build());
+                    cursor = cursor.plusMinutes(Math.max(slotStepMinutes, 5));
+                    continue;
+                }
+                int occupied = countOccupied(provider.getId(), service.getId(), resolvedDate, cursor, occupiedEnd,
+                        null);
+                if (occupied < slotMaxConcurrent) {
+                    boolean leadTimeOk = LocalDateTime.of(resolvedDate, cursor)
+                            .isAfter(LocalDateTime.now(providerZone).plusMinutes(Math.max(minimumLeadTimeMinutes, 0)));
+                    slots.add(BookingSlotOptionResponse.builder()
+                            .slotId(null)
+                            .providerServiceId(service.getId())
+                            .serviceName(firstNonBlank(service.getCustomName(),
+                                    service.getService() != null ? service.getService().getName() : null))
+                            .date(resolvedDate.format(ISO_DATE))
+                            .startTime(cursor.format(TIME_VIEW))
+                            .endTime(serviceEnd.format(TIME_VIEW))
+                            .label(cursor.format(TIME_VIEW))
+                            .capacityRemaining(leadTimeOk ? slotMaxConcurrent - occupied : 0)
+                            .selected(false)
+                            .status(leadTimeOk ? "AVAILABLE" : "LEAD_TIME_REQUIRED")
+                            .reason(leadTimeOk ? null
+                                    : "Cần đặt trước tối thiểu " + Math.max(minimumLeadTimeMinutes, 0) + " phút")
                             .build());
                 }
             }
@@ -117,6 +151,9 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
                 .durationMinutes(duration)
                 .bufferAfterMinutes(buffer)
                 .maxConcurrent(maxConcurrent)
+                .status(slots.stream().anyMatch(slot -> "AVAILABLE".equalsIgnoreCase(slot.status())) ? "AVAILABLE"
+                        : "FULL")
+                .reason(slots.isEmpty() ? "Không có khung giờ khả dụng cho ngày này" : null)
                 .slots(slots)
                 .build();
         availabilityCache.put(cacheKey,
@@ -135,29 +172,32 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
         ProviderService service = providerServiceRepository.findActiveDetailById(request.providerServiceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ"));
         validateServiceBelongsToProvider(provider, service);
-        validateNotPast(provider, request.appointmentDate(), request.startTime());
-        ProviderBusinessHour hour = resolveBusinessHour(provider.getId(), request.appointmentDate());
+        String lockType = firstNonBlank(request.lockType(), "LOCK_SLOT").toUpperCase(Locale.ROOT);
+        LocalDate lockDate = Optional.ofNullable(request.appointmentDate())
+                .orElse(LocalDate.now(resolveZone(provider)));
+        LocalTime start = resolveLockStartTime(lockType, request.startTime());
+        validateNotPast(provider, lockDate, start);
+        ProviderBusinessHour hour = resolveBusinessHour(provider.getId(), lockDate);
         List<ProviderScheduleException> exceptions = providerScheduleExceptionRepository
-                .findByProvider_IdAndLocalDateOrderByStartsAtLocalAscIdAsc(provider.getId(), request.appointmentDate());
-        int duration = resolveDuration(service, request.durationMinutes());
+                .findByProvider_IdAndLocalDateOrderByStartsAtLocalAscIdAsc(provider.getId(), lockDate);
+        int duration = resolveLockDuration(lockType, service, request.durationMinutes(), request.endTime(), start);
         int buffer = resolveBufferAfter(service);
-        LocalTime start = request.startTime();
         LocalTime serviceEnd = start.plusMinutes(duration);
         LocalTime occupiedEnd = serviceEnd.plusMinutes(buffer);
         if (start.isBefore(hour.getOpensAt()) || serviceEnd.isAfter(hour.getClosesAt())
                 || overlapsBreak(start, occupiedEnd, hour) || isBlockedByException(start, occupiedEnd, exceptions)) {
             throw new BadRequestException("Khung giờ đã chọn nằm ngoài lịch nhận booking của nhà cung cấp");
         }
-        int maxConcurrent = resolveMaxConcurrent(hour, exceptions, start);
+        int maxConcurrent = resolveMaxConcurrent(service, exceptions, start);
         if (maxConcurrent <= 0) {
             throw new BadRequestException("Nhà cung cấp không nhận booking vào khung giờ này");
         }
-        int occupied = countOccupied(provider.getId(), service.getId(), request.appointmentDate(), start, occupiedEnd,
+        int occupied = countOccupied(provider.getId(), service.getId(), lockDate, start, occupiedEnd,
                 owner.getId());
         if (occupied >= maxConcurrent) {
             log.warn(
                     "booking.slot_lock_rejected providerId={} serviceId={} date={} start={} end={} occupied={} maxConcurrent={}",
-                    provider.getId(), service.getId(), request.appointmentDate(), start, occupiedEnd, occupied,
+                    provider.getId(), service.getId(), lockDate, start, occupiedEnd, occupied,
                     maxConcurrent);
             throw new BadRequestException("Slot đã hết chỗ, vui lòng chọn giờ khác");
         }
@@ -166,7 +206,7 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
         lock.setProvider(provider);
         lock.setProviderService(service);
         lock.setUser(owner);
-        lock.setAppointmentDate(request.appointmentDate());
+        lock.setAppointmentDate(lockDate);
         lock.setStartTime(start);
         lock.setEndTime(occupiedEnd);
         lock.setDurationMinutes(duration);
@@ -174,14 +214,14 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
         lock.setExpiresAtUtc(LocalDateTime.now(UTC).plusMinutes(Math.max(lockMinutes, 1)));
         lock.setStatus("ACTIVE");
         BookingLock saved = bookingLockRepository.save(lock);
-        invalidateAvailabilityCache(provider.getId(), service.getId(), request.appointmentDate());
+        invalidateAvailabilityCache(provider.getId(), service.getId(), lockDate);
 
         return BookingLockResponse.builder()
                 .lockId(saved.getId())
                 .ownerUserId(owner.getId())
                 .providerId(provider.getId())
                 .providerServiceId(service.getId())
-                .appointmentDate(request.appointmentDate().format(ISO_DATE))
+                .appointmentDate(lockDate.format(ISO_DATE))
                 .startTime(start.format(TIME_VIEW))
                 .endTime(serviceEnd.format(TIME_VIEW))
                 .expiresAtUtc(saved.getExpiresAtUtc().toString())
@@ -191,12 +231,37 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
                 .build();
     }
 
+    private LocalTime resolveLockStartTime(String lockType, LocalTime requestedStart) {
+        if ("LOCK_FROM_NOW_UNTIL_MANUAL_UNLOCK".equals(lockType) || "LOCK_DURATION_FROM_NOW".equals(lockType)) {
+            return Optional.ofNullable(requestedStart).orElse(LocalTime.now().withSecond(0).withNano(0));
+        }
+        if (requestedStart == null) {
+            throw new BadRequestException("Vui lòng chọn giờ hẹn hợp lệ cho loại lock này");
+        }
+        return requestedStart;
+    }
+
+    private int resolveLockDuration(String lockType, ProviderService service, Integer requestedDuration,
+            LocalTime requestedEnd, LocalTime start) {
+        if ("LOCK_TIME_RANGE".equals(lockType)) {
+            if (requestedEnd == null || !start.isBefore(requestedEnd)) {
+                throw new BadRequestException("LOCK_TIME_RANGE cần endTime sau startTime.");
+            }
+            return Math.max((int) java.time.Duration.between(start, requestedEnd).toMinutes(), 5);
+        }
+        if ("LOCK_DURATION_FROM_NOW".equals(lockType) || "LOCK_FROM_NOW_UNTIL_MANUAL_UNLOCK".equals(lockType)) {
+            return Math.max(Optional.ofNullable(requestedDuration).orElse(resolveDuration(service, null)), 5);
+        }
+        return resolveDuration(service, requestedDuration);
+    }
+
     private int countOccupied(Long providerId, Long serviceId, LocalDate date, LocalTime start, LocalTime end,
             Long lockOwnerUserId) {
         long bookingCount = bookingRepository.countActiveOverlappingBookings(providerId, serviceId, date, start, end);
         long lockCount = bookingLockRepository.countActiveOverlappingLocks(providerId, serviceId, date, start, end,
                 LocalDateTime.now(UTC), lockOwnerUserId);
-        return Math.toIntExact(bookingCount + lockCount);
+        long total = bookingCount + lockCount;
+        return total > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) total;
     }
 
     public void invalidateAvailabilityCache(Long providerId, Long providerServiceId, LocalDate date) {
@@ -268,9 +333,9 @@ public class BookingAvailabilityServiceImpl implements BookingAvailabilityServic
                 && start.isBefore(hour.getBreakEndsAt()) && end.isAfter(hour.getBreakStartsAt());
     }
 
-    private int resolveMaxConcurrent(ProviderBusinessHour hour, List<ProviderScheduleException> exceptions,
+    private int resolveMaxConcurrent(ProviderService service, List<ProviderScheduleException> exceptions,
             LocalTime slotStart) {
-        int maxConcurrent = 1;
+        int maxConcurrent = Math.max(Optional.ofNullable(service.getCapacityPerSlot()).orElse(1), 1);
         if (exceptions == null || exceptions.isEmpty()) {
             return maxConcurrent;
         }

@@ -16,38 +16,55 @@ import java.util.Map;
 @RequestMapping("/api/v1/admin/wallet")
 @RequiredArgsConstructor
 public class AdminWalletController {
-    private final WalletService walletService;
+        private final WalletService walletService;
 
-    @GetMapping("/pending-transactions")
-    public ResponseEntity<Map<String, Object>> pending(HttpServletRequest request) {
-        return ResponseEntity.ok(Map.of("message", "Lấy danh sách giao dịch ví chờ duyệt thành công.", "result",
-                walletService.getPendingAdminTransactions(request)));
-    }
+        @GetMapping("/pending-transactions")
+        public ResponseEntity<Map<String, Object>> pending(HttpServletRequest request) {
+                return ResponseEntity.ok(Map.of("message", "Lấy danh sách giao dịch ví chờ duyệt thành công.", "result",
+                                walletService.getPendingAdminTransactions(request)));
+        }
 
-    @PostMapping("/transactions/{transactionId}/review")
-    public ResponseEntity<Map<String, Object>> review(HttpServletRequest request, @PathVariable Long transactionId,
-            @Valid @RequestBody WalletAdminReviewRequest reviewRequest) {
-        return ResponseEntity.ok(Map.of("message", "Duyệt giao dịch ví thành công.", "result",
-                walletService.reviewAdminTransaction(request, transactionId, reviewRequest)));
-    }
+        @GetMapping("/failed-top-ups")
+        public ResponseEntity<Map<String, Object>> failedTopUps(HttpServletRequest request) {
+                return ResponseEntity
+                                .ok(Map.of("message", "Lấy danh sách giao dịch nạp ví thất bại thành công.", "result",
+                                                walletService.getFailedTopUpTransactions(request)));
+        }
 
-    @PatchMapping("/users/{userId}/status")
-    public ResponseEntity<Map<String, Object>> updateWalletStatus(HttpServletRequest request, @PathVariable Long userId,
-            @Valid @RequestBody WalletStatusUpdateRequest statusRequest) {
-        return ResponseEntity.ok(Map.of("message", "Cập nhật trạng thái ví thành công.", "result",
-                walletService.updateWalletStatus(request, userId, statusRequest)));
-    }
+        @PostMapping("/transactions/{transactionId}/review")
+        public ResponseEntity<Map<String, Object>> review(HttpServletRequest request, @PathVariable Long transactionId,
+                        @Valid @RequestBody WalletAdminReviewRequest reviewRequest) {
+                return ResponseEntity.ok(Map.of("message", "Duyệt giao dịch ví thành công.", "result",
+                                walletService.reviewAdminTransaction(request, transactionId, reviewRequest)));
+        }
 
-    @GetMapping("/settings/auto-confirm-top-up")
-    public ResponseEntity<Map<String, Object>> getAutoConfirmTopUp(HttpServletRequest request) {
-        return ResponseEntity.ok(Map.of("message", "Lấy cấu hình tự động cộng tiền ví thành công.", "result",
-                walletService.getAutoConfirmSetting(request)));
-    }
+        @PostMapping("/failed-top-ups/{transactionId}/resolve")
+        public ResponseEntity<Map<String, Object>> resolveFailedTopUp(HttpServletRequest request,
+                        @PathVariable Long transactionId,
+                        @Valid @RequestBody WalletAdminReviewRequest reviewRequest) {
+                return ResponseEntity.ok(Map.of("message", "Xử lý giao dịch nạp ví thất bại thành công.", "result",
+                                walletService.resolveFailedTopUp(request, transactionId, reviewRequest)));
+        }
 
-    @PatchMapping("/settings/auto-confirm-top-up")
-    public ResponseEntity<Map<String, Object>> updateAutoConfirmTopUp(HttpServletRequest request,
-            @Valid @RequestBody WalletAutoConfirmSettingRequest settingRequest) {
-        return ResponseEntity.ok(Map.of("message", "Cập nhật cấu hình tự động cộng tiền ví thành công.", "result",
-                walletService.updateAutoConfirmSetting(request, settingRequest)));
-    }
+        @PatchMapping("/users/{userId}/status")
+        public ResponseEntity<Map<String, Object>> updateWalletStatus(HttpServletRequest request,
+                        @PathVariable Long userId,
+                        @Valid @RequestBody WalletStatusUpdateRequest statusRequest) {
+                return ResponseEntity.ok(Map.of("message", "Cập nhật trạng thái ví thành công.", "result",
+                                walletService.updateWalletStatus(request, userId, statusRequest)));
+        }
+
+        @GetMapping("/settings/auto-confirm-top-up")
+        public ResponseEntity<Map<String, Object>> getAutoConfirmTopUp(HttpServletRequest request) {
+                return ResponseEntity.ok(Map.of("message", "Lấy cấu hình tự động cộng tiền ví thành công.", "result",
+                                walletService.getAutoConfirmSetting(request)));
+        }
+
+        @PatchMapping("/settings/auto-confirm-top-up")
+        public ResponseEntity<Map<String, Object>> updateAutoConfirmTopUp(HttpServletRequest request,
+                        @Valid @RequestBody WalletAutoConfirmSettingRequest settingRequest) {
+                return ResponseEntity
+                                .ok(Map.of("message", "Cập nhật cấu hình tự động cộng tiền ví thành công.", "result",
+                                                walletService.updateAutoConfirmSetting(request, settingRequest)));
+        }
 }

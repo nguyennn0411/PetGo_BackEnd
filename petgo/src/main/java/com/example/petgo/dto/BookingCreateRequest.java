@@ -7,29 +7,21 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 public record BookingCreateRequest(
-        @NotNull(message = "Thiếu ownerUserId")
-        Long ownerUserId,
+                Long ownerUserId,
 
-        @NotNull(message = "Vui lòng chọn thú cưng")
-        Long petId,
+                @NotNull(message = "Vui lòng chọn thú cưng") Long petId,
 
-        @NotNull(message = "Thiếu providerId")
-        Long providerId,
+                @NotNull(message = "Thiếu providerId") Long providerId,
 
-        @NotNull(message = "Vui lòng chọn dịch vụ")
-        Long providerServiceId,
+                @NotNull(message = "Vui lòng chọn dịch vụ") Long providerServiceId,
 
-        Long slotId,
+                Long slotId,
 
-        @NotNull(message = "Vui lòng chọn ngày hẹn")
-        LocalDate appointmentDate,
+                @NotNull(message = "Vui lòng chọn ngày hẹn") LocalDate appointmentDate,
 
-        @NotNull(message = "Vui lòng chọn giờ hẹn")
-        LocalTime startTime,
+                @NotNull(message = "Vui lòng chọn giờ hẹn") LocalTime startTime,
 
-        LocalTime endTime,
+                LocalTime endTime,
 
-        @Size(max = 1000, message = "Ghi chú không được vượt quá 1000 ký tự")
-        String customerNote
-) {
+                @Size(max = 1000, message = "Ghi chú không được vượt quá 1000 ký tự") String customerNote) {
 }

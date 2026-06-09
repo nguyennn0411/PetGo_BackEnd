@@ -4,6 +4,7 @@
 -- Sau khi reset, chạy lại PetGo_BackEnd/database/2-base_roles.sql để seed role USER/PROVIDER/ADMIN.
 -- Nếu cần dữ liệu demo, chạy tiếp các file sample trong thư mục PetGo_BackEnd/database theo thứ tự số prefix.
 -- Sau khi tạo user demo hoặc user thật, chạy PetGo_BackEnd/database/5-base_wallets.sql để tạo ví và cấu hình ví mặc định.
+-- Danh sách TRUNCATE bên dưới đã được đối chiếu với entity backend và các file SQL seed/sample hiện có.
 
 USE petgo_db;
 
@@ -25,9 +26,14 @@ TRUNCATE TABLE booking_status_history;
 TRUNCATE TABLE booking_locks;
 TRUNCATE TABLE bookings;
 
+TRUNCATE TABLE chat_messages;
+TRUNCATE TABLE chat_participants;
+TRUNCATE TABLE chat_conversations;
+
 TRUNCATE TABLE review_photos;
 TRUNCATE TABLE reviews;
 
+-- Shop/cart tables hiện chưa có dữ liệu seed, nhưng vẫn reset để dọn dữ liệu phát sinh khi test.
 TRUNCATE TABLE cart_items;
 TRUNCATE TABLE shop_order_status_history;
 TRUNCATE TABLE shop_order_items;
@@ -43,14 +49,17 @@ TRUNCATE TABLE provider_schedule_exceptions;
 TRUNCATE TABLE provider_business_hours;
 TRUNCATE TABLE provider_booking_policies;
 TRUNCATE TABLE provider_photos;
+TRUNCATE TABLE favorites;
 TRUNCATE TABLE provider_profiles;
 
 TRUNCATE TABLE products;
 TRUNCATE TABLE product_categories;
 TRUNCATE TABLE services;
 TRUNCATE TABLE service_categories;
+-- Bảng home_sliders hiện chưa có dữ liệu seed, nhưng là bảng nội dung trang chủ nên vẫn reset nếu đã test thủ công.
 TRUNCATE TABLE home_sliders;
 
+-- Membership tables hiện chưa có dữ liệu seed, nhưng vẫn reset để đồng bộ schema hiện có.
 TRUNCATE TABLE membership_subscriptions;
 TRUNCATE TABLE membership_plan_features;
 TRUNCATE TABLE membership_plans;
@@ -60,6 +69,7 @@ TRUNCATE TABLE wallets;
 TRUNCATE TABLE wallet_settings;
 
 TRUNCATE TABLE refresh_tokens;
+TRUNCATE TABLE registration_applications;
 TRUNCATE TABLE user_roles;
 TRUNCATE TABLE users;
 TRUNCATE TABLE roles;

@@ -15,6 +15,8 @@ public interface ChatService {
 
     ChatConversationResponse startBookingChat(HttpServletRequest request, Long bookingId);
 
+    ChatConversationResponse ensureAdminBookingDisputeChat(Long bookingId);
+
     List<ChatConversationResponse> listMyConversations(HttpServletRequest request);
 
     List<ChatMessageResponse> listMessages(HttpServletRequest request, Long conversationId, int limit);

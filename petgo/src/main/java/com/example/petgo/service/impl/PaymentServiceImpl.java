@@ -41,6 +41,11 @@ public class PaymentServiceImpl implements PaymentService {
         Booking booking = bookingRepository.findDetailedById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking để thanh toán"));
 
+        if (isWalletEscrowBooking(booking)) {
+            throw new BadRequestException(
+                    "Booking này đã được thanh toán bằng ví PetGo và đang giữ escrow, không dùng checkout ngoài ví.");
+        }
+
         PromoPreview promoPreview = promotionPolicyService.previewForBooking(booking, promoCode);
         Invoice invoice = invoiceRepository.findByBookingId(bookingId).orElse(null);
         Payment payment = invoice != null
@@ -86,6 +91,11 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentCheckoutResponse checkout(PaymentCheckoutRequest request) {
         Booking booking = bookingRepository.findDetailedById(request.bookingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking để thanh toán"));
+
+        if (isWalletEscrowBooking(booking)) {
+            throw new BadRequestException(
+                    "Booking này đã được thanh toán bằng ví PetGo và đang giữ escrow, không dùng checkout ngoài ví.");
+        }
 
         if (!List.of("PENDING_PAYMENT", "PENDING_CONFIRMATION").contains(booking.getStatus())) {
             throw new BadRequestException("Booking hiện không ở trạng thái có thể thanh toán");
@@ -350,6 +360,24 @@ public class PaymentServiceImpl implements PaymentService {
                 return value.trim();
         }
         return null;
+    }
+
+    private boolean isWalletEscrowBooking(Booking booking) {
+        if (booking == null || booking.getId() == null) {
+            return false;
+        }
+        String status = firstNonBlank(booking.getStatus(), "").toUpperCase(Locale.ROOT);
+        return List.of(
+                "PENDING_PROVIDER_CONFIRMATION",
+                "CONFIRMED",
+                "IN_PROGRESS",
+                "AWAITING_COMPLETION_CONFIRMATION",
+                "COMPLETED_BY_USER",
+                "COMPLETED_BY_PROVIDER",
+                "COMPLETED",
+                "DISPUTED",
+                "ADMIN_REVIEW")
+                .contains(status);
     }
 
     private String generateCode(String prefix) {

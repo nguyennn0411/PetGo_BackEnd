@@ -93,6 +93,30 @@ public class PartnerReviewManagementServiceImpl implements PartnerReviewManageme
                 .build();
     }
 
+    @Override
+    @Transactional
+    public PartnerReviewSummaryResponse replyReview(HttpServletRequest request, Long reviewId, String reply) {
+        ProviderProfile provider = partnerAccessService.requirePartnerContext(request).provider();
+        String normalizedReply = mapper.normalizeBlank(reply);
+        if (normalizedReply == null) {
+            throw new BadRequestException("Nội dung phản hồi review không được để trống.");
+        }
+        if (normalizedReply.length() > 1000) {
+            throw new BadRequestException("Nội dung phản hồi review tối đa 1000 ký tự.");
+        }
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy review."));
+        if (review.getDeletedAt() != null || review.getProvider() == null
+                || !Objects.equals(review.getProvider().getId(), provider.getId())) {
+            throw new BadRequestException("Bạn không có quyền phản hồi review này.");
+        }
+        review.setProviderReply(normalizedReply);
+        review.setProviderRepliedAt(LocalDateTime.now(PartnerMappingSupport.APP_ZONE));
+        review.setProviderRepliedBy(provider.getUser());
+        reviewRepository.save(review);
+        return mapReview(review, buildPhotoMap(List.of(review)));
+    }
+
     private PartnerReviewSummaryResponse mapReview(Review review, Map<Long, List<ReviewPhotoResponse>> photoMap) {
         Booking booking = review.getBooking();
         User customer = review.getCustomerUser();
@@ -122,6 +146,10 @@ public class PartnerReviewManagementServiceImpl implements PartnerReviewManageme
                         booking.getPetBreedSnapshot()) : null)
                 .appointmentDate(booking != null ? mapper.formatIsoDate(booking.getAppointmentDate()) : null)
                 .appointmentDateDisplay(booking != null ? mapper.formatDate(booking.getAppointmentDate()) : null)
+                .providerReply(review.getProviderReply())
+                .providerRepliedAt(formatDateTime(review.getProviderRepliedAt()))
+                .adminNote(review.getAdminNote())
+                .adminReviewedAt(formatDateTime(review.getAdminReviewedAt()))
                 .photos(photoMap.getOrDefault(review.getId(), List.of()))
                 .build();
     }

@@ -33,8 +33,15 @@ public class PartnerBookingController {
         return ResponseEntity.ok(partnerBookingManagementService.getBookingDetail(request, id));
     }
 
-    @PostMapping("/{id}/confirm")
+    @PutMapping("/{id}/confirm")
     public ResponseEntity<BookingMutationResponse> confirmBooking(HttpServletRequest request,
+            @PathVariable Long id,
+            @RequestBody(required = false) PartnerBookingActionRequest requestBody) {
+        return ResponseEntity.ok(partnerBookingManagementService.confirmBooking(request, id, requestBody));
+    }
+
+    @PostMapping("/{id}/confirm")
+    public ResponseEntity<BookingMutationResponse> confirmBookingLegacy(HttpServletRequest request,
             @PathVariable Long id,
             @RequestBody(required = false) PartnerBookingActionRequest requestBody) {
         return ResponseEntity.ok(partnerBookingManagementService.confirmBooking(request, id, requestBody));
@@ -52,6 +59,20 @@ public class PartnerBookingController {
             @PathVariable Long id,
             @RequestBody(required = false) PartnerBookingActionRequest requestBody) {
         return ResponseEntity.ok(partnerBookingManagementService.completeBooking(request, id, requestBody));
+    }
+
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<BookingMutationResponse> rejectBooking(HttpServletRequest request,
+            @PathVariable Long id,
+            @RequestBody(required = false) PartnerBookingActionRequest requestBody) {
+        return ResponseEntity.ok(partnerBookingManagementService.rejectBooking(request, id, requestBody));
+    }
+
+    @PutMapping("/{id}/confirm-completed-by-provider")
+    public ResponseEntity<BookingMutationResponse> confirmCompletedByProvider(HttpServletRequest request,
+            @PathVariable Long id,
+            @RequestBody(required = false) PartnerBookingActionRequest requestBody) {
+        return ResponseEntity.ok(partnerBookingManagementService.confirmCompletedByProvider(request, id, requestBody));
     }
 
     @PostMapping("/{id}/cancel")

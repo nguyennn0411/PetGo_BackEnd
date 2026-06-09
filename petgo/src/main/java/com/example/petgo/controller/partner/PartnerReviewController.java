@@ -5,10 +5,15 @@ import com.example.petgo.service.partner.PartnerReviewManagementService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/partner/reviews")
@@ -28,5 +33,11 @@ public class PartnerReviewController {
             @RequestParam(required = false, defaultValue = "12") Integer size) {
         return ResponseEntity.ok(partnerReviewManagementService.listReviews(request, rating, serviceId, from, to,
                 keyword, page, size));
+    }
+
+    @PutMapping("/{reviewId}/reply")
+    public ResponseEntity<?> replyReview(HttpServletRequest request, @PathVariable Long reviewId,
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(partnerReviewManagementService.replyReview(request, reviewId, body.get("reply")));
     }
 }

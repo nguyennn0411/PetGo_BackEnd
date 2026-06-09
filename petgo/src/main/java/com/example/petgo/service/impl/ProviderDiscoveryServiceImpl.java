@@ -1,6 +1,7 @@
 package com.example.petgo.service.impl;
 
 import com.example.petgo.dto.*;
+import com.example.petgo.entity.CatalogService;
 import com.example.petgo.entity.ProviderAvailabilitySlot;
 import com.example.petgo.entity.ProviderBusinessHour;
 import com.example.petgo.entity.ProviderProfile;
@@ -11,6 +12,7 @@ import com.example.petgo.service.ProviderDiscoveryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -41,6 +43,7 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
     private int cardSlotLimit;
 
     @Override
+    @Transactional(readOnly = true)
     public ProviderListResponse findProviders(ProviderSearchCriteria criteria) {
         ProviderSearchCriteria safeCriteria = normalizeCriteria(criteria);
         List<ProviderProfile> providers = providerProfileRepository.findActiveProviders();
@@ -96,6 +99,7 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProviderFilterOptionsResponse getFilterOptions() {
         List<ServiceCategory> allCategories = serviceCategoryRepository.findByActiveTrueOrderByNameAscIdAsc();
         List<ProviderCategoryOptionResponse> categories = buildProviderCategoryTree(allCategories, null);
@@ -111,10 +115,14 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ProviderDetailServiceItemResponse> findActiveServices(ProviderSearchCriteria criteria) {
         ProviderSearchCriteria safeCriteria = normalizeCriteria(criteria);
         return providerServiceRepository.findAllActiveDetails().stream()
                 .filter(service -> matchesServiceFilters(service, safeCriteria))
+                .sorted(buildServiceComparator(safeCriteria.sortBy()))
+                .skip((long) safeCriteria.page() * safeCriteria.size())
+                .limit(safeCriteria.size())
                 .map(this::mapProviderServiceItem)
                 .toList();
     }
@@ -159,10 +167,14 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
 
     private ProviderDetailServiceItemResponse mapProviderServiceItem(ProviderService providerService) {
         ProviderProfile provider = providerService.getProvider();
-        String serviceName = firstNonBlank(providerService.getCustomName(), providerService.getService().getName(),
+        CatalogService catalogService = providerService.getService();
+        ServiceCategory category = resolveServiceCategory(providerService);
+        String serviceName = firstNonBlank(providerService.getCustomName(),
+                catalogService != null ? catalogService.getName() : null,
                 "Dịch vụ");
         String description = firstNonBlank(providerService.getShortDescription(), providerService.getDescription(),
-                providerService.getService().getShortDescription(), providerService.getService().getDescription());
+                catalogService != null ? catalogService.getShortDescription() : null,
+                catalogService != null ? catalogService.getDescription() : null);
         return ProviderDetailServiceItemResponse.builder()
                 .id(providerService.getId())
                 .name(serviceName)
@@ -170,13 +182,13 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
                 .price(providerService.getPriceAmount())
                 .priceDisplay(formatMoney(providerService.getPriceAmount()))
                 .currencyCode(firstNonBlank(providerService.getCurrencyCode(),
-                        providerService.getService().getCurrencyCode(), "VND"))
+                        catalogService != null ? catalogService.getCurrencyCode() : null, "VND"))
                 .priceUnit(providerService.getPriceUnit())
                 .durationMinutes(providerService.getDurationMinutes())
                 .duration(formatDuration(providerService.getDurationMinutes()))
                 .featured(Boolean.TRUE.equals(providerService.getFeatured()))
-                .categoryId(providerService.getService().getCategory().getId())
-                .categoryName(providerService.getService().getCategory().getName())
+                .categoryId(category != null ? category.getId() : null)
+                .categoryName(category != null ? category.getName() : null)
                 .providerId(provider.getId())
                 .providerName(provider.getBusinessName())
                 .providerImage(resolveProviderImage(provider))
@@ -259,12 +271,14 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
         BigDecimal lowestPrice = resolveLowestPrice(provider, providerServices);
         String currencyCode = resolveCurrencyCode(provider, providerServices);
         List<Long> categoryIds = providerServices.stream()
-                .flatMap(service -> collectCategoryIds(service.getService().getCategory()).stream())
+                .flatMap(service -> collectCategoryIds(resolveServiceCategory(service)).stream())
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
         List<String> categoryNames = providerServices.stream()
-                .map(service -> service.getService().getCategory().getName())
+                .map(service -> resolveServiceCategory(service))
+                .filter(Objects::nonNull)
+                .map(ServiceCategory::getName)
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
@@ -371,6 +385,40 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
             case "FEATURED" -> featuredComparator.thenComparing(ratingComparator).thenComparing(distanceComparator)
                     .thenComparing(fallback);
             default -> featuredComparator.thenComparing(ratingComparator).thenComparing(fallback);
+        };
+    }
+
+    private Comparator<ProviderService> buildServiceComparator(String sortBy) {
+        Comparator<ProviderService> featuredComparator = Comparator
+                .comparing((ProviderService service) -> Boolean.TRUE.equals(service.getFeatured())).reversed();
+        Comparator<ProviderService> providerFeaturedComparator = Comparator
+                .comparing((ProviderService service) -> service.getProvider() != null
+                        && Boolean.TRUE.equals(service.getProvider().getFeatured()))
+                .reversed();
+        Comparator<ProviderService> ratingComparator = Comparator
+                .comparing(
+                        (ProviderService service) -> service.getProvider() != null
+                                ? service.getProvider().getAverageRating()
+                                : null,
+                        Comparator.nullsLast(Comparator.reverseOrder()));
+        Comparator<ProviderService> priceComparator = Comparator.comparing(ProviderService::getPriceAmount,
+                Comparator.nullsLast(Comparator.naturalOrder()));
+        Comparator<ProviderService> fallback = Comparator.comparing(ProviderService::getId,
+                Comparator.nullsLast(Comparator.naturalOrder()));
+        Comparator<ProviderService> providerIdFallback = Comparator.comparing(
+                (ProviderService service) -> service.getProvider() != null ? service.getProvider().getId() : null,
+                Comparator.nullsLast(Comparator.naturalOrder()));
+
+        return switch (sortBy) {
+            case "LOWEST_PRICE" -> priceComparator.thenComparing(ratingComparator).thenComparing(providerIdFallback)
+                    .thenComparing(fallback);
+            case "TOP_RATED", "NEAREST" -> ratingComparator.thenComparing(featuredComparator)
+                    .thenComparing(providerIdFallback).thenComparing(fallback);
+            case "FEATURED" ->
+                featuredComparator.thenComparing(providerFeaturedComparator).thenComparing(ratingComparator)
+                        .thenComparing(providerIdFallback).thenComparing(fallback);
+            default -> featuredComparator.thenComparing(ratingComparator).thenComparing(providerIdFallback)
+                    .thenComparing(fallback);
         };
     }
 
@@ -553,6 +601,13 @@ public class ProviderDiscoveryServiceImpl implements ProviderDiscoveryService {
             cursor = cursor.getParent();
         }
         return ids;
+    }
+
+    private ServiceCategory resolveServiceCategory(ProviderService providerService) {
+        if (providerService == null || providerService.getService() == null) {
+            return null;
+        }
+        return providerService.getService().getCategory();
     }
 
     private String resolveProviderImage(ProviderProfile provider) {

@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.Optional;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -37,6 +38,8 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
     private final BookingStatusHistoryRepository bookingStatusHistoryRepository;
     private final BookingCancellationRepository bookingCancellationRepository;
     private final ProviderAvailabilitySlotRepository providerAvailabilitySlotRepository;
+    private final WalletRepository walletRepository;
+    private final WalletTransactionRepository walletTransactionRepository;
     private final BookingNotificationService bookingNotificationService;
 
     @Override
@@ -115,16 +118,58 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
     @Transactional
     public BookingMutationResponse completeBooking(HttpServletRequest request, Long bookingId,
             PartnerBookingActionRequest requestBody) {
+        return confirmCompletedByProvider(request, bookingId, requestBody);
+    }
+
+    @Override
+    @Transactional
+    public BookingMutationResponse rejectBooking(HttpServletRequest request, Long bookingId,
+            PartnerBookingActionRequest requestBody) {
+        ProviderProfile provider = partnerAccessService.requirePartnerContext(request).provider();
+        Booking booking = requireOwnedBooking(provider.getId(), bookingId);
+        String status = mapper.firstNonBlank(booking.getStatus(), "").toUpperCase(Locale.ROOT);
+        if (!List.of("PENDING_PROVIDER_CONFIRMATION", "PENDING_CONFIRMATION").contains(status)) {
+            throw new BadRequestException("Booking hiện không thể từ chối.");
+        }
+        String reason = mapper.normalizeBlank(requestBody != null ? requestBody.reasonText() : null);
+        refundBookingEscrow(booking, "Provider từ chối booking" + (reason != null ? ": " + reason : ""));
+        BookingMutationResponse response = transitionBooking(booking, provider.getUser(), "REJECTED",
+                noteOrDefault(requestBody, "Provider từ chối booking, hoàn tiền về ví user"));
+        bookingNotificationService.notifyOwnerBookingRejected(booking, reason);
+        return BookingMutationResponse.builder()
+                .bookingId(response.bookingId())
+                .bookingCode(response.bookingCode())
+                .status(response.status())
+                .statusLabel(response.statusLabel())
+                .appointmentDate(response.appointmentDate())
+                .appointmentDateDisplay(response.appointmentDateDisplay())
+                .appointmentTime(response.appointmentTime())
+                .slotId(response.slotId())
+                .message("Đã từ chối booking và hoàn tiền về ví user.")
+                .refundAmount(mapper.defaultMoney(booking.getTotalAmount()))
+                .refundAmountDisplay(mapper.formatMoney(booking.getTotalAmount()))
+                .refundStatus("REFUNDED_TO_WALLET")
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public BookingMutationResponse confirmCompletedByProvider(HttpServletRequest request, Long bookingId,
+            PartnerBookingActionRequest requestBody) {
         ProviderProfile provider = partnerAccessService.requirePartnerContext(request).provider();
         Booking booking = requireOwnedBooking(provider.getId(), bookingId);
         if (!mapper.canComplete(booking)) {
-            throw new BadRequestException("Booking hiện không thể hoàn thành.");
+            throw new BadRequestException("Booking hiện không thể xác nhận hoàn tất.");
         }
-        BookingMutationResponse response = transitionBooking(booking, provider.getUser(), "COMPLETED",
-                noteOrDefault(requestBody, "Partner hoàn thành booking"));
-        provider.setTotalCompletedBookings(
-                Math.max(0, provider.getTotalCompletedBookings() == null ? 0 : provider.getTotalCompletedBookings())
-                        + 1);
+        String current = mapper.firstNonBlank(booking.getStatus(), "").toUpperCase(Locale.ROOT);
+        String nextStatus = "COMPLETED_BY_USER".equals(current) ? "COMPLETED" : "COMPLETED_BY_PROVIDER";
+        BookingMutationResponse response = transitionBooking(booking, provider.getUser(), nextStatus,
+                noteOrDefault(requestBody, "Provider xác nhận hoàn tất dịch vụ"));
+        if ("COMPLETED".equals(nextStatus)) {
+            provider.setTotalCompletedBookings(
+                    Math.max(0, provider.getTotalCompletedBookings() == null ? 0 : provider.getTotalCompletedBookings())
+                            + 1);
+        }
         return response;
     }
 
@@ -220,6 +265,41 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
                 .refundAmountDisplay(mapper.formatMoney(BigDecimal.ZERO))
                 .refundStatus(null)
                 .build();
+    }
+
+    private void refundBookingEscrow(Booking booking, String note) {
+        User owner = booking.getCustomerUser();
+        if (owner == null) {
+            throw new BadRequestException("Booking thiếu thông tin user để hoàn tiền.");
+        }
+        WalletTransaction holdTx = walletTransactionRepository
+                .findFirstByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
+                        "BOOKING:" + booking.getId(), "BOOKING_ESCROW_HOLD", "HELD_BY_ADMIN")
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy khoản escrow đang giữ của booking."));
+        Wallet wallet = walletRepository.findWithLockByUserId(owner.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Ví user chưa được khởi tạo."));
+        BigDecimal amount = mapper.defaultMoney(holdTx.getAmount());
+        BigDecimal before = mapper.defaultMoney(wallet.getBalance());
+        wallet.setBalance(before.add(amount));
+        walletRepository.save(wallet);
+
+        holdTx.setStatus("REFUNDED_TO_USER");
+        holdTx.setReviewNote(note);
+        walletTransactionRepository.save(holdTx);
+
+        WalletTransaction refundTx = new WalletTransaction();
+        refundTx.setTransactionCode("BOOKINGREFUND-" + java.util.UUID.randomUUID().toString().replace("-", "")
+                .substring(0, 12).toUpperCase(Locale.ROOT));
+        refundTx.setWallet(wallet);
+        refundTx.setUser(owner);
+        refundTx.setType("BOOKING_REFUND");
+        refundTx.setStatus("COMPLETED");
+        refundTx.setAmount(amount);
+        refundTx.setGatewayTransactionId("BOOKING:" + booking.getId() + ":REFUND");
+        refundTx.setBalanceBefore(before);
+        refundTx.setBalanceAfter(wallet.getBalance());
+        refundTx.setNote(note);
+        walletTransactionRepository.save(refundTx);
     }
 
     private void releaseSlot(ProviderAvailabilitySlot slot) {

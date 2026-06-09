@@ -20,7 +20,12 @@ public interface WalletService {
 
         List<WalletTransactionResponse> getPendingAdminTransactions(HttpServletRequest request);
 
+        List<WalletTransactionResponse> getFailedTopUpTransactions(HttpServletRequest request);
+
         WalletTransactionResponse reviewAdminTransaction(HttpServletRequest request, Long transactionId,
+                        WalletAdminReviewRequest reviewRequest);
+
+        WalletTransactionResponse resolveFailedTopUp(HttpServletRequest request, Long transactionId,
                         WalletAdminReviewRequest reviewRequest);
 
         WalletResponse updateWalletStatus(HttpServletRequest request, Long userId,
