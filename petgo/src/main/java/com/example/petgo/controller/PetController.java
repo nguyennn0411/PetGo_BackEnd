@@ -28,8 +28,7 @@ public class PetController {
     @GetMapping("/{petId}")
     public ResponseEntity<PetResponse> getPetDetail(
             @PathVariable Long ownerUserId,
-            @PathVariable Long petId
-    ) {
+            @PathVariable Long petId) {
         return ResponseEntity.ok(petService.getPetDetail(ownerUserId, petId));
     }
 
@@ -37,11 +36,17 @@ public class PetController {
     public ResponseEntity<PetResponse> createPet(
             @PathVariable Long ownerUserId,
             @Valid @RequestPart("data") PetUpsertRequest request,
-            @RequestPart(value = "avatarFile", required = false) MultipartFile avatarFile
-    ) {
+            @RequestPart(value = "avatarFile", required = false) MultipartFile avatarFile) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(petService.createPet(ownerUserId, request, avatarFile));
+    }
+
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<PetResponse> createPetJson(
+            @PathVariable Long ownerUserId,
+            @Valid @RequestBody PetUpsertRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(petService.createPet(ownerUserId, request));
     }
 
     @PutMapping(value = "/{petId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -49,22 +54,23 @@ public class PetController {
             @PathVariable Long ownerUserId,
             @PathVariable Long petId,
             @Valid @RequestPart("data") PetUpsertRequest request,
-            @RequestPart(value = "avatarFile", required = false) MultipartFile avatarFile
-    ) {
+            @RequestPart(value = "avatarFile", required = false) MultipartFile avatarFile) {
         return ResponseEntity.ok(petService.updatePet(ownerUserId, petId, request, avatarFile));
+    }
+
+    @PutMapping(value = "/{petId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<PetResponse> updatePetJson(
+            @PathVariable Long ownerUserId,
+            @PathVariable Long petId,
+            @Valid @RequestBody PetUpsertRequest request) {
+        return ResponseEntity.ok(petService.updatePet(ownerUserId, petId, request));
     }
 
     @DeleteMapping("/{petId}")
     public ResponseEntity<ApiMessageResponse> deletePet(
             @PathVariable Long ownerUserId,
-            @PathVariable Long petId
-    ) {
+            @PathVariable Long petId) {
         petService.deletePet(ownerUserId, petId);
-
-        return ResponseEntity.ok(
-                ApiMessageResponse.builder()
-                        .message("Đã xóa thú cưng thành công")
-                        .build()
-        );
+        return ResponseEntity.ok(ApiMessageResponse.builder().message("Đã xóa thú cưng thành công").build());
     }
 }

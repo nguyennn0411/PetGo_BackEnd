@@ -6,5 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ServiceCategoryRepository extends JpaRepository<ServiceCategory, Long> {
-    List<ServiceCategory> findByActiveTrueOrderBySortOrderAscIdAsc();
+    List<ServiceCategory> findAllByOrderByNameAscIdAsc();
+    List<ServiceCategory> findByActiveTrueOrderByNameAscIdAsc();
+    boolean existsByParent_Id(Long parentId);
 }

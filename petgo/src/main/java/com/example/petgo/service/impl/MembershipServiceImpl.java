@@ -8,13 +8,14 @@ import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.repository.*;
 import com.example.petgo.service.AuthService;
 import com.example.petgo.service.MembershipService;
+import com.example.petgo.service.PromotionPolicyService;
+import com.example.petgo.service.PromotionPolicyService.PromoPreview;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -31,17 +32,18 @@ public class MembershipServiceImpl implements MembershipService {
 
     private final MembershipPlanRepository membershipPlanRepository;
     private final MembershipSubscriptionRepository membershipSubscriptionRepository;
-    private final PromoCodeRepository promoCodeRepository;
     private final InvoiceRepository invoiceRepository;
     private final InvoiceItemRepository invoiceItemRepository;
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
     private final AuthService authService;
+    private final PromotionPolicyService promotionPolicyService;
 
     @Override
     @Transactional(readOnly = true)
     public MembershipPlansResponse getPlans() {
-        List<MembershipPlanCardResponse> plans = membershipPlanRepository.findByActiveTrueOrderByPopularDescSortOrderAscIdAsc()
+        List<MembershipPlanCardResponse> plans = membershipPlanRepository
+                .findByActiveTrueOrderByPopularDescSortOrderAscIdAsc()
                 .stream()
                 .map(plan -> mapPlan(plan, false))
                 .toList();
@@ -56,7 +58,8 @@ public class MembershipServiceImpl implements MembershipService {
     @Transactional
     public MembershipSubscriptionResponse getMyMembership(HttpServletRequest request) {
         User user = requireCurrentUser(request);
-        MembershipSubscription subscription = membershipSubscriptionRepository.findTopByUser_IdOrderByCreatedAtDescIdDesc(user.getId())
+        MembershipSubscription subscription = membershipSubscriptionRepository
+                .findTopByUser_IdOrderByCreatedAtDescIdDesc(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Bạn chưa có gói membership nào."));
 
         normalizeStatusIfExpired(subscription);
@@ -65,19 +68,22 @@ public class MembershipServiceImpl implements MembershipService {
 
     @Override
     @Transactional
-    public MembershipCheckoutContextResponse getCheckoutContext(HttpServletRequest request, String planSlug, String promoCode) {
+    public MembershipCheckoutContextResponse getCheckoutContext(HttpServletRequest request, String planSlug,
+            String promoCode) {
         User user = requireCurrentUser(request);
         MembershipPlan plan = findActivePlan(planSlug);
         MembershipSubscription currentSubscription = findCurrentMembership(user.getId()).orElse(null);
 
-        PromoPreview promoPreview = resolvePromoPreview(plan.getPriceAmount(), promoCode);
+        PromoPreview promoPreview = promotionPolicyService.previewForMembership(user, plan, promoCode);
         BigDecimal subtotal = defaultMoney(plan.getPriceAmount());
         BigDecimal discount = promoPreview.discountAmount();
         BigDecimal tax = BigDecimal.ZERO;
-        BigDecimal total = calculateTotal(subtotal, discount, tax);
+        BigDecimal total = promotionPolicyService.calculateTotal(subtotal, discount, tax);
 
         return MembershipCheckoutContextResponse.builder()
-                .plan(mapPlan(plan, currentSubscription != null && currentSubscription.getMembershipPlan() != null && currentSubscription.getMembershipPlan().getId().equals(plan.getId())))
+                .plan(mapPlan(plan,
+                        currentSubscription != null && currentSubscription.getMembershipPlan() != null
+                                && currentSubscription.getMembershipPlan().getId().equals(plan.getId())))
                 .currentSubscription(currentSubscription != null ? mapSubscription(currentSubscription) : null)
                 .subtotalAmount(subtotal)
                 .discountAmount(discount)
@@ -100,11 +106,11 @@ public class MembershipServiceImpl implements MembershipService {
         String paymentMethod = normalizePaymentMethod(requestBody.paymentMethod());
         boolean autoRenew = requestBody.autoRenew() == null || requestBody.autoRenew();
 
-        PromoPreview promoPreview = resolvePromoPreview(plan.getPriceAmount(), requestBody.promoCode());
+        PromoPreview promoPreview = promotionPolicyService.previewForMembership(user, plan, requestBody.promoCode());
         BigDecimal subtotal = defaultMoney(plan.getPriceAmount());
         BigDecimal discount = promoPreview.discountAmount();
         BigDecimal tax = BigDecimal.ZERO;
-        BigDecimal total = calculateTotal(subtotal, discount, tax);
+        BigDecimal total = promotionPolicyService.calculateTotal(subtotal, discount, tax);
 
         MembershipSubscription subscription = upsertSubscriptionForCheckout(user, plan, autoRenew);
         if ("PAYOS".equals(paymentMethod)) {
@@ -153,6 +159,8 @@ public class MembershipServiceImpl implements MembershipService {
         payment.setMetadataJson("PAYOS".equals(paymentMethod) ? "{\"source\":\"petgo-membership-payos\"}" : "{\"source\":\"petgo-membership-checkout\"}");
         paymentRepository.save(payment);
 
+        promotionPolicyService.recordMembershipRedemption(promoPreview, user, subscription, invoice);
+
         return MembershipCheckoutResponse.builder()
                 .subscriptionId(subscription.getId())
                 .subscriptionCode(subscription.getSubscriptionCode())
@@ -177,13 +185,15 @@ public class MembershipServiceImpl implements MembershipService {
 
     @Override
     @Transactional
-    public MembershipSubscriptionResponse cancelAutoRenew(HttpServletRequest request, MembershipCancelRequest requestBody) {
+    public MembershipSubscriptionResponse cancelAutoRenew(HttpServletRequest request,
+            MembershipCancelRequest requestBody) {
         User user = requireCurrentUser(request);
         MembershipSubscription subscription = findCurrentMembership(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Bạn chưa có gói membership đang hoạt động."));
 
         normalizeStatusIfExpired(subscription);
-        if (!"ACTIVE".equalsIgnoreCase(subscription.getStatus()) && !"PAST_DUE".equalsIgnoreCase(subscription.getStatus())) {
+        if (!"ACTIVE".equalsIgnoreCase(subscription.getStatus())
+                && !"PAST_DUE".equalsIgnoreCase(subscription.getStatus())) {
             throw new BadRequestException("Không thể hủy gia hạn cho subscription hiện tại.");
         }
 
@@ -192,7 +202,8 @@ public class MembershipServiceImpl implements MembershipService {
             subscription.setCancelledAt(LocalDateTime.now(APP_ZONE));
         }
         String reason = requestBody != null ? normalizeBlank(requestBody.reason()) : null;
-        subscription.setCancelReason(firstNonBlank(reason, subscription.getCancelReason(), "Người dùng tắt tự động gia hạn"));
+        subscription.setCancelReason(
+                firstNonBlank(reason, subscription.getCancelReason(), "Người dùng tắt tự động gia hạn"));
         membershipSubscriptionRepository.save(subscription);
 
         return mapSubscription(subscription);
@@ -252,86 +263,31 @@ public class MembershipServiceImpl implements MembershipService {
     }
 
     private Optional<MembershipSubscription> findCurrentMembership(Long userId) {
-        Optional<MembershipSubscription> subscription = membershipSubscriptionRepository.findTopByUser_IdAndStatusInOrderByCreatedAtDescIdDesc(userId, CURRENT_MEMBERSHIP_STATUSES);
+        Optional<MembershipSubscription> subscription = membershipSubscriptionRepository
+                .findTopByUser_IdAndStatusInOrderByCreatedAtDescIdDesc(userId, CURRENT_MEMBERSHIP_STATUSES);
         subscription.ifPresent(this::normalizeStatusIfExpired);
-        if (subscription.isPresent() && List.of("ACTIVE", "PAST_DUE", "PENDING_PAYMENT").contains(subscription.get().getStatus())) {
+        if (subscription.isPresent()
+                && List.of("ACTIVE", "PAST_DUE", "PENDING_PAYMENT").contains(subscription.get().getStatus())) {
             return subscription;
         }
         return Optional.empty();
     }
 
     private void normalizeStatusIfExpired(MembershipSubscription subscription) {
-        if (subscription == null || subscription.getExpiresAt() == null) return;
-        if ("ACTIVE".equalsIgnoreCase(subscription.getStatus()) && subscription.getExpiresAt().isBefore(LocalDateTime.now(APP_ZONE))) {
+        if (subscription == null || subscription.getExpiresAt() == null)
+            return;
+        if ("ACTIVE".equalsIgnoreCase(subscription.getStatus())
+                && subscription.getExpiresAt().isBefore(LocalDateTime.now(APP_ZONE))) {
             subscription.setStatus("EXPIRED");
             membershipSubscriptionRepository.save(subscription);
         }
     }
 
-    private PromoPreview resolvePromoPreview(BigDecimal planPrice, String rawPromoCode) {
-        String promoCode = normalizeBlank(rawPromoCode);
-        if (promoCode == null) {
-            return new PromoPreview(null, BigDecimal.ZERO, null);
-        }
-
-        PromoCode promo = promoCodeRepository.findByCodeIgnoreCaseAndActiveTrue(promoCode)
-                .orElseThrow(() -> new BadRequestException("Mã promo không tồn tại hoặc đã hết hạn"));
-
-        LocalDateTime now = LocalDateTime.now(APP_ZONE);
-        if (promo.getStartsAt() != null && now.isBefore(promo.getStartsAt())) {
-            throw new BadRequestException("Mã promo chưa đến thời gian sử dụng");
-        }
-        if (promo.getEndsAt() != null && now.isAfter(promo.getEndsAt())) {
-            throw new BadRequestException("Mã promo đã hết hạn");
-        }
-
-        String targetType = firstNonBlank(promo.getTargetType(), "BOTH").toUpperCase(Locale.ROOT);
-        if (!List.of("MEMBERSHIP", "BOTH").contains(targetType)) {
-            throw new BadRequestException("Mã promo không áp dụng cho membership");
-        }
-
-        BigDecimal subtotal = defaultMoney(planPrice);
-        BigDecimal minOrder = defaultMoney(promo.getMinOrderAmount());
-        if (subtotal.compareTo(minOrder) < 0) {
-            throw new BadRequestException("Giá trị gói chưa đạt tối thiểu để dùng promo");
-        }
-
-        BigDecimal discount = calculatePromoDiscount(subtotal, promo);
-        return new PromoPreview(promo.getCode().toUpperCase(Locale.ROOT), discount,
-                discount.compareTo(BigDecimal.ZERO) > 0
-                        ? "Đã áp dụng mã " + promo.getCode().toUpperCase(Locale.ROOT)
-                        : "Mã promo không tạo ra giảm giá");
-    }
-
-    private BigDecimal calculatePromoDiscount(BigDecimal subtotal, PromoCode promo) {
-        BigDecimal discountValue = defaultMoney(promo.getDiscountValue());
-        if (discountValue.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
-
-        BigDecimal discount;
-        String discountType = firstNonBlank(promo.getDiscountType(), "FIXED_AMOUNT").toUpperCase(Locale.ROOT);
-        if ("PERCENTAGE".equals(discountType)) {
-            discount = subtotal.multiply(discountValue).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        } else {
-            discount = discountValue;
-        }
-
-        BigDecimal maxDiscount = promo.getMaxDiscountAmount();
-        if (maxDiscount != null && maxDiscount.compareTo(BigDecimal.ZERO) > 0 && discount.compareTo(maxDiscount) > 0) {
-            discount = maxDiscount;
-        }
-        if (discount.compareTo(subtotal) > 0) {
-            discount = subtotal;
-        }
-        return discount.max(BigDecimal.ZERO);
-    }
-
     private void refreshInvoiceItems(Invoice invoice,
-                                     MembershipPlan plan,
-                                     BigDecimal subtotal,
-                                     BigDecimal discount,
-                                     BigDecimal tax) {
+            MembershipPlan plan,
+            BigDecimal subtotal,
+            BigDecimal discount,
+            BigDecimal tax) {
         if (invoice.getId() != null) {
             invoiceItemRepository.deleteByInvoiceId(invoice.getId());
         }
@@ -393,13 +349,15 @@ public class MembershipServiceImpl implements MembershipService {
                 .priorityBooking(Boolean.TRUE.equals(plan.getPriorityBooking()))
                 .prioritySupport(Boolean.TRUE.equals(plan.getPrioritySupport()))
                 .popular(Boolean.TRUE.equals(plan.getPopular()))
-                .features(plan.getFeatures().stream().map(MembershipPlanFeature::getFeatureText).filter(v -> v != null && !v.isBlank()).toList())
+                .features(plan.getFeatures().stream().map(MembershipPlanFeature::getFeatureText)
+                        .filter(v -> v != null && !v.isBlank()).toList())
                 .currentPlan(currentPlan)
                 .build();
     }
 
     private MembershipSubscriptionResponse mapSubscription(MembershipSubscription subscription) {
-        Invoice latestInvoice = invoiceRepository.findTopByMembershipSubscriptionIdOrderByCreatedAtDescIdDesc(subscription.getId()).orElse(null);
+        Invoice latestInvoice = invoiceRepository
+                .findTopByMembershipSubscriptionIdOrderByCreatedAtDescIdDesc(subscription.getId()).orElse(null);
         return mapSubscription(subscription, latestInvoice);
     }
 
@@ -427,7 +385,11 @@ public class MembershipServiceImpl implements MembershipService {
                 .priorityBooking(plan != null && Boolean.TRUE.equals(plan.getPriorityBooking()))
                 .prioritySupport(plan != null && Boolean.TRUE.equals(plan.getPrioritySupport()))
                 .popular(plan != null && Boolean.TRUE.equals(plan.getPopular()))
-                .features(plan != null ? plan.getFeatures().stream().map(MembershipPlanFeature::getFeatureText).filter(v -> v != null && !v.isBlank()).toList() : List.of())
+                .features(
+                        plan != null
+                                ? plan.getFeatures().stream().map(MembershipPlanFeature::getFeatureText)
+                                        .filter(v -> v != null && !v.isBlank()).toList()
+                                : List.of())
                 .latestInvoiceId(latestInvoice != null ? latestInvoice.getId() : null)
                 .latestInvoiceNumber(latestInvoice != null ? latestInvoice.getInvoiceNumber() : null)
                 .latestInvoiceStatus(latestInvoice != null ? latestInvoice.getStatus() : null)
@@ -477,15 +439,15 @@ public class MembershipServiceImpl implements MembershipService {
     }
 
     private String buildUserAddress(User user) {
-        if (user == null) return null;
+        if (user == null)
+            return null;
         List<String> parts = java.util.stream.Stream.of(
-                        user.getAddressLine1(),
-                        user.getAddressLine2(),
-                        user.getWard(),
-                        user.getDistrict(),
-                        user.getCity(),
-                        user.getProvince()
-                )
+                user.getAddressLine1(),
+                user.getAddressLine2(),
+                user.getWard(),
+                user.getDistrict(),
+                user.getCity(),
+                user.getProvince())
                 .filter(value -> value != null && !value.isBlank())
                 .toList();
         return parts.isEmpty() ? null : String.join(", ", parts);
@@ -493,11 +455,6 @@ public class MembershipServiceImpl implements MembershipService {
 
     private BigDecimal defaultMoney(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
-    }
-
-    private BigDecimal calculateTotal(BigDecimal subtotal, BigDecimal discount, BigDecimal tax) {
-        BigDecimal total = defaultMoney(subtotal).subtract(defaultMoney(discount)).add(defaultMoney(tax));
-        return total.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : total;
     }
 
     private String formatMoney(BigDecimal amount) {
@@ -513,7 +470,8 @@ public class MembershipServiceImpl implements MembershipService {
     }
 
     private String firstNonBlank(String... values) {
-        if (values == null) return null;
+        if (values == null)
+            return null;
         for (String value : values) {
             if (value != null && !value.isBlank()) {
                 return value;
@@ -523,19 +481,19 @@ public class MembershipServiceImpl implements MembershipService {
     }
 
     private String normalizeBlank(String value) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 
     private <T> T firstNonNull(T... values) {
-        if (values == null) return null;
+        if (values == null)
+            return null;
         for (T value : values) {
-            if (value != null) return value;
+            if (value != null)
+                return value;
         }
         return null;
-    }
-
-    private record PromoPreview(String appliedCode, BigDecimal discountAmount, String message) {
     }
 }

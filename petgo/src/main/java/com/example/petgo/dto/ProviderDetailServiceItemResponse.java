@@ -16,7 +16,10 @@ public record ProviderDetailServiceItemResponse(
         Integer durationMinutes,
         String duration,
         Boolean featured,
+        Long categoryId,
         String categoryName,
-        String categorySlug
-) {
+        Long providerId,
+        String providerName,
+        String providerImage,
+        String providerAddress) {
 }
