@@ -1,10 +1,6 @@
 package com.example.petgo.service;
 
-import com.example.petgo.dto.ProviderDetailResponse;
-import com.example.petgo.dto.ProviderResponse;
-import com.example.petgo.dto.ProviderVerificationRequest;
-import com.example.petgo.dto.ServiceCategoryRequest;
-import com.example.petgo.dto.ServiceCategoryResponse;
+import com.example.petgo.dto.*;
 import java.util.List;
 
 public interface AdminService {
@@ -19,7 +15,20 @@ public interface AdminService {
     void updateProviderAccountStatus(ProviderVerificationRequest request);
 
     List<ServiceCategoryResponse> getAllCategories();
+
     ServiceCategoryResponse createCategory(ServiceCategoryRequest request);
+
     ServiceCategoryResponse updateCategory(Long id, ServiceCategoryRequest request);
+
     void deleteCategory(Long id);
+
+    List<HomeSliderResponse> getAllHomeSliders();
+
+    HomeSliderResponse createHomeSlider(HomeSliderRequest request);
+
+    HomeSliderResponse updateHomeSlider(Long id, HomeSliderRequest request);
+
+    void deleteHomeSlider(Long id);
+
+    HomeSliderResponse updateHomeSliderVisibility(Long id, Boolean active);
 }

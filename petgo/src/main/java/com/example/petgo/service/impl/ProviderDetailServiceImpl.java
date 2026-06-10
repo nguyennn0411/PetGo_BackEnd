@@ -48,28 +48,35 @@ public class ProviderDetailServiceImpl implements ProviderDetailService {
 
         List<ProviderPhoto> photos = providerPhotoRepository.findImagesByProviderId(providerId);
         List<ProviderService> services = providerServiceRepository.findActiveDetailsByProviderId(providerId);
-        List<ProviderBusinessHour> businessHours = providerBusinessHourRepository.findByProvider_IdOrderByWeekdayAscIdAsc(providerId);
+        List<ProviderBusinessHour> businessHours = providerBusinessHourRepository
+                .findByProvider_IdOrderByWeekdayAscIdAsc(providerId);
 
         LocalDate today = LocalDate.now(APP_ZONE);
-        List<ProviderAvailabilitySlot> allUpcomingSlots = providerAvailabilitySlotRepository.findUpcomingAvailableSlotsForProvider(
-                providerId,
-                today,
-                today.plusDays(Math.max(slotLookaheadDays, 1))
-        );
-        List<Review> reviews = reviewRepository.findVisibleByProviderId(providerId, PageRequest.of(0, Math.max(detailReviewLimit, 1)));
+        List<ProviderAvailabilitySlot> allUpcomingSlots = providerAvailabilitySlotRepository
+                .findUpcomingAvailableSlotsForProvider(
+                        providerId,
+                        today,
+                        today.plusDays(Math.max(slotLookaheadDays, 1)));
+        List<Review> reviews = reviewRepository.findVisibleByProviderId(providerId,
+                PageRequest.of(0, Math.max(detailReviewLimit, 1)));
 
-        String bannerImage = firstNonBlank(provider.getCoverImageUrl(), provider.getMainImageUrl(), firstPhotoUrl(photos), fallbackProviderImage(provider));
-        String mainImage = firstNonBlank(provider.getMainImageUrl(), firstPhotoUrl(photos), bannerImage, fallbackProviderImage(provider));
-        List<String> gallery = buildGallery(photos, bannerImage, mainImage);
+        String bannerImage = firstNonBlank(provider.getCoverImageUrl(), provider.getMainImageUrl(),
+                firstPhotoUrl(photos), fallbackProviderImage(provider));
+        String mainImage = firstNonBlank(provider.getMainImageUrl(), firstPhotoUrl(photos), bannerImage,
+                fallbackProviderImage(provider));
+        List<String> gallery = buildGallery(photos);
         List<ProviderDetailServiceItemResponse> serviceItems = services.stream().map(this::mapService).toList();
         List<ProviderBusinessHourDetailResponse> hourItems = businessHours.stream().map(this::mapHour).toList();
-        List<ProviderSlotResponse> slotItems = allUpcomingSlots.stream().limit(Math.max(detailSlotLimit, 1)).map(this::mapSlot).toList();
+        List<ProviderSlotResponse> slotItems = allUpcomingSlots.stream().limit(Math.max(detailSlotLimit, 1))
+                .map(this::mapSlot).toList();
         List<ProviderReviewResponse> reviewItems = reviews.stream().map(this::mapReview).toList();
 
-        boolean openNow = isOpenNow(businessHours, LocalDateTime.now(APP_ZONE).toLocalTime(), LocalDate.now(APP_ZONE).getDayOfWeek());
+        boolean openNow = isOpenNow(businessHours, LocalDateTime.now(APP_ZONE).toLocalTime(),
+                LocalDate.now(APP_ZONE).getDayOfWeek());
         Double distanceKm = calculateDistanceKm(latitude, longitude, provider.getLatitude(), provider.getLongitude());
         BigDecimal priceFrom = resolveLowestPrice(provider, services);
-        String nextAvailableSlot = slotItems.isEmpty() ? null : slotItems.get(0).date() + " " + slotItems.get(0).label();
+        String nextAvailableSlot = slotItems.isEmpty() ? null
+                : slotItems.get(0).date() + " " + slotItems.get(0).label();
 
         return ProviderDetailResponse.builder()
                 .id(provider.getId())
@@ -99,7 +106,9 @@ public class ProviderDetailServiceImpl implements ProviderDetailService {
                 .reviews(reviewItems)
                 .summary(ProviderDetailSummaryResponse.builder()
                         .priceFrom(priceFrom)
-                        .currencyCode(firstNonBlank(provider.getCurrencyCode(), services.stream().map(ProviderService::getCurrencyCode).filter(Objects::nonNull).findFirst().orElse("VND")))
+                        .currencyCode(firstNonBlank(provider.getCurrencyCode(),
+                                services.stream().map(ProviderService::getCurrencyCode).filter(Objects::nonNull)
+                                        .findFirst().orElse("VND")))
                         .cancellationFreeHours(provider.getCancellationFreeHours())
                         .openNow(openNow)
                         .distance(formatDistance(distanceKm))
@@ -114,21 +123,24 @@ public class ProviderDetailServiceImpl implements ProviderDetailService {
     }
 
     private ProviderDetailServiceItemResponse mapService(ProviderService providerService) {
-        String serviceName = firstNonBlank(providerService.getCustomName(), providerService.getService().getName(), "Dịch vụ");
-        String description = firstNonBlank(providerService.getShortDescription(), providerService.getDescription(), providerService.getService().getShortDescription(), providerService.getService().getDescription());
+        String serviceName = firstNonBlank(providerService.getCustomName(), providerService.getService().getName(),
+                "Dịch vụ");
+        String description = firstNonBlank(providerService.getShortDescription(), providerService.getDescription(),
+                providerService.getService().getShortDescription(), providerService.getService().getDescription());
         return ProviderDetailServiceItemResponse.builder()
                 .id(providerService.getId())
                 .name(serviceName)
                 .desc(description)
                 .price(providerService.getPriceAmount())
                 .priceDisplay(formatMoney(providerService.getPriceAmount()))
-                .currencyCode(firstNonBlank(providerService.getCurrencyCode(), providerService.getService().getCurrencyCode(), "VND"))
+                .currencyCode(firstNonBlank(providerService.getCurrencyCode(),
+                        providerService.getService().getCurrencyCode(), "VND"))
                 .priceUnit(providerService.getPriceUnit())
                 .durationMinutes(providerService.getDurationMinutes())
                 .duration(formatDuration(providerService.getDurationMinutes()))
+                .categoryId(providerService.getService().getCategory().getId())
                 .featured(Boolean.TRUE.equals(providerService.getFeatured()))
                 .categoryName(providerService.getService().getCategory().getName())
-                .categorySlug(providerService.getService().getCategory().getSlug())
                 .build();
     }
 
@@ -147,9 +159,11 @@ public class ProviderDetailServiceImpl implements ProviderDetailService {
 
     private ProviderSlotResponse mapSlot(ProviderAvailabilitySlot slot) {
         String serviceName = slot.getProviderService() != null && slot.getProviderService().getService() != null
-                ? firstNonBlank(slot.getProviderService().getCustomName(), slot.getProviderService().getService().getName())
+                ? firstNonBlank(slot.getProviderService().getCustomName(),
+                        slot.getProviderService().getService().getName())
                 : null;
-        int capacityRemaining = Math.max(0, Optional.ofNullable(slot.getCapacityTotal()).orElse(0) - Optional.ofNullable(slot.getCapacityBooked()).orElse(0));
+        int capacityRemaining = Math.max(0, Optional.ofNullable(slot.getCapacityTotal()).orElse(0)
+                - Optional.ofNullable(slot.getCapacityBooked()).orElse(0));
         return ProviderSlotResponse.builder()
                 .id(slot.getId())
                 .providerServiceId(slot.getProviderService() != null ? slot.getProviderService().getId() : null)
@@ -201,10 +215,8 @@ public class ProviderDetailServiceImpl implements ProviderDetailService {
                 .orElse(provider.getPriceFromAmount());
     }
 
-    private List<String> buildGallery(List<ProviderPhoto> photos, String bannerImage, String mainImage) {
+    private List<String> buildGallery(List<ProviderPhoto> photos) {
         LinkedHashSet<String> urls = new LinkedHashSet<>();
-        if (bannerImage != null && !bannerImage.isBlank()) urls.add(bannerImage);
-        if (mainImage != null && !mainImage.isBlank()) urls.add(mainImage);
         for (ProviderPhoto photo : photos) {
             if (photo.getPhotoUrl() != null && !photo.getPhotoUrl().isBlank()) {
                 urls.add(photo.getPhotoUrl());
@@ -214,12 +226,14 @@ public class ProviderDetailServiceImpl implements ProviderDetailService {
     }
 
     private String firstPhotoUrl(List<ProviderPhoto> photos) {
-        return photos.stream().map(ProviderPhoto::getPhotoUrl).filter(Objects::nonNull).filter(url -> !url.isBlank()).findFirst().orElse(null);
+        return photos.stream().map(ProviderPhoto::getPhotoUrl).filter(Objects::nonNull).filter(url -> !url.isBlank())
+                .findFirst().orElse(null);
     }
 
     private String fallbackProviderImage(ProviderProfile provider) {
         String slug = provider.getSlug() == null || provider.getSlug().isBlank() ? "petgo" : provider.getSlug();
-        return "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=1200&sig=" + Math.abs(slug.hashCode());
+        return "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=1200&sig="
+                + Math.abs(slug.hashCode());
     }
 
     private String buildHourLabel(ProviderBusinessHour hour) {
@@ -235,7 +249,8 @@ public class ProviderDetailServiceImpl implements ProviderDetailService {
     }
 
     private String mapWeekdayLabel(Integer weekday) {
-        if (weekday == null) return "N/A";
+        if (weekday == null)
+            return "N/A";
         return switch (weekday) {
             case 1 -> "Mon";
             case 2 -> "Tue";

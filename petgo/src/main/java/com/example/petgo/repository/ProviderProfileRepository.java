@@ -11,52 +11,56 @@ import java.util.Optional;
 
 public interface ProviderProfileRepository extends JpaRepository<ProviderProfile, Long> {
 
-    @Query("""
-            select p
-            from ProviderProfile p
-            where p.status = 'ACTIVE'
-              and p.deletedAt is null
-            order by p.featured desc, p.hot desc, p.averageRating desc, p.totalReviews desc, p.id asc
-            """)
-    List<ProviderProfile> findFeaturedProviders(Pageable pageable);
+  @Query("""
+      select p
+      from ProviderProfile p
+      where p.status = 'ACTIVE'
+        and p.deletedAt is null
+      order by p.featured desc, p.hot desc, p.averageRating desc, p.totalReviews desc, p.id asc
+      """)
+  List<ProviderProfile> findFeaturedProviders(Pageable pageable);
 
-    @Query("""
-            select p
-            from ProviderProfile p
-            where p.status = 'ACTIVE'
-              and p.deletedAt is null
-            order by p.averageRating desc, p.totalReviews desc, p.totalCompletedBookings desc, p.id asc
-            """)
-    List<ProviderProfile> findNearbyProviders(Pageable pageable);
+  @Query("""
+      select p
+      from ProviderProfile p
+      where p.status = 'ACTIVE'
+        and p.deletedAt is null
+      order by p.averageRating desc, p.totalReviews desc, p.totalCompletedBookings desc, p.id asc
+      """)
+  List<ProviderProfile> findNearbyProviders(Pageable pageable);
 
-    @Query("""
-            select p
-            from ProviderProfile p
-            where p.status = 'ACTIVE'
-              and p.deletedAt is null
-            order by p.featured desc, p.hot desc, p.averageRating desc, p.totalReviews desc, p.id asc
-            """)
-    List<ProviderProfile> findActiveProviders();
+  @Query("""
+      select p
+      from ProviderProfile p
+      where p.status = 'ACTIVE'
+        and p.deletedAt is null
+      order by p.featured desc, p.hot desc, p.averageRating desc, p.totalReviews desc, p.id asc
+      """)
+  List<ProviderProfile> findActiveProviders();
 
-    @Query("""
-            select distinct p.city
-            from ProviderProfile p
-            where p.status = 'ACTIVE'
-              and p.deletedAt is null
-              and p.city is not null
-              and trim(p.city) <> ''
-            order by p.city asc
-            """)
-    List<String> findDistinctActiveCities();
+  @Query("""
+      select distinct p.city
+      from ProviderProfile p
+      where p.status = 'ACTIVE'
+        and p.deletedAt is null
+        and p.city is not null
+        and trim(p.city) <> ''
+      order by p.city asc
+      """)
+  List<String> findDistinctActiveCities();
 
-    @Query("""
-            select p
-            from ProviderProfile p
-            where p.id = :providerId
-              and p.status = 'ACTIVE'
-              and p.deletedAt is null
-            """)
-    Optional<ProviderProfile> findActiveById(@Param("providerId") Long providerId);
+  @Query("""
+      select p
+      from ProviderProfile p
+      where p.id = :providerId
+        and p.status = 'ACTIVE'
+        and p.deletedAt is null
+      """)
+  Optional<ProviderProfile> findActiveById(@Param("providerId") Long providerId);
 
-    List<ProviderProfile> findByVerificationStatus(String status);
+  List<ProviderProfile> findByVerificationStatus(String status);
+
+  Optional<ProviderProfile> findByUser_Id(Long userId);
+
+  boolean existsBySlug(String slug);
 }
