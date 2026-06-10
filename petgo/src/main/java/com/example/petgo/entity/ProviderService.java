@@ -36,9 +36,6 @@ public class ProviderService extends BaseEntity {
     @Column(name = "duration_minutes", nullable = false)
     private Integer durationMinutes;
 
-    @Column(name = "duration_type", nullable = false, length = 30)
-    private String durationType;
-
     @Column(name = "price_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal priceAmount;
 
@@ -60,18 +57,6 @@ public class ProviderService extends BaseEntity {
     @Column(name = "booking_buffer_minutes", nullable = false)
     private Integer bookingBufferMinutes;
 
-    @Column(name = "buffer_after_minutes", nullable = false)
-    private Integer bufferAfterMinutes;
-
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;
-
-    @Column(name = "category_ids", length = 500)
-    private String categoryIds;
-
-    @Column(name = "photo_urls", columnDefinition = "TEXT")
-    private String photoUrls;
-
-    @Column(name = "approval_status", length = 20)
-    private String approvalStatus;
 }

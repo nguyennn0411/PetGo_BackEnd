@@ -5,7 +5,6 @@ import com.cloudinary.utils.ObjectUtils;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.service.CloudinaryStorageService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,8 +14,9 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class CloudinaryStorageServiceImpl implements CloudinaryStorageService {
+
+    private static final long MAX_IMAGE_SIZE = 5L * 1024 * 1024;
 
     private final Cloudinary cloudinary;
 
@@ -26,86 +26,109 @@ public class CloudinaryStorageServiceImpl implements CloudinaryStorageService {
             return null;
         }
 
-        return uploadImage(file, "petgo/pets/avatar", "File avatar phải là ảnh");
-    }
-
-    @Override
-    public String uploadPartnerLocationImage(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new BadRequestException("Vui lòng chọn ảnh địa điểm nhà cung cấp.");
-        }
-
-        return uploadImage(file, "petgo/registrations/partner/locations", "File địa điểm nhà cung cấp phải là ảnh");
-    }
-
-    @Override
-    public String uploadPartnerServiceImage(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new BadRequestException("Vui lòng chọn ảnh mô tả dịch vụ.");
-        }
-
-        return uploadImage(file, "petgo/partner/services", "File mô tả dịch vụ phải là ảnh");
-    }
-
-    @Override
-    public String uploadChatImage(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new BadRequestException("Vui lòng chọn ảnh chat.");
-        }
-
-        return uploadImage(file, "petgo/chat/images", "File chat phải là ảnh");
-    }
-
-    private String uploadImage(MultipartFile file, String folder, String invalidTypeMessage) {
-        validateImage(file, invalidTypeMessage);
+        validateImage(file, "File avatar phải là ảnh");
 
         try {
             String publicId = UUID.randomUUID().toString().replace("-", "");
 
-            Map<?, ?> uploadResult = cloudinary.uploader().upload(
+            Map uploadResult = cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
-                            "folder", folder,
+                            "folder", "petgo/pets/avatar",
                             "public_id", publicId,
                             "resource_type", "image",
-                            "overwrite", false));
+                            "overwrite", false
+                    )
+            );
 
             Object secureUrl = uploadResult.get("secure_url");
-
             if (secureUrl == null) {
                 throw new BadRequestException("Cloudinary không trả về URL ảnh");
             }
 
             return secureUrl.toString();
+        } catch (IOException e) {
+            throw new BadRequestException("Không thể đọc file ảnh");
         } catch (BadRequestException e) {
             throw e;
-        } catch (IOException e) {
-            log.warn(
-                    "Unable to read image file before Cloudinary upload. folder={}, filename={}, contentType={}, size={}",
-                    folder, safeFilename(file), file.getContentType(), file.getSize(), e);
-            throw new BadRequestException("Không thể đọc file ảnh");
         } catch (Exception e) {
-            log.error("Cloudinary upload failed. folder={}, filename={}, contentType={}, size={}",
-                    folder, safeFilename(file), file.getContentType(), file.getSize(), e);
             throw new BadRequestException("Upload ảnh lên Cloudinary thất bại");
         }
     }
 
-    private String safeFilename(MultipartFile file) {
-        String filename = file.getOriginalFilename();
-        return filename == null || filename.isBlank() ? "unknown" : filename;
+    @Override
+    public String uploadGroomingImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Vui lòng chọn ảnh thú cưng");
+        }
+
+        validateImage(file, "File upload phải là ảnh");
+
+        try {
+            String publicId = UUID.randomUUID().toString().replace("-", "");
+
+            Map uploadResult = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "petgo/ai-grooming/originals",
+                            "public_id", publicId,
+                            "resource_type", "image",
+                            "overwrite", false
+                    )
+            );
+
+            Object secureUrl = uploadResult.get("secure_url");
+            if (secureUrl == null) {
+                throw new BadRequestException("Cloudinary không trả về URL ảnh gốc");
+            }
+
+            return secureUrl.toString();
+        } catch (IOException e) {
+            throw new BadRequestException("Không thể đọc file ảnh thú cưng");
+        } catch (BadRequestException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BadRequestException("Upload ảnh grooming lên Cloudinary thất bại");
+        }
+    }
+
+    @Override
+    public String uploadGroomingPreview(byte[] imageBytes, String publicId) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            throw new BadRequestException("Dữ liệu ảnh preview không hợp lệ");
+        }
+
+        try {
+            Map uploadResult = cloudinary.uploader().upload(
+                    imageBytes,
+                    ObjectUtils.asMap(
+                            "folder", "petgo/ai-grooming/previews",
+                            "public_id", publicId,
+                            "resource_type", "image",
+                            "overwrite", false
+                    )
+            );
+
+            Object secureUrl = uploadResult.get("secure_url");
+            if (secureUrl == null) {
+                throw new BadRequestException("Cloudinary không trả về URL ảnh preview");
+            }
+
+            return secureUrl.toString();
+        } catch (BadRequestException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BadRequestException("Upload ảnh preview lên Cloudinary thất bại");
+        }
     }
 
     private void validateImage(MultipartFile file, String invalidTypeMessage) {
         String contentType = file.getContentType();
-
         if (contentType == null || !contentType.startsWith("image/")) {
             throw new BadRequestException(invalidTypeMessage);
         }
 
-        long maxSize = 5L * 1024 * 1024;
-
-        if (file.getSize() > maxSize) {
+        if (file.getSize() > MAX_IMAGE_SIZE) {
             throw new BadRequestException("Ảnh không được vượt quá 5MB");
         }
     }

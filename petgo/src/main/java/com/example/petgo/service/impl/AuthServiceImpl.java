@@ -6,14 +6,10 @@ import com.example.petgo.dto.AuthLoginRequest;
 import com.example.petgo.dto.AuthRegisterRequest;
 import com.example.petgo.dto.AuthTokenBundleResponse;
 import com.example.petgo.dto.AuthUserResponse;
-import com.example.petgo.dto.ForgotPasswordRequest;
-import com.example.petgo.dto.ResetPasswordRequest;
 import com.example.petgo.entity.RefreshToken;
-import com.example.petgo.entity.RoleType;
 import com.example.petgo.entity.User;
 import com.example.petgo.entity.UserRole;
 import com.example.petgo.entity.UserRoleId;
-import com.example.petgo.entity.Wallet;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.exception.UnauthorizedException;
@@ -21,7 +17,6 @@ import com.example.petgo.repository.RefreshTokenRepository;
 import com.example.petgo.repository.RoleRepository;
 import com.example.petgo.repository.UserRepository;
 import com.example.petgo.repository.UserRoleRepository;
-import com.example.petgo.repository.WalletRepository;
 import com.example.petgo.service.AuthService;
 import com.example.petgo.service.MailService;
 import com.example.petgo.dto.VerifyOtpRequest;
@@ -53,7 +48,6 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenService jwtTokenService;
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
-    private final WalletRepository walletRepository;
 
     @Override
     @Transactional
@@ -64,8 +58,7 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new BadRequestException("Email đã tồn tại.");
         }
-        if (normalizedPhone != null && !normalizedPhone.isBlank()
-                && userRepository.existsByPhoneNumber(normalizedPhone)) {
+        if (normalizedPhone != null && !normalizedPhone.isBlank() && userRepository.existsByPhoneNumber(normalizedPhone)) {
             throw new BadRequestException("Số điện thoại đã tồn tại.");
         }
 
@@ -80,18 +73,17 @@ public class AuthServiceImpl implements AuthService {
         user.setAvatarUrl(defaultAvatarUrl());
         user.setCoverUrl(defaultCoverUrl());
 
-        String otp = generateOtp();
+        // Generate OTP
+        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
         user.setOtpCode(otp);
         user.setOtpExpiryTime(LocalDateTime.now().plusMinutes(10));
 
         userRepository.save(user);
-        Wallet wallet = new Wallet();
-        wallet.setUser(user);
-        walletRepository.save(wallet);
 
+        // Send OTP Email
         mailService.sendOtpEmail(user.getEmail(), otp);
 
-        roleRepository.findByCode(RoleType.USER).ifPresent(role -> {
+        roleRepository.findByCode("CUSTOMER").ifPresent(role -> {
             UserRole userRole = new UserRole();
             userRole.setId(new UserRoleId(user.getId(), role.getId()));
             userRole.setUser(user);
@@ -129,60 +121,13 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void forgotPassword(ForgotPasswordRequest request) {
-        User user = userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(normalizeEmail(request.email()))
-                .orElseThrow(() -> new ResourceNotFoundException("Email này chưa tồn tại trong hệ thống."));
-
-        if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
-            throw new BadRequestException("Tài khoản của bạn đang bị khóa, không thể đặt lại mật khẩu.");
-        }
-
-        String otp = generateOtp();
-        user.setOtpCode(otp);
-        user.setOtpExpiryTime(LocalDateTime.now().plusMinutes(10));
-        userRepository.save(user);
-
-        mailService.sendPasswordResetOtpEmail(user.getEmail(), otp);
-    }
-
-    @Override
-    @Transactional
-    public void resetPassword(ResetPasswordRequest request) {
-        User user = userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(normalizeEmail(request.email()))
-                .orElseThrow(() -> new ResourceNotFoundException("Email này chưa tồn tại trong hệ thống."));
-
-        if ("SUSPENDED".equalsIgnoreCase(user.getStatus())) {
-            throw new BadRequestException("Tài khoản của bạn đang bị khóa, không thể đặt lại mật khẩu.");
-        }
-
-        if (user.getOtpCode() == null || !user.getOtpCode().equals(request.otpCode())) {
-            throw new BadRequestException("Mã OTP không chính xác.");
-        }
-
-        if (user.getOtpExpiryTime() == null || user.getOtpExpiryTime().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("Mã OTP đã hết hạn.");
-        }
-
-        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-        if (user.getEmailVerifiedAt() == null) {
-            user.setEmailVerifiedAt(LocalDateTime.now());
-            user.setStatus("ACTIVE");
-        }
-        user.setOtpCode(null);
-        user.setOtpExpiryTime(null);
-        userRepository.save(user);
-    }
-
-    @Override
-    @Transactional
     public AuthTokenBundleResponse login(AuthLoginRequest request) {
         String principal = request.userName() == null ? "" : request.userName().trim();
-        String password = normalizePassword(request.password());
         User user = findUserForLogin(principal)
                 .filter(candidate -> candidate.getDeletedAt() == null)
                 .orElseThrow(() -> new UnauthorizedException("Thông tin đăng nhập không chính xác."));
 
-        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new UnauthorizedException("Thông tin đăng nhập không chính xác.");
         }
 
@@ -290,11 +235,10 @@ public class AuthServiceImpl implements AuthService {
     private List<String> resolveRoles(Long userId) {
         List<String> roles = userRoleRepository.findByUser_Id(userId).stream()
                 .map(userRole -> userRole.getRole().getCode())
-                .map(RoleType::getCode)
                 .filter(code -> code != null && !code.isBlank())
                 .distinct()
                 .toList();
-        return roles.isEmpty() ? List.of(RoleType.USER.getCode()) : roles;
+        return roles.isEmpty() ? List.of("CUSTOMER") : roles;
     }
 
     private AuthUserResponse mapUser(User user, List<String> roles) {
@@ -319,21 +263,20 @@ public class AuthServiceImpl implements AuthService {
                 .countryCode(user.getCountryCode())
                 .address(address)
                 .status(user.getStatus())
-                .createdAt(
-                        user.getCreatedAt() != null ? user.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                                : null)
+                .createdAt(user.getCreatedAt() != null ? user.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null)
                 .roles(roles)
                 .build();
     }
 
     private String buildAddress(User user) {
         List<String> parts = java.util.stream.Stream.of(
-                user.getAddressLine1(),
-                user.getAddressLine2(),
-                user.getWard(),
-                user.getDistrict(),
-                user.getCity(),
-                user.getProvince())
+                        user.getAddressLine1(),
+                        user.getAddressLine2(),
+                        user.getWard(),
+                        user.getDistrict(),
+                        user.getCity(),
+                        user.getProvince()
+                )
                 .filter(value -> value != null && !value.isBlank())
                 .toList();
         return parts.isEmpty() ? null : String.join(", ", parts);
@@ -343,23 +286,12 @@ public class AuthServiceImpl implements AuthService {
         return "USR-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
     }
 
-    private String generateOtp() {
-        return String.format("%06d", new java.util.Random().nextInt(1_000_000));
-    }
-
     private String normalizeEmail(String email) {
         return email == null ? null : email.trim().toLowerCase();
     }
 
     private String normalizePhone(String phone) {
         return phone == null ? null : phone.trim();
-    }
-
-    private String normalizePassword(String password) {
-        if (password == null) {
-            return null;
-        }
-        return password.strip();
     }
 
     private String defaultAvatarUrl() {
@@ -371,8 +303,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private String extractBearerToken(String authorizationHeader) {
-        if (authorizationHeader == null || authorizationHeader.isBlank()
-                || !authorizationHeader.startsWith("Bearer ")) {
+        if (authorizationHeader == null || authorizationHeader.isBlank() || !authorizationHeader.startsWith("Bearer ")) {
             throw new UnauthorizedException("Thiếu token xác thực.");
         }
         return authorizationHeader.substring(7).trim();

@@ -2,8 +2,6 @@ package com.example.petgo.controller;
 
 import com.example.petgo.dto.AuthLoginRequest;
 import com.example.petgo.dto.AuthRegisterRequest;
-import com.example.petgo.dto.ForgotPasswordRequest;
-import com.example.petgo.dto.ResetPasswordRequest;
 import com.example.petgo.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -32,18 +30,6 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> verifyOtp(@Valid @RequestBody com.example.petgo.dto.VerifyOtpRequest request) {
         authService.verifyOtp(request);
         return ResponseEntity.ok(Map.of("message", "Xác thực email thành công. Bạn có thể đăng nhập ngay bây giờ."));
-    }
-
-    @PostMapping("/forgot-password")
-    public ResponseEntity<Map<String, Object>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        authService.forgotPassword(request);
-        return ResponseEntity.ok(Map.of("message", "Mã xác thực đặt lại mật khẩu đã được gửi đến email của bạn."));
-    }
-
-    @PostMapping("/reset-password")
-    public ResponseEntity<Map<String, Object>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request);
-        return ResponseEntity.ok(Map.of("message", "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới."));
     }
 
     @PostMapping("/login")
