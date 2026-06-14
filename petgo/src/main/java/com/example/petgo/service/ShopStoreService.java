@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.example.petgo.dto.PaymentRequestDTO;
+import com.example.petgo.dto.PaymentResponseDTO;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -31,6 +34,7 @@ public class ShopStoreService {
     private final InvoiceRepository invoiceRepository;
     private final InvoiceItemRepository invoiceItemRepository;
     private final PaymentRepository paymentRepository;
+    private final PayOsService payOsService;
 
     @Transactional(readOnly = true)
     public List<CategoryResponse> getCategories() {
@@ -164,9 +168,21 @@ public class ShopStoreService {
         order.setTotalAmount(subtotal.add(shipping));
 
         ShopOrder savedOrder = shopOrderRepository.save(order);
-        createInvoiceAndPayment(user, savedOrder);
+        Invoice invoice = createInvoiceAndPayment(user, savedOrder);
         cartItemRepository.deleteByUser_Id(user.getId());
-        return toOrderResponse(savedOrder);
+        
+        String checkoutUrl = null;
+        if ("PAYOS".equalsIgnoreCase(request.paymentMethod())) {
+            PaymentRequestDTO payosReq = new PaymentRequestDTO(
+                invoice.getId(), null, null, "PAYOS",
+                "http://localhost:5173/payment/success",
+                "http://localhost:5173/payment/cancel"
+            );
+            PaymentResponseDTO payRes = payOsService.createPayment(payosReq);
+            checkoutUrl = payRes.checkoutUrl();
+        }
+
+        return toOrderResponse(savedOrder, checkoutUrl);
     }
 
     @Transactional(readOnly = true)
@@ -230,7 +246,7 @@ public class ShopStoreService {
         return toOrderResponse(saved);
     }
 
-    private void createInvoiceAndPayment(User user, ShopOrder order) {
+    private Invoice createInvoiceAndPayment(User user, ShopOrder order) {
         Invoice invoice = new Invoice();
         invoice.setInvoiceNumber("INV-SHOP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT));
         invoice.setUser(user);
@@ -282,7 +298,10 @@ public class ShopStoreService {
         payment.setCurrencyCode("VND");
         payment.setPaymentMethod(order.getPaymentMethod());
         payment.setStatus("COD".equals(order.getPaymentMethod()) ? "PENDING" : "PENDING");
-        paymentRepository.save(payment);
+        if (!"PAYOS".equalsIgnoreCase(order.getPaymentMethod())) {
+            paymentRepository.save(payment);
+        }
+        return savedInvoice;
     }
 
     private void applyProductRequest(Product product, ProductUpsertRequest request) {
@@ -339,7 +358,11 @@ public class ShopStoreService {
     }
 
     private OrderResponse toOrderResponse(ShopOrder order) {
+        return toOrderResponse(order, null);
+    }
+
+    private OrderResponse toOrderResponse(ShopOrder order, String checkoutUrl) {
         List<OrderItemResponse> items = order.getItems().stream().map(i -> new OrderItemResponse(i.getId(), i.getProduct() == null ? null : i.getProduct().getId(), i.getProductNameSnapshot(), i.getProductSkuSnapshot(), i.getProductImageSnapshot(), i.getQuantity(), i.getUnitPrice(), i.getLineTotal())).toList();
-        return new OrderResponse(order.getId(), order.getOrderCode(), order.getCustomerUser() == null ? null : order.getCustomerUser().getId(), order.getReceiverName(), order.getReceiverPhone(), order.getReceiverEmail(), order.getShippingAddress(), order.getWard(), order.getDistrict(), order.getCity(), order.getProvince(), order.getStatus(), order.getPaymentMethod(), order.getSubtotalAmount(), order.getShippingFeeAmount(), order.getDiscountAmount(), order.getTaxAmount(), order.getTotalAmount(), order.getCurrencyCode(), order.getCreatedAt(), items);
+        return new OrderResponse(order.getId(), order.getOrderCode(), order.getCustomerUser() == null ? null : order.getCustomerUser().getId(), order.getReceiverName(), order.getReceiverPhone(), order.getReceiverEmail(), order.getShippingAddress(), order.getWard(), order.getDistrict(), order.getCity(), order.getProvince(), order.getStatus(), order.getPaymentMethod(), order.getSubtotalAmount(), order.getShippingFeeAmount(), order.getDiscountAmount(), order.getTaxAmount(), order.getTotalAmount(), order.getCurrencyCode(), order.getCreatedAt(), checkoutUrl, items);
     }
 }

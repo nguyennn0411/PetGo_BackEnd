@@ -13,6 +13,8 @@ import java.util.List;
 public interface UserRoleRepository extends JpaRepository<UserRole, UserRoleId> {
   List<UserRole> findByUser_Id(Long userId);
 
+  void deleteByUser(User user);
+
   @Query("""
       select distinct u
       from UserRole ur

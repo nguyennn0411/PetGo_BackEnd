@@ -61,9 +61,27 @@ public class AuthServiceImpl implements AuthService {
         String normalizedEmail = normalizeEmail(request.email());
         String normalizedPhone = normalizePhone(request.phoneNumber());
 
-        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
-            throw new BadRequestException("Email đã tồn tại.");
+        // Kiểm tra email đã tồn tại chưa
+        Optional<User> existingUserOpt = userRepository.findByEmailIgnoreCase(normalizedEmail);
+        if (existingUserOpt.isPresent()) {
+            User existingUser = existingUserOpt.get();
+
+            if (existingUser.getEmailVerifiedAt() != null) {
+                // Tài khoản đã được kích hoạt -> Không cho đăng ký
+                throw new BadRequestException("Email đã tồn tại.");
+            } else if (existingUser.getOtpExpiryTime() != null
+                    && existingUser.getOtpExpiryTime().isAfter(LocalDateTime.now())) {
+                // Tài khoản chưa xác thực, OTP vẫn còn hạn -> Thông báo chuyển sang xác thực OTP
+                throw new BadRequestException("Tài khoản đã được đăng ký. Hệ thống đang chuyển sang trang xác minh OTP.");
+            } else {
+                // Tài khoản chưa xác thực, OTP đã hết hạn -> Xóa tài khoản cũ và cho tạo mới
+                userRoleRepository.deleteByUser(existingUser);
+                walletRepository.deleteByUser(existingUser);
+                userRepository.delete(existingUser);
+                userRepository.flush();
+            }
         }
+
         if (normalizedPhone != null && !normalizedPhone.isBlank()
                 && userRepository.existsByPhoneNumber(normalizedPhone)) {
             throw new BadRequestException("Số điện thoại đã tồn tại.");
@@ -191,7 +209,16 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (user.getEmailVerifiedAt() == null) {
-            throw new UnauthorizedException("Tài khoản chưa được xác thực email.");
+            if (user.getOtpExpiryTime() != null && user.getOtpExpiryTime().isAfter(LocalDateTime.now())) {
+                // OTP còn hạn (trong 10 phút) -> Thông báo chuyển sang trang xác minh OTP
+                throw new UnauthorizedException("Tài khoản đã được đăng ký. Hệ thống đang chuyển sang trang xác minh OTP.");
+            } else {
+                // OTP đã hết hạn (quá 10 phút) -> Xóa tài khoản và yêu cầu đăng ký lại
+                userRoleRepository.deleteByUser(user);
+                walletRepository.deleteByUser(user);
+                userRepository.delete(user);
+                throw new UnauthorizedException("Mã OTP đã hết hạn và tài khoản đã bị hủy. Vui lòng đăng ký lại tài khoản mới.");
+            }
         }
 
         user.setLastLoginAt(LocalDateTime.now());
