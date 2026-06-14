@@ -17,9 +17,11 @@ import com.example.petgo.dto.PaymentResponseDTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -35,6 +37,9 @@ public class ShopStoreService {
     private final InvoiceItemRepository invoiceItemRepository;
     private final PaymentRepository paymentRepository;
     private final PayOsService payOsService;
+    private final WalletRepository walletRepository;
+    private final WalletTransactionRepository walletTransactionRepository;
+    private final MembershipSubscriptionRepository membershipSubscriptionRepository;
 
     @Transactional(readOnly = true)
     public List<CategoryResponse> getCategories() {
@@ -134,7 +139,7 @@ public class ShopStoreService {
         order.setDistrict(request.district());
         order.setCity(request.city());
         order.setProvince(request.province());
-        order.setPaymentMethod(StringUtils.hasText(request.paymentMethod()) ? request.paymentMethod() : "COD");
+        order.setPaymentMethod(StringUtils.hasText(request.paymentMethod()) ? request.paymentMethod() : "WALLET");
         order.setCustomerNote(request.customerNote());
 
         BigDecimal subtotal = BigDecimal.ZERO;
@@ -160,12 +165,46 @@ public class ShopStoreService {
             product.setSoldQuantity((product.getSoldQuantity() == null ? 0 : product.getSoldQuantity()) + cartItem.getQuantity());
             if (nextStock <= 0) product.setStatus("OUT_OF_STOCK");
         }
+        BigDecimal discount = calculateMembershipDiscount(user.getId(), subtotal);
+        BigDecimal afterDiscount = subtotal.subtract(discount);
+        if (afterDiscount.compareTo(BigDecimal.ZERO) < 0) afterDiscount = BigDecimal.ZERO;
+        
         BigDecimal shipping = subtotal.compareTo(BigDecimal.valueOf(300000)) >= 0 ? BigDecimal.ZERO : BigDecimal.valueOf(30000);
         order.setSubtotalAmount(subtotal);
         order.setShippingFeeAmount(shipping);
-        order.setDiscountAmount(BigDecimal.ZERO);
+        order.setDiscountAmount(discount);
         order.setTaxAmount(BigDecimal.ZERO);
-        order.setTotalAmount(subtotal.add(shipping));
+        order.setTotalAmount(afterDiscount.add(shipping));
+
+        if ("WALLET".equalsIgnoreCase(order.getPaymentMethod())) {
+            Wallet wallet = walletRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy ví của bạn"));
+            if (!"ACTIVE".equals(wallet.getStatus())) {
+                throw new BadRequestException("Ví của bạn không ở trạng thái hoạt động");
+            }
+            if (wallet.getBalance() == null || wallet.getBalance().compareTo(order.getTotalAmount()) < 0) {
+                throw new BadRequestException("Số dư ví không đủ để thanh toán đơn hàng này");
+            }
+            BigDecimal balanceBefore = wallet.getBalance();
+            wallet.setBalance(balanceBefore.subtract(order.getTotalAmount()));
+            walletRepository.save(wallet);
+
+            WalletTransaction tx = new WalletTransaction();
+            tx.setTransactionCode("WTX-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT));
+            tx.setWallet(wallet);
+            tx.setUser(user);
+            tx.setType("SHOP_PAYMENT");
+            tx.setStatus("COMPLETED");
+            tx.setAmount(order.getTotalAmount().negate());
+            tx.setBalanceBefore(balanceBefore);
+            tx.setBalanceAfter(wallet.getBalance());
+            tx.setPaymentContent("Thanh toán đơn hàng " + order.getOrderCode());
+            walletTransactionRepository.save(tx);
+            
+            order.setStatus("PROCESSING");
+        } else {
+            order.setStatus("PENDING");
+        }
 
         ShopOrder savedOrder = shopOrderRepository.save(order);
         Invoice invoice = createInvoiceAndPayment(user, savedOrder);
@@ -252,7 +291,7 @@ public class ShopStoreService {
         invoice.setUser(user);
         invoice.setShopOrder(order);
         invoice.setInvoiceType("SHOP_ORDER");
-        invoice.setStatus("ISSUED");
+        invoice.setStatus("WALLET".equalsIgnoreCase(order.getPaymentMethod()) ? "PAID" : "ISSUED");
         invoice.setBillingName(order.getReceiverName());
         invoice.setBillingEmail(order.getReceiverEmail());
         invoice.setBillingPhone(order.getReceiverPhone());
@@ -297,7 +336,10 @@ public class ShopStoreService {
         payment.setAmount(order.getTotalAmount());
         payment.setCurrencyCode("VND");
         payment.setPaymentMethod(order.getPaymentMethod());
-        payment.setStatus("COD".equals(order.getPaymentMethod()) ? "PENDING" : "PENDING");
+        payment.setStatus("WALLET".equalsIgnoreCase(order.getPaymentMethod()) ? "SUCCEEDED" : "PENDING");
+        if ("WALLET".equalsIgnoreCase(order.getPaymentMethod())) {
+            payment.setPaidAt(LocalDateTime.now());
+        }
         if (!"PAYOS".equalsIgnoreCase(order.getPaymentMethod())) {
             paymentRepository.save(payment);
         }
@@ -333,8 +375,32 @@ public class ShopStoreService {
 
     private CartResponse buildCartResponse(Long userId, List<CartItemResponse> items) {
         BigDecimal subtotal = items.stream().map(CartItemResponse::lineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal discount = calculateMembershipDiscount(userId, subtotal);
+        BigDecimal afterDiscount = subtotal.subtract(discount);
+        if (afterDiscount.compareTo(BigDecimal.ZERO) < 0) afterDiscount = BigDecimal.ZERO;
+        
         BigDecimal shipping = subtotal.compareTo(BigDecimal.valueOf(300000)) >= 0 || subtotal.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO : BigDecimal.valueOf(30000);
-        return new CartResponse(userId, items, subtotal, shipping, BigDecimal.ZERO, BigDecimal.ZERO, subtotal.add(shipping));
+        return new CartResponse(userId, items, subtotal, shipping, discount, BigDecimal.ZERO, afterDiscount.add(shipping));
+    }
+
+    private BigDecimal calculateMembershipDiscount(Long userId, BigDecimal subtotal) {
+        if (subtotal == null || subtotal.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
+        
+        Optional<MembershipSubscription> subscription = membershipSubscriptionRepository
+                .findTopByUser_IdAndStatusInOrderByCreatedAtDescIdDesc(userId, List.of("ACTIVE"));
+        
+        if (subscription.isPresent() && subscription.get().getMembershipPlan() != null) {
+            MembershipSubscription sub = subscription.get();
+            if (sub.getExpiresAt() != null && sub.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")))) {
+                return BigDecimal.ZERO;
+            }
+            MembershipPlan plan = sub.getMembershipPlan();
+            BigDecimal discountPercent = plan.getDiscountPercent();
+            if (discountPercent != null && discountPercent.compareTo(BigDecimal.ZERO) > 0) {
+                return subtotal.multiply(discountPercent).divide(BigDecimal.valueOf(100));
+            }
+        }
+        return BigDecimal.ZERO;
     }
 
     private BigDecimal effectivePrice(Product product) {
