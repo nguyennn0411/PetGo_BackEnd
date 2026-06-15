@@ -96,3 +96,7 @@ openai:
   image-model: ${OPENAI_IMAGE_MODEL:dall-e-3}
   image-size: ${OPENAI_IMAGE_SIZE:1024x1024}
   image-quality: ${OPENAI_IMAGE_QUALITY:standard}
+
+resend:
+  api:
+    key: ${RESEND_API_KEY}
