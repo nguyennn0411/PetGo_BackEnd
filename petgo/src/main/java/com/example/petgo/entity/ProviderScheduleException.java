@@ -8,7 +8,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "provider_schedule_exceptions")
+@Table(name = "provider_schedule_exceptions", indexes = {
+        @Index(name = "idx_provider_schedule_exceptions_provider_date", columnList = "provider_id, local_date")
+})
 @Getter
 @Setter
 public class ProviderScheduleException extends BaseEntity {

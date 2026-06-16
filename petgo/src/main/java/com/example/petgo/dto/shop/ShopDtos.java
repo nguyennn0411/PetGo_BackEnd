@@ -62,6 +62,6 @@ public final class ShopDtos {
     ) {}
 
     public record OrderItemResponse(Long id, Long productId, String productName, String productSku, String productImageUrl, Integer quantity, BigDecimal unitPrice, BigDecimal lineTotal) {}
-    public record OrderResponse(Long id, String orderCode, Long customerUserId, String receiverName, String receiverPhone, String receiverEmail, String shippingAddress, String ward, String district, String city, String province, String status, String paymentMethod, BigDecimal subtotalAmount, BigDecimal shippingFeeAmount, BigDecimal discountAmount, BigDecimal taxAmount, BigDecimal totalAmount, String currencyCode, LocalDateTime createdAt, List<OrderItemResponse> items) {}
+    public record OrderResponse(Long id, String orderCode, Long customerUserId, String receiverName, String receiverPhone, String receiverEmail, String shippingAddress, String ward, String district, String city, String province, String status, String paymentMethod, BigDecimal subtotalAmount, BigDecimal shippingFeeAmount, BigDecimal discountAmount, BigDecimal taxAmount, BigDecimal totalAmount, String currencyCode, LocalDateTime createdAt, String checkoutUrl, List<OrderItemResponse> items) {}
     public record OrderStatusUpdateRequest(@NotBlank String status, Long changedByUserId, String note) {}
 }

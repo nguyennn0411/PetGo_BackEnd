@@ -27,7 +27,7 @@ public class MembershipServiceImpl implements MembershipService {
 
     private static final ZoneId APP_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final DateTimeFormatter DATE_TIME_VIEW = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    private static final List<String> CHECKOUT_PAYMENT_METHODS = List.of("MOMO", "VNPAY", "CARD", "BANK_TRANSFER", "PAYOS");
+    private static final List<String> CHECKOUT_PAYMENT_METHODS = List.of("MOMO", "VNPAY", "CARD", "BANK_TRANSFER", "PAYOS", "WALLET");
     private static final List<String> CURRENT_MEMBERSHIP_STATUSES = List.of("ACTIVE", "PENDING_PAYMENT", "PAST_DUE");
 
     private final MembershipPlanRepository membershipPlanRepository;
@@ -38,6 +38,8 @@ public class MembershipServiceImpl implements MembershipService {
     private final UserRepository userRepository;
     private final AuthService authService;
     private final PromotionPolicyService promotionPolicyService;
+    private final WalletRepository walletRepository;
+    private final WalletTransactionRepository walletTransactionRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -119,6 +121,30 @@ public class MembershipServiceImpl implements MembershipService {
             subscription.setExpiresAt(null);
             subscription.setNextBillingAt(null);
             membershipSubscriptionRepository.save(subscription);
+        } else if ("WALLET".equals(paymentMethod)) {
+            Wallet wallet = walletRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy ví của bạn"));
+            if (!"ACTIVE".equals(wallet.getStatus())) {
+                throw new BadRequestException("Ví của bạn không ở trạng thái hoạt động");
+            }
+            if (wallet.getBalance() == null || wallet.getBalance().compareTo(total) < 0) {
+                throw new BadRequestException("Số dư ví không đủ để thanh toán gói Membership này");
+            }
+            BigDecimal balanceBefore = wallet.getBalance();
+            wallet.setBalance(balanceBefore.subtract(total));
+            walletRepository.save(wallet);
+
+            WalletTransaction tx = new WalletTransaction();
+            tx.setTransactionCode("WTX-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT));
+            tx.setWallet(wallet);
+            tx.setUser(user);
+            tx.setType("MEMBERSHIP_PAYMENT");
+            tx.setStatus("COMPLETED");
+            tx.setAmount(total.negate());
+            tx.setBalanceBefore(balanceBefore);
+            tx.setBalanceAfter(wallet.getBalance());
+            tx.setPaymentContent("Thanh toán gói Membership " + plan.getPlanCode());
+            walletTransactionRepository.save(tx);
         }
 
         Invoice invoice = new Invoice();

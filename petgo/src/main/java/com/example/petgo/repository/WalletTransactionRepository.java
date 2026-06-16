@@ -26,8 +26,12 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
     @EntityGraph(attributePaths = { "user", "wallet", "counterpartyUser", "reviewedByAdmin" })
     Optional<WalletTransaction> findByGatewayTransactionId(String gatewayTransactionId);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = { "user", "wallet", "counterpartyUser", "reviewedByAdmin" })
     Optional<WalletTransaction> findFirstByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
+            String gatewayTransactionId, String type, String status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = { "user", "wallet", "counterpartyUser", "reviewedByAdmin" })
+    Optional<WalletTransaction> findFirstWithLockByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
             String gatewayTransactionId, String type, String status);
 }
