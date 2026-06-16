@@ -371,7 +371,7 @@ public class WalletServiceImpl implements WalletService {
         return walletSettingRepository.findBySettingKey(AUTO_CONFIRM_TOP_UP_KEY)
                 .map(WalletSetting::getSettingValue)
                 .map(Boolean::parseBoolean)
-                .orElse(false);
+                .orElse(true);
     }
 
     private boolean isTopUpPaymentExpired(WalletTransaction tx) {
