@@ -8,7 +8,6 @@ import com.example.petgo.dto.partner.PartnerScheduleExceptionResponse;
 import com.example.petgo.dto.partner.PartnerScheduleResponse;
 import com.example.petgo.dto.partner.PartnerWeeklyScheduleRequest;
 import com.example.petgo.entity.BookingLock;
-import com.example.petgo.entity.ProviderAvailabilitySlot;
 import com.example.petgo.entity.ProviderBusinessHour;
 import com.example.petgo.entity.ProviderProfile;
 import com.example.petgo.entity.ProviderScheduleException;
@@ -54,7 +53,6 @@ public class PartnerScheduleServiceImpl implements PartnerScheduleService {
     private final PartnerMappingSupport mapper;
     private final BookingRepository bookingRepository;
     private final ProviderBusinessHourRepository providerBusinessHourRepository;
-    private final ProviderAvailabilitySlotRepository providerAvailabilitySlotRepository;
     private final ProviderServiceRepository providerServiceRepository;
     private final ProviderScheduleExceptionRepository providerScheduleExceptionRepository;
     private final BookingLockRepository bookingLockRepository;
@@ -64,7 +62,6 @@ public class PartnerScheduleServiceImpl implements PartnerScheduleService {
     @Transactional(readOnly = true)
     public PartnerScheduleResponse getSchedule(HttpServletRequest request, String from, String to) {
         ProviderProfile provider = partnerAccessService.requirePartnerContext(request).provider();
-        List<ProviderAvailabilitySlot> slots = loadSlots(provider.getId(), from, to);
         return PartnerScheduleResponse.builder()
                 .providerId(provider.getId())
                 .weeklyHours(providerBusinessHourRepository.findByProvider_IdOrderByWeekdayAscIdAsc(provider.getId())
@@ -72,7 +69,7 @@ public class PartnerScheduleServiceImpl implements PartnerScheduleService {
                         .map(mapper::mapHour)
                         .toList())
                 .dayOverrides(loadDayOverrides(provider.getId(), from, to))
-                .slots(slots.stream().map(mapper::mapSlot).toList())
+                .slots(List.of())
                 .build();
     }
 
@@ -388,26 +385,6 @@ public class PartnerScheduleServiceImpl implements PartnerScheduleService {
         if (activeBookings > 0) {
             throw new BadRequestException("Không thể đóng/chặn lịch vì đang có booking active trong khoảng này.");
         }
-    }
-
-    private List<ProviderAvailabilitySlot> loadSlots(Long providerId, String from, String to) {
-        if (mapper.normalizeBlank(from) == null || mapper.normalizeBlank(to) == null) {
-            return providerAvailabilitySlotRepository.findByProvider_IdOrderBySlotDateAscStartTimeAscIdAsc(providerId)
-                    .stream()
-                    .limit(120)
-                    .toList();
-        }
-        LocalDate fromDate = parseDate(from);
-        LocalDate toDate = parseDate(to);
-        if (toDate.isBefore(fromDate)) {
-            throw new BadRequestException("Khoảng ngày lịch không hợp lệ.");
-        }
-        return providerAvailabilitySlotRepository
-                .findByProvider_IdAndSlotDateBetweenOrderBySlotDateAscStartTimeAscIdAsc(providerId, fromDate, toDate)
-                .stream()
-                .sorted(Comparator.comparing(ProviderAvailabilitySlot::getSlotDate)
-                        .thenComparing(ProviderAvailabilitySlot::getStartTime))
-                .toList();
     }
 
     private BookingLockResponse mapLock(BookingLock lock) {

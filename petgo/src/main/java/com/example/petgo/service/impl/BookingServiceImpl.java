@@ -338,6 +338,11 @@ public class BookingServiceImpl implements BookingService {
                 history.setNote("User xác nhận hoàn tất dịch vụ");
                 bookingStatusHistoryRepository.save(history);
 
+                // Giải ngân escrow ngay khi booking hoàn tất
+                if ("COMPLETED".equals(nextStatus)) {
+                        releaseBookingEscrowIfCompleted(booking);
+                }
+
                 return BookingMutationResponse.builder()
                                 .bookingId(booking.getId())
                                 .bookingCode(booking.getBookingCode())
@@ -465,6 +470,49 @@ public class BookingServiceImpl implements BookingService {
                 tx.setBalanceAfter(wallet.getBalance());
                 tx.setNote("Giữ tiền booking trong escrow/admin hold, chờ provider xác nhận và hoàn tất dịch vụ.");
                 walletTransactionRepository.save(tx);
+        }
+
+        private void releaseBookingEscrowIfCompleted(Booking booking) {
+                if (booking == null || booking.getProvider() == null || booking.getProvider().getUser() == null) {
+                        return;
+                }
+                try {
+                        WalletTransaction holdTx = walletTransactionRepository
+                                        .findFirstWithLockByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
+                                                        "BOOKING:" + booking.getId(), "BOOKING_ESCROW_HOLD",
+                                                        "HELD_BY_ADMIN")
+                                        .orElse(null);
+                        if (holdTx == null) {
+                                return;
+                        }
+                        // Cộng tiền vào ví provider
+                        Wallet providerWallet = getOrCreateWalletWithLock(booking.getProvider().getUser());
+                        BigDecimal before = defaultMoney(providerWallet.getBalance());
+                        providerWallet.setBalance(before.add(holdTx.getAmount()));
+                        walletRepository.save(providerWallet);
+
+                        // Tạo transaction credit cho provider
+                        WalletTransaction creditTx = new WalletTransaction();
+                        creditTx.setTransactionCode(generateWalletTransactionCode("BOOKING_RELEASE"));
+                        creditTx.setWallet(providerWallet);
+                        creditTx.setUser(booking.getProvider().getUser());
+                        creditTx.setType("BOOKING_ESCROW_RELEASE");
+                        creditTx.setStatus("COMPLETED");
+                        creditTx.setAmount(holdTx.getAmount());
+                        creditTx.setGatewayTransactionId("BOOKING:" + booking.getId());
+                        creditTx.setBalanceBefore(before);
+                        creditTx.setBalanceAfter(providerWallet.getBalance());
+                        creditTx.setNote("Giải ngân escrow booking " + booking.getBookingCode() + " sau khi hoàn tất.");
+                        walletTransactionRepository.save(creditTx);
+
+                        // Cập nhật status hold transaction
+                        holdTx.setStatus("RELEASED_TO_PROVIDER");
+                        holdTx.setReviewNote("Auto released to provider when booking completed.");
+                        walletTransactionRepository.save(holdTx);
+                } catch (Exception e) {
+                        // Log error nhưng không fail booking completion
+                        System.err.println("Lỗi giải ngân escrow booking " + booking.getId() + ": " + e.getMessage());
+                }
         }
 
         private Wallet getOrCreateWalletWithLock(User owner) {
