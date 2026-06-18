@@ -169,6 +169,8 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
             provider.setTotalCompletedBookings(
                     Math.max(0, provider.getTotalCompletedBookings() == null ? 0 : provider.getTotalCompletedBookings())
                             + 1);
+            // Giải ngân escrow ngay khi booking hoàn tất
+            releaseBookingEscrowIfCompleted(booking);
         }
         return response;
     }
@@ -273,7 +275,7 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
             throw new BadRequestException("Booking thiếu thông tin user để hoàn tiền.");
         }
         WalletTransaction holdTx = walletTransactionRepository
-                .findFirstByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
+                .findFirstWithLockByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
                         "BOOKING:" + booking.getId(), "BOOKING_ESCROW_HOLD", "HELD_BY_ADMIN")
                 .orElseThrow(() -> new BadRequestException("Không tìm thấy khoản escrow đang giữ của booking."));
         Wallet wallet = walletRepository.findWithLockByUserId(owner.getId())
@@ -300,6 +302,64 @@ public class PartnerBookingManagementServiceImpl implements PartnerBookingManage
         refundTx.setBalanceAfter(wallet.getBalance());
         refundTx.setNote(note);
         walletTransactionRepository.save(refundTx);
+    }
+
+    private void releaseBookingEscrowIfCompleted(Booking booking) {
+        if (booking == null || booking.getProvider() == null || booking.getProvider().getUser() == null) {
+            return;
+        }
+        try {
+            WalletTransaction holdTx = walletTransactionRepository
+                    .findFirstWithLockByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
+                            "BOOKING:" + booking.getId(), "BOOKING_ESCROW_HOLD", "HELD_BY_ADMIN")
+                    .orElse(null);
+            if (holdTx == null) {
+                return;
+            }
+            // Cộng tiền vào ví provider
+            Wallet providerWallet = getOrCreateWalletWithLock(booking.getProvider().getUser());
+            BigDecimal before = mapper.defaultMoney(providerWallet.getBalance());
+            providerWallet.setBalance(before.add(holdTx.getAmount()));
+            walletRepository.save(providerWallet);
+
+            // Tạo transaction credit cho provider
+            WalletTransaction creditTx = new WalletTransaction();
+            creditTx.setTransactionCode(generateWalletTransactionCode("BOOKING_RELEASE"));
+            creditTx.setWallet(providerWallet);
+            creditTx.setUser(booking.getProvider().getUser());
+            creditTx.setType("BOOKING_ESCROW_RELEASE");
+            creditTx.setStatus("COMPLETED");
+            creditTx.setAmount(holdTx.getAmount());
+            creditTx.setGatewayTransactionId("BOOKING:" + booking.getId());
+            creditTx.setBalanceBefore(before);
+            creditTx.setBalanceAfter(providerWallet.getBalance());
+            creditTx.setNote("Giải ngân escrow booking " + booking.getBookingCode() + " sau khi hoàn tất.");
+            walletTransactionRepository.save(creditTx);
+
+            // Cập nhật status hold transaction
+            holdTx.setStatus("RELEASED_TO_PROVIDER");
+            holdTx.setReviewNote("Auto released to provider when booking completed.");
+            walletTransactionRepository.save(holdTx);
+        } catch (Exception e) {
+            // Log error nhưng không fail booking completion
+            System.err.println("Lỗi giải ngân escrow booking " + booking.getId() + ": " + e.getMessage());
+        }
+    }
+
+    private Wallet getOrCreateWalletWithLock(User owner) {
+        walletRepository.findByUserId(owner.getId()).orElseGet(() -> {
+            Wallet wallet = new Wallet();
+            wallet.setUser(owner);
+            return walletRepository.save(wallet);
+        });
+        return walletRepository.findWithLockByUserId(owner.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Ví chưa được khởi tạo."));
+    }
+
+    private String generateWalletTransactionCode(String prefix) {
+        return prefix.replace("_", "") + "-"
+                + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12)
+                .toUpperCase(Locale.ROOT);
     }
 
     private void releaseSlot(ProviderAvailabilitySlot slot) {

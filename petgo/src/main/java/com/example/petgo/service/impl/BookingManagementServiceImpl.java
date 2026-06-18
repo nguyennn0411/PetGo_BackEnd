@@ -484,7 +484,7 @@ public class BookingManagementServiceImpl implements BookingManagementService {
             return null;
         }
         Optional<WalletTransaction> holdTxOpt = walletTransactionRepository
-                .findFirstByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
+                .findFirstWithLockByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
                         "BOOKING:" + booking.getId(), "BOOKING_ESCROW_HOLD", "HELD_BY_ADMIN");
         if (holdTxOpt.isEmpty()) {
             return null;

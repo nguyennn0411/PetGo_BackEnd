@@ -71,7 +71,7 @@ public class BookingWorkflowJob {
         LocalDateTime now = LocalDateTime.now(APP_ZONE);
         bookingRepository.findByStatusInOrderByUpdatedAtAscIdAsc(List.of("COMPLETED")).forEach(booking -> {
             WalletTransaction holdTx = walletTransactionRepository
-                    .findFirstByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
+                    .findFirstWithLockByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
                             "BOOKING:" + booking.getId(), "BOOKING_ESCROW_HOLD", "HELD_BY_ADMIN")
                     .orElse(null);
             if (holdTx == null || holdTx.getCreatedAt() == null) {

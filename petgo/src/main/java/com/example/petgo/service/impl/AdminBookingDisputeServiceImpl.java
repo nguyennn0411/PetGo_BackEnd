@@ -78,7 +78,7 @@ public class AdminBookingDisputeServiceImpl implements AdminBookingDisputeServic
                 BigDecimal refund = money(resolveRequest.refundToUserAmount());
                 BigDecimal release = money(resolveRequest.releaseToProviderAmount());
                 WalletTransaction holdTx = walletTransactionRepository
-                                .findFirstByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
+                                .findFirstWithLockByGatewayTransactionIdAndTypeAndStatusOrderByCreatedAtDescIdDesc(
                                                 "BOOKING:" + booking.getId(), "BOOKING_ESCROW_HOLD", "HELD_BY_ADMIN")
                                 .orElseThrow(() -> new BadRequestException(
                                                 "Không tìm thấy khoản escrow đang giữ của booking."));
