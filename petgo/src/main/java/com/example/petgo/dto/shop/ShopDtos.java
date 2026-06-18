@@ -12,6 +12,15 @@ public final class ShopDtos {
 
     public record CategoryResponse(Long id, String name, String slug, String iconKey, String description, Integer sortOrder, Boolean active) {}
 
+    public record CategoryUpsertRequest(
+            @NotBlank String name,
+            String slug,
+            String iconKey,
+            String description,
+            Integer sortOrder,
+            Boolean active
+    ) {}
+
     public record ProductResponse(
             Long id, String productCode, Long categoryId, String categoryName, String name, String slug, String brand,
             String shortDescription, String description, String targetSpecies, BigDecimal priceAmount,

@@ -1,16 +1,21 @@
 package com.example.petgo.controller;
 
+import com.example.petgo.dto.shop.ShopDtos.CategoryResponse;
+import com.example.petgo.dto.shop.ShopDtos.CategoryUpsertRequest;
 import com.example.petgo.dto.shop.ShopDtos.OrderResponse;
 import com.example.petgo.dto.shop.ShopDtos.OrderStatusUpdateRequest;
 import com.example.petgo.dto.shop.ShopDtos.ProductResponse;
 import com.example.petgo.dto.shop.ShopDtos.ProductUpsertRequest;
 import com.example.petgo.service.ShopStoreService;
+import com.example.petgo.service.CloudinaryStorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -18,6 +23,34 @@ import java.util.List;
 @CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173"})
 public class AdminShopController {
     private final ShopStoreService shopStoreService;
+    private final CloudinaryStorageService cloudinaryStorageService;
+
+    @PostMapping("/upload-image")
+    public ResponseEntity<Map<String, Object>> uploadImage(@RequestParam("file") MultipartFile file) {
+        String imageUrl = cloudinaryStorageService.uploadStoreImage(file);
+        return ResponseEntity.ok(Map.of("message", "Upload ảnh thành công", "result", imageUrl));
+    }
+
+    @GetMapping("/shop-categories")
+    public ResponseEntity<List<CategoryResponse>> categories() {
+        return ResponseEntity.ok(shopStoreService.getAdminCategories());
+    }
+
+    @PostMapping("/shop-categories")
+    public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryUpsertRequest request) {
+        return ResponseEntity.ok(shopStoreService.createCategory(request));
+    }
+
+    @PutMapping("/shop-categories/{id}")
+    public ResponseEntity<CategoryResponse> updateCategory(@PathVariable Long id, @Valid @RequestBody CategoryUpsertRequest request) {
+        return ResponseEntity.ok(shopStoreService.updateCategory(id, request));
+    }
+
+    @DeleteMapping("/shop-categories/{id}")
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+        shopStoreService.deleteCategory(id);
+        return ResponseEntity.noContent().build();
+    }
 
     @GetMapping("/products")
     public ResponseEntity<List<ProductResponse>> products(@RequestParam(required = false) String keyword) {

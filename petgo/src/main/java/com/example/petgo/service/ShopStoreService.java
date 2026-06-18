@@ -47,6 +47,44 @@ public class ShopStoreService {
     }
 
     @Transactional(readOnly = true)
+    public List<CategoryResponse> getAdminCategories() {
+        return categoryRepository.findAll().stream().map(this::toCategoryResponse).toList();
+    }
+
+    @Transactional
+    public CategoryResponse createCategory(CategoryUpsertRequest request) {
+        ProductCategory category = new ProductCategory();
+        category.setName(request.name());
+        category.setSlug(StringUtils.hasText(request.slug()) ? request.slug() : slugify(request.name()));
+        category.setIconKey(request.iconKey());
+        category.setDescription(request.description());
+        category.setSortOrder(request.sortOrder() != null ? request.sortOrder() : 0);
+        category.setActive(request.active() == null || request.active());
+        return toCategoryResponse(categoryRepository.save(category));
+    }
+
+    @Transactional
+    public CategoryResponse updateCategory(Long id, CategoryUpsertRequest request) {
+        ProductCategory category = categoryRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục"));
+        category.setName(request.name());
+        category.setSlug(StringUtils.hasText(request.slug()) ? request.slug() : slugify(request.name()));
+        category.setIconKey(request.iconKey());
+        category.setDescription(request.description());
+        category.setSortOrder(request.sortOrder() != null ? request.sortOrder() : 0);
+        if (request.active() != null) {
+            category.setActive(request.active());
+        }
+        return toCategoryResponse(categoryRepository.save(category));
+    }
+
+    @Transactional
+    public void deleteCategory(Long id) {
+        ProductCategory category = categoryRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục"));
+        category.setActive(false);
+        categoryRepository.save(category);
+    }
+
+    @Transactional(readOnly = true)
     public List<ProductResponse> getProducts(String keyword, Long categoryId, String categorySlug, String species, Boolean hot, Boolean featured, Boolean includeInactive) {
         Specification<Product> spec = (root, query, cb) -> {
             if (query != null) root.fetch("category", jakarta.persistence.criteria.JoinType.LEFT);
@@ -201,9 +239,9 @@ public class ShopStoreService {
             tx.setPaymentContent("Thanh toán đơn hàng " + order.getOrderCode());
             walletTransactionRepository.save(tx);
             
-            order.setStatus("PROCESSING");
+            order.setStatus("PAID");
         } else {
-            order.setStatus("PENDING");
+            order.setStatus("PENDING_PAYMENT");
         }
 
         ShopOrder savedOrder = shopOrderRepository.save(order);

@@ -8,6 +8,8 @@ import com.example.petgo.entity.Invoice;
 import com.example.petgo.entity.Payment;
 import com.example.petgo.entity.MembershipSubscription;
 import com.example.petgo.entity.MembershipPlan;
+import com.example.petgo.entity.ShopOrder;
+import com.example.petgo.entity.ShopOrderStatusHistory;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.repository.BookingRepository;
@@ -15,6 +17,8 @@ import com.example.petgo.repository.BookingStatusHistoryRepository;
 import com.example.petgo.repository.InvoiceRepository;
 import com.example.petgo.repository.PaymentRepository;
 import com.example.petgo.repository.MembershipSubscriptionRepository;
+import com.example.petgo.repository.ShopOrderRepository;
+import com.example.petgo.repository.ShopOrderStatusHistoryRepository;
 import com.example.petgo.service.PayOsService;
 import com.example.petgo.service.WalletService;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +54,8 @@ public class PayOsServiceImpl implements PayOsService {
     private final BookingRepository bookingRepository;
     private final BookingStatusHistoryRepository bookingStatusHistoryRepository;
     private final MembershipSubscriptionRepository membershipSubscriptionRepository;
+    private final ShopOrderRepository shopOrderRepository;
+    private final ShopOrderStatusHistoryRepository shopOrderStatusHistoryRepository;
     private final WalletService walletService;
 
     @Override
@@ -373,6 +379,24 @@ public class PayOsServiceImpl implements PayOsService {
                 subscription.setNextBillingAt(subscription.getExpiresAt());
                 membershipSubscriptionRepository.save(subscription);
             }
+        } else if ("SHOP_ORDER".equalsIgnoreCase(invoice.getInvoiceType()) && invoice.getShopOrder() != null) {
+            ShopOrder shopOrder = invoice.getShopOrder();
+            String alreadyDone = shopOrder.getStatus();
+            if (!"PAID".equalsIgnoreCase(alreadyDone)
+                    && !"PACKING".equalsIgnoreCase(alreadyDone)
+                    && !"SHIPPING".equalsIgnoreCase(alreadyDone)
+                    && !"COMPLETED".equalsIgnoreCase(alreadyDone)) {
+                shopOrder.setStatus("PAID");
+                shopOrderRepository.save(shopOrder);
+
+                ShopOrderStatusHistory history = new ShopOrderStatusHistory();
+                history.setShopOrder(shopOrder);
+                history.setFromStatus(alreadyDone);
+                history.setToStatus("PAID");
+                history.setChangedByUser(invoice.getUser());
+                history.setNote("Thanh toán thành công qua PayOS (VietQR)");
+                shopOrderStatusHistoryRepository.save(history);
+            }
         }
     }
 
@@ -397,6 +421,12 @@ public class PayOsServiceImpl implements PayOsService {
                 subscription.setStatus("CANCELLED");
                 subscription.setCancelReason("Hủy thanh toán PayOS");
                 membershipSubscriptionRepository.save(subscription);
+            }
+        } else if ("SHOP_ORDER".equalsIgnoreCase(invoice.getInvoiceType()) && invoice.getShopOrder() != null) {
+            ShopOrder shopOrder = invoice.getShopOrder();
+            if (!"CANCELLED".equalsIgnoreCase(shopOrder.getStatus()) && !"COMPLETED".equalsIgnoreCase(shopOrder.getStatus())) {
+                shopOrder.setStatus("PENDING_PAYMENT");
+                shopOrderRepository.save(shopOrder);
             }
         }
     }
