@@ -30,36 +30,30 @@ public class CloudinaryStorageServiceImpl implements CloudinaryStorageService {
     }
 
     @Override
+    public String uploadPartnerLocationImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Vui lòng chọn ảnh địa điểm nhà cung cấp.");
+        }
+
+        return uploadImage(file, "petgo/registrations/partner/locations", "File địa điểm nhà cung cấp phải là ảnh");
+    }
+
+    @Override
+    public String uploadPartnerServiceImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Vui lòng chọn ảnh mô tả dịch vụ.");
+        }
+
+        return uploadImage(file, "petgo/partner/services", "File mô tả dịch vụ phải là ảnh");
+    }
+
+    @Override
     public String uploadChatImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("Vui lòng chọn ảnh chat.");
         }
 
         return uploadImage(file, "petgo/chat/images", "File chat phải là ảnh");
-    }
-
-    @Override
-    public String uploadPlatformServiceImage(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new BadRequestException("Vui lòng chọn ảnh dịch vụ.");
-        }
-        return uploadImage(file, "petgo/platform/services", "File ảnh dịch vụ phải là ảnh");
-    }
-
-    @Override
-    public String uploadUserAvatar(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            return null;
-        }
-        return uploadImage(file, "petgo/users/avatars", "File avatar phải là ảnh");
-    }
-
-    @Override
-    public String uploadUserCover(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            return null;
-        }
-        return uploadImage(file, "petgo/users/covers", "File cover phải là ảnh");
     }
 
     @Override

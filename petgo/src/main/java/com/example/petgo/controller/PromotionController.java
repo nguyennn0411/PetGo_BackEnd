@@ -9,7 +9,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -70,11 +69,36 @@ public class PromotionController {
                 "result", promotionService.updateAdminPromotionStatus(request, id, requestBody.get("active"))));
     }
 
-    @DeleteMapping("/admin/promotions/{id}")
-    public ResponseEntity<Map<String, Object>> deleteAdminPromotion(HttpServletRequest request,
-            @PathVariable Long id) {
-        promotionService.deleteAdminPromotion(request, id);
-        return ResponseEntity.ok(Map.of("message", "Xóa khuyến mãi thành công."));
+    @GetMapping("/partner/promotions")
+    public ResponseEntity<List<PromotionResponse>> listPartnerPromotions(HttpServletRequest request,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "targetType", required = false) String targetType) {
+        return ResponseEntity.ok(promotionService.listPartnerPromotions(request, status, targetType));
     }
 
+    @GetMapping("/partner/promotions/options")
+    public ResponseEntity<PromotionOptionsResponse> getPartnerOptions(HttpServletRequest request) {
+        return ResponseEntity.ok(promotionService.getPartnerOptions(request));
+    }
+
+    @PostMapping("/partner/promotions")
+    public ResponseEntity<PromotionResponse> createPartnerPromotion(HttpServletRequest request,
+            @Valid @RequestBody PromotionRequest requestBody) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(promotionService.createPartnerPromotion(request, requestBody));
+    }
+
+    @PutMapping("/partner/promotions/{id}")
+    public ResponseEntity<PromotionResponse> updatePartnerPromotion(HttpServletRequest request,
+            @PathVariable Long id,
+            @Valid @RequestBody PromotionRequest requestBody) {
+        return ResponseEntity.ok(promotionService.updatePartnerPromotion(request, id, requestBody));
+    }
+
+    @PatchMapping("/partner/promotions/{id}/status")
+    public ResponseEntity<PromotionResponse> updatePartnerPromotionStatus(HttpServletRequest request,
+            @PathVariable Long id,
+            @RequestBody Map<String, Boolean> requestBody) {
+        return ResponseEntity.ok(promotionService.updatePartnerPromotionStatus(request, id, requestBody.get("active")));
+    }
 }

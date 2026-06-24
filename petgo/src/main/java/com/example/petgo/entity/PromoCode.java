@@ -30,6 +30,10 @@ public class PromoCode extends BaseEntity {
     private String ownerType;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "provider_id")
+    private ProviderProfile provider;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_user_id")
     private User createdByUser;
 
@@ -78,8 +82,11 @@ public class PromoCode extends BaseEntity {
     @Column(name = "applicable_days_of_week", length = 100)
     private String applicableDaysOfWeek;
 
-    @Column(name = "area_ids", length = 1000)
-    private String areaIds;
+    @Column(name = "provider_ids", length = 1000)
+    private String providerIds;
+
+    @Column(name = "provider_service_ids", length = 1000)
+    private String providerServiceIds;
 
     @Column(name = "service_category_ids", length = 1000)
     private String serviceCategoryIds;

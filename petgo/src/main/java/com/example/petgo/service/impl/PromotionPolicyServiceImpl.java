@@ -1,13 +1,16 @@
 package com.example.petgo.service.impl;
 
+import com.example.petgo.entity.Booking;
 import com.example.petgo.entity.Invoice;
 import com.example.petgo.entity.MembershipPlan;
 import com.example.petgo.entity.MembershipSubscription;
 import com.example.petgo.entity.PromoCode;
 import com.example.petgo.entity.PromoCodeRedemption;
-import com.example.petgo.entity.ShippingBooking;
+import com.example.petgo.entity.ProviderService;
+import com.example.petgo.entity.ServiceCategory;
 import com.example.petgo.entity.User;
 import com.example.petgo.exception.BadRequestException;
+import com.example.petgo.repository.BookingRepository;
 import com.example.petgo.repository.MembershipSubscriptionRepository;
 import com.example.petgo.repository.PromoCodeRedemptionRepository;
 import com.example.petgo.repository.PromoCodeRepository;
@@ -18,9 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -37,7 +42,33 @@ public class PromotionPolicyServiceImpl implements PromotionPolicyService {
 
     private final PromoCodeRepository promoCodeRepository;
     private final PromoCodeRedemptionRepository promoCodeRedemptionRepository;
+    private final BookingRepository bookingRepository;
     private final MembershipSubscriptionRepository membershipSubscriptionRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public PromoPreview previewForBooking(Booking booking, String rawPromoCode) {
+        String promoCode = normalizeBlank(rawPromoCode);
+        if (promoCode == null) {
+            return new PromoPreview(null, null, BigDecimal.ZERO, null);
+        }
+        if (booking == null) {
+            throw new BadRequestException("Không tìm thấy booking để áp dụng ưu đãi.");
+        }
+
+        PromoCode promo = requireActivePromo(promoCode);
+        User user = booking.getCustomerUser();
+        BigDecimal subtotal = defaultMoney(booking.getSubtotalAmount());
+
+        validateCommonPolicy(promo, user, subtotal, "BOOKING");
+        validateBookingScope(promo, booking, user);
+
+        BigDecimal discount = calculatePromoDiscount(subtotal, promo);
+        return new PromoPreview(promo, promo.getCode().toUpperCase(Locale.ROOT), discount,
+                discount.compareTo(BigDecimal.ZERO) > 0
+                        ? "Đã áp dụng mã " + promo.getCode().toUpperCase(Locale.ROOT)
+                        : "Mã ưu đãi không tạo ra giảm giá");
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -65,6 +96,34 @@ public class PromotionPolicyServiceImpl implements PromotionPolicyService {
 
     @Override
     @Transactional
+    public void recordBookingRedemption(PromoPreview preview, User user, Booking booking, Invoice invoice) {
+        if (preview == null || !preview.applied() || invoice == null || invoice.getId() == null || user == null) {
+            return;
+        }
+        if (promoCodeRedemptionRepository.existsByInvoice_IdAndPromoCode_Id(invoice.getId(),
+                preview.promoCode().getId())) {
+            return;
+        }
+        PromoCode promo = preview.promoCode();
+        PromoCodeRedemption redemption = new PromoCodeRedemption();
+        redemption.setPromoCode(promo);
+        redemption.setUser(user);
+        redemption.setInvoice(invoice);
+        redemption.setBooking(booking);
+        redemption.setPromoCodeSnapshot(firstNonBlank(promo.getCode(), preview.appliedCode()));
+        redemption.setOwnerType(normalizeEnumValue(promo.getOwnerType(), "ADMIN"));
+        redemption.setTargetType("BOOKING");
+        redemption.setDiscountType(normalizeEnumValue(promo.getDiscountType(), "FIXED_AMOUNT"));
+        redemption.setSubtotalAmount(
+                defaultMoney(booking != null ? booking.getSubtotalAmount() : invoice.getSubtotalAmount()));
+        redemption.setDiscountAmount(defaultMoney(preview.discountAmount()));
+        redemption.setRedeemedAt(LocalDateTime.now(APP_ZONE));
+        promoCodeRedemptionRepository.save(redemption);
+        incrementUsageCount(promo);
+    }
+
+    @Override
+    @Transactional
     public void recordMembershipRedemption(PromoPreview preview, User user, MembershipSubscription subscription,
             Invoice invoice) {
         if (preview == null || !preview.applied() || invoice == null || invoice.getId() == null || user == null) {
@@ -85,60 +144,6 @@ public class PromotionPolicyServiceImpl implements PromotionPolicyService {
         redemption.setTargetType("MEMBERSHIP");
         redemption.setDiscountType(normalizeEnumValue(promo.getDiscountType(), "FIXED_AMOUNT"));
         redemption.setSubtotalAmount(defaultMoney(invoice.getSubtotalAmount()));
-        redemption.setDiscountAmount(defaultMoney(preview.discountAmount()));
-        redemption.setRedeemedAt(LocalDateTime.now(APP_ZONE));
-        promoCodeRedemptionRepository.save(redemption);
-        incrementUsageCount(promo);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PromoPreview previewForBooking(BigDecimal priceAmount, BigDecimal shippingFee, User user,
-            String rawPromoCode, Long areaId, List<Long> serviceCategoryIds) {
-        String promoCode = normalizeBlank(rawPromoCode);
-        if (promoCode == null) {
-            return new PromoPreview(null, null, BigDecimal.ZERO, null);
-        }
-
-        PromoCode promo = requireActivePromo(promoCode);
-        BigDecimal totalForMinOrder = defaultMoney(priceAmount).add(defaultMoney(shippingFee));
-
-        validateBookingPolicy(promo, user, totalForMinOrder, areaId, serviceCategoryIds);
-
-        String targetType = normalizeEnumValue(promo.getTargetType(), "BOTH");
-        BigDecimal subtotal = switch (targetType) {
-            case "BOOKING" -> defaultMoney(priceAmount);
-            case "SHIPPING" -> defaultMoney(shippingFee);
-            default -> totalForMinOrder;
-        };
-
-        BigDecimal discount = calculatePromoDiscount(subtotal, promo);
-        return new PromoPreview(promo, promo.getCode().toUpperCase(Locale.ROOT), discount,
-                discount.compareTo(BigDecimal.ZERO) > 0
-                        ? "Đã áp dụng mã " + promo.getCode().toUpperCase(Locale.ROOT)
-                        : "Mã ưu đãi không tạo ra giảm giá");
-    }
-
-    @Override
-    @Transactional
-    public void recordBookingRedemption(PromoPreview preview, User user, ShippingBooking booking) {
-        if (preview == null || !preview.applied() || booking == null || booking.getId() == null || user == null) {
-            return;
-        }
-        if (promoCodeRedemptionRepository.existsByShippingBooking_IdAndPromoCode_Id(booking.getId(),
-                preview.promoCode().getId())) {
-            return;
-        }
-        PromoCode promo = preview.promoCode();
-        PromoCodeRedemption redemption = new PromoCodeRedemption();
-        redemption.setPromoCode(promo);
-        redemption.setUser(user);
-        redemption.setShippingBooking(booking);
-        redemption.setPromoCodeSnapshot(firstNonBlank(promo.getCode(), preview.appliedCode()));
-        redemption.setOwnerType(normalizeEnumValue(promo.getOwnerType(), "ADMIN"));
-        redemption.setTargetType(normalizeEnumValue(promo.getTargetType(), "BOTH"));
-        redemption.setDiscountType(normalizeEnumValue(promo.getDiscountType(), "FIXED_AMOUNT"));
-        redemption.setSubtotalAmount(defaultMoney(booking.getTotalAmount()));
         redemption.setDiscountAmount(defaultMoney(preview.discountAmount()));
         redemption.setRedeemedAt(LocalDateTime.now(APP_ZONE));
         promoCodeRedemptionRepository.save(redemption);
@@ -191,57 +196,47 @@ public class PromotionPolicyServiceImpl implements PromotionPolicyService {
         validateUserSegment(promo, user);
     }
 
-    private void validateBookingPolicy(PromoCode promo, User user, BigDecimal totalForMinOrder, Long areaId,
-            List<Long> serviceCategoryIds) {
-        String targetType = normalizeEnumValue(promo.getTargetType(), "BOTH");
-        if (!Set.of("BOOKING", "SHIPPING", "BOTH").contains(targetType)) {
-            throw new BadRequestException("Mã ưu đãi không áp dụng cho dịch vụ vận chuyển");
-        }
-
-        BigDecimal minOrder = defaultMoney(promo.getMinOrderAmount());
-        if (totalForMinOrder.compareTo(minOrder) < 0) {
-            throw new BadRequestException("Giá trị thanh toán chưa đạt tối thiểu để dùng ưu đãi");
-        }
-
-        Integer totalLimit = promo.getUsageLimitTotal();
-        if (totalLimit != null && totalLimit > 0
-                && promoCodeRedemptionRepository.countByPromoCode_Id(promo.getId()) >= totalLimit) {
-            throw new BadRequestException("Mã ưu đãi đã hết lượt sử dụng");
-        }
-
-        Integer perUserLimit = promo.getUsageLimitPerUser();
-        if (perUserLimit != null && perUserLimit > 0 && user != null
-                && promoCodeRedemptionRepository.countByPromoCode_IdAndUser_Id(promo.getId(),
-                        user.getId()) >= perUserLimit) {
-            throw new BadRequestException("Bạn đã dùng hết lượt cho mã ưu đãi này");
-        }
-
-        validateUserSegment(promo, user);
-        validateBookingScope(promo, areaId, serviceCategoryIds);
-    }
-
-    private void validateBookingScope(PromoCode promo, Long areaId, List<Long> serviceCategoryIds) {
-        Set<Long> allowedAreaIds = parseLongCsv(promo.getAreaIds());
-        if (!allowedAreaIds.isEmpty()) {
-            if (areaId == null || !allowedAreaIds.contains(areaId)) {
-                throw new BadRequestException("Mã ưu đãi không áp dụng cho khu vực này");
+    private void validateBookingScope(PromoCode promo, Booking booking, User user) {
+        String ownerType = normalizeEnumValue(promo.getOwnerType(), "ADMIN");
+        Long bookingProviderId = booking.getProvider() != null ? booking.getProvider().getId() : null;
+        if ("PARTNER".equals(ownerType)) {
+            Long promoProviderId = promo.getProvider() != null ? promo.getProvider().getId() : null;
+            if (!Objects.equals(promoProviderId, bookingProviderId)) {
+                throw new BadRequestException("Mã ưu đãi của partner khác không áp dụng cho booking này");
             }
         }
 
-        Set<Long> allowedCategoryIds = parseLongCsv(promo.getServiceCategoryIds());
-        if (!allowedCategoryIds.isEmpty()) {
-            List<Long> bookingCategoryIds = serviceCategoryIds == null ? List.of() : serviceCategoryIds.stream()
-                    .filter(Objects::nonNull)
-                    .distinct()
-                    .toList();
-            boolean matched = bookingCategoryIds.stream().anyMatch(allowedCategoryIds::contains);
-            if (!matched) {
-                throw new BadRequestException("Mã ưu đãi không áp dụng cho nhóm dịch vụ này");
+        Set<Long> providerIds = parseLongCsv(promo.getProviderIds());
+        if (!providerIds.isEmpty() && !providerIds.contains(bookingProviderId)) {
+            throw new BadRequestException("Mã ưu đãi không áp dụng cho nhà cung cấp này");
+        }
+
+        Long providerServiceId = booking.getProviderService() != null ? booking.getProviderService().getId() : null;
+        Set<Long> providerServiceIds = parseLongCsv(promo.getProviderServiceIds());
+        if (!providerServiceIds.isEmpty() && !providerServiceIds.contains(providerServiceId)) {
+            throw new BadRequestException("Mã ưu đãi không áp dụng cho dịch vụ này");
+        }
+
+        Set<Long> categoryIds = parseLongCsv(promo.getServiceCategoryIds());
+        if (!categoryIds.isEmpty() && !bookingMatchesCategory(booking.getProviderService(), categoryIds)) {
+            throw new BadRequestException("Mã ưu đãi không áp dụng cho nhóm dịch vụ này");
+        }
+
+        Set<String> days = parseStringCsv(promo.getApplicableDaysOfWeek());
+        if (!days.isEmpty() && booking.getAppointmentDate() != null) {
+            DayOfWeek dayOfWeek = booking.getAppointmentDate().getDayOfWeek();
+            if (!days.contains(dayOfWeek.name())) {
+                throw new BadRequestException("Mã ưu đãi không áp dụng vào ngày đặt lịch này");
             }
         }
+
+        validateCompletedBookingThreshold(promo, user);
     }
 
     private void validateMembershipScope(PromoCode promo, MembershipPlan plan) {
+        if ("PARTNER".equals(normalizeEnumValue(promo.getOwnerType(), "ADMIN"))) {
+            throw new BadRequestException("Mã ưu đãi của partner chỉ áp dụng cho booking dịch vụ");
+        }
         Set<Long> planIds = parseLongCsv(promo.getMembershipPlanIds());
         if (!planIds.isEmpty() && !planIds.contains(plan.getId())) {
             throw new BadRequestException("Mã ưu đãi không áp dụng cho gói membership này");
@@ -253,14 +248,15 @@ public class PromotionPolicyServiceImpl implements PromotionPolicyService {
             return;
         }
         String segment = normalizeEnumValue(promo.getUserSegment(), "ALL");
+        long bookingCount = bookingRepository.countByCustomerUser_Id(user.getId());
         long activeMembershipCount = membershipSubscriptionRepository.countByUser_IdAndStatusIn(user.getId(),
                 ACTIVE_MEMBERSHIP_STATUSES);
 
-        if ("NEW_USER".equals(segment)) {
-            return;
+        if ("NEW_USER".equals(segment) && bookingCount > 1) {
+            throw new BadRequestException("Mã ưu đãi chỉ dành cho khách hàng mới");
         }
-        if ("RETURNING_USER".equals(segment)) {
-            return;
+        if ("RETURNING_USER".equals(segment) && bookingCount <= 1) {
+            throw new BadRequestException("Mã ưu đãi chỉ dành cho khách hàng đã quay lại sử dụng dịch vụ");
         }
         if ("MEMBERSHIP_ACTIVE".equals(segment) && activeMembershipCount <= 0) {
             throw new BadRequestException("Mã ưu đãi chỉ dành cho hội viên đang hoạt động");
@@ -268,6 +264,32 @@ public class PromotionPolicyServiceImpl implements PromotionPolicyService {
         if ("NON_MEMBER".equals(segment) && activeMembershipCount > 0) {
             throw new BadRequestException("Mã ưu đãi chỉ dành cho khách hàng chưa có membership");
         }
+    }
+
+    private void validateCompletedBookingThreshold(PromoCode promo, User user) {
+        Integer requiredCompletedBookings = promo.getMinCompletedBookings();
+        if (requiredCompletedBookings == null || requiredCompletedBookings <= 0 || user == null
+                || user.getId() == null) {
+            return;
+        }
+        long completedBookings = bookingRepository.countByCustomerUser_IdAndStatus(user.getId(), "COMPLETED");
+        if (completedBookings < requiredCompletedBookings) {
+            throw new BadRequestException("Bạn chưa đạt số booking hoàn thành tối thiểu để dùng ưu đãi");
+        }
+    }
+
+    private boolean bookingMatchesCategory(ProviderService providerService, Collection<Long> acceptedCategoryIds) {
+        if (providerService == null || providerService.getService() == null) {
+            return false;
+        }
+        ServiceCategory cursor = providerService.getService().getCategory();
+        while (cursor != null) {
+            if (acceptedCategoryIds.contains(cursor.getId())) {
+                return true;
+            }
+            cursor = cursor.getParent();
+        }
+        return false;
     }
 
     private BigDecimal calculatePromoDiscount(BigDecimal subtotal, PromoCode promo) {
@@ -369,10 +391,6 @@ public class PromotionPolicyServiceImpl implements PromotionPolicyService {
     }
 
     private String targetLabel(String targetType) {
-        return switch (targetType) {
-            case "MEMBERSHIP" -> "membership";
-            case "SHIPPING" -> "phí vận chuyển";
-            default -> "booking";
-        };
+        return "MEMBERSHIP".equals(targetType) ? "membership" : "booking";
     }
 }

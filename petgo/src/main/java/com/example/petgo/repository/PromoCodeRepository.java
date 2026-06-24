@@ -8,14 +8,20 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PromoCodeRepository extends JpaRepository<PromoCode, Long> {
-    @EntityGraph(attributePaths = {"createdByUser"})
+    @EntityGraph(attributePaths = {"provider", "createdByUser"})
     Optional<PromoCode> findByCodeIgnoreCaseAndActiveTrue(String code);
 
-    @EntityGraph(attributePaths = {"createdByUser"})
+    @EntityGraph(attributePaths = {"provider", "createdByUser"})
     Optional<PromoCode> findByCodeIgnoreCase(String code);
 
     boolean existsByCodeIgnoreCase(String code);
 
-    @EntityGraph(attributePaths = {"createdByUser"})
+    @EntityGraph(attributePaths = {"provider", "createdByUser"})
     List<PromoCode> findAllByOrderByCreatedAtDescIdDesc();
+
+    @EntityGraph(attributePaths = {"provider", "createdByUser"})
+    List<PromoCode> findByProvider_IdOrderByCreatedAtDescIdDesc(Long providerId);
+
+    @EntityGraph(attributePaths = {"provider", "createdByUser"})
+    Optional<PromoCode> findByIdAndProvider_Id(Long id, Long providerId);
 }

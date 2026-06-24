@@ -1,46 +1,27 @@
 package com.example.petgo.dto;
 
 import jakarta.validation.constraints.NotNull;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.experimental.FieldDefaults;
+import jakarta.validation.constraints.Size;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-@Getter
-@Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
-public class BookingCreateRequest {
+public record BookingCreateRequest(
+                Long ownerUserId,
 
-    @NotNull(message = "ID thú cưng không được để trống")
-    Long petId;
+                @NotNull(message = "Vui lòng chọn thú cưng") Long petId,
 
-    @NotNull(message = "ID khu vực không được để trống")
-    Long areaId;
+                @NotNull(message = "Thiếu providerId") Long providerId,
 
-    @NotNull(message = "ID dịch vụ không được để trống")
-    Long serviceId;
+                @NotNull(message = "Vui lòng chọn dịch vụ") Long providerServiceId,
 
-    @NotNull(message = "Ngày hẹn không được để trống")
-    LocalDate appointmentDate;
+                Long slotId,
 
-    @NotNull(message = "Giờ bắt đầu không được để trống")
-    LocalTime startTime;
+                @NotNull(message = "Vui lòng chọn ngày hẹn") LocalDate appointmentDate,
 
-    BigDecimal pickupLatitude;
-    BigDecimal pickupLongitude;
-    String pickupAddress;
+                @NotNull(message = "Vui lòng chọn giờ hẹn") LocalTime startTime,
 
-    String promoCode;
+                LocalTime endTime,
 
-    String customerNote;
+                @Size(max = 1000, message = "Ghi chú không được vượt quá 1000 ký tự") String customerNote) {
 }

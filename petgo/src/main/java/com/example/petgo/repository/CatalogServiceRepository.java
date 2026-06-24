@@ -11,37 +11,35 @@ import java.util.Optional;
 
 public interface CatalogServiceRepository extends JpaRepository<CatalogService, Long> {
 
-  @EntityGraph(attributePaths = { "categories" })
+  @EntityGraph(attributePaths = { "category", "category.parent" })
   List<CatalogService> findByActiveTrueOrderByNameAscIdAsc();
 
-  @EntityGraph(attributePaths = { "categories" })
+  @EntityGraph(attributePaths = { "category", "category.parent" })
   @Query("""
-      select distinct s
+      select s
       from CatalogService s
-      join s.categories c
       where s.active = true
-        and c.active = true
-      order by s.name asc, s.id asc
+        and s.category.active = true
+      order by s.category.name asc, s.name asc, s.id asc
       """)
   List<CatalogService> findActiveDetails();
 
-  @EntityGraph(attributePaths = { "categories" })
+  @EntityGraph(attributePaths = { "category", "category.parent" })
   @Query("""
       select s
       from CatalogService s
-      join s.categories c
       where s.id = :serviceId
         and s.active = true
-        and c.active = true
+        and s.category.active = true
       """)
   Optional<CatalogService> findActiveDetailById(@Param("serviceId") Long serviceId);
 
+  @EntityGraph(attributePaths = { "category", "category.parent" })
   @Query("""
       select s
       from CatalogService s
-      join s.categories c
       where lower(s.name) = lower(:name)
-        and c.id = :categoryId
+        and s.category.id = :categoryId
         and s.active = true
       order by s.id asc
       """)
@@ -51,8 +49,4 @@ public interface CatalogServiceRepository extends JpaRepository<CatalogService, 
   boolean existsBySlug(String slug);
 
   boolean existsByServiceCode(String serviceCode);
-
-  List<CatalogService> findByCategories_Id(Long categoryId);
-
-  long countByCategories_Id(Long categoryId);
 }

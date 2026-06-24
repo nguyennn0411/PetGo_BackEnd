@@ -17,17 +17,11 @@ public class Wallet extends BaseEntity {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = true, unique = true)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
-
-    @Column(name = "is_system", nullable = false)
-    private boolean isSystem = false;
 
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO;
-
-    @Column(name = "held_balance", nullable = false, precision = 14, scale = 2)
-    private BigDecimal heldBalance = BigDecimal.ZERO;
 
     @Column(name = "currency_code", nullable = false, length = 3)
     private String currencyCode = "VND";

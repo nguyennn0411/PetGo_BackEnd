@@ -4,25 +4,27 @@ import com.example.petgo.config.AuthenticatedUser;
 import com.example.petgo.dto.promotion.PromotionOptionsResponse;
 import com.example.petgo.dto.promotion.PromotionRequest;
 import com.example.petgo.dto.promotion.PromotionResponse;
-import com.example.petgo.entity.Area;
 import com.example.petgo.entity.MembershipPlan;
 import com.example.petgo.entity.PromoCode;
+import com.example.petgo.entity.ProviderProfile;
+import com.example.petgo.entity.ProviderService;
 import com.example.petgo.entity.RoleType;
 import com.example.petgo.entity.ServiceCategory;
 import com.example.petgo.entity.User;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.exception.UnauthorizedException;
-import com.example.petgo.repository.AreaRepository;
 import com.example.petgo.repository.MembershipPlanRepository;
 import com.example.petgo.repository.PromoCodeRedemptionRepository;
 import com.example.petgo.repository.PromoCodeRepository;
+import com.example.petgo.repository.ProviderProfileRepository;
+import com.example.petgo.repository.ProviderServiceRepository;
 import com.example.petgo.repository.ServiceCategoryRepository;
 import com.example.petgo.repository.UserRepository;
 import com.example.petgo.repository.UserRoleRepository;
 import com.example.petgo.service.AuthService;
 import com.example.petgo.service.PromotionService;
-
+import com.example.petgo.service.partner.PartnerAccessService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,10 +36,13 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -48,8 +53,9 @@ public class PromotionServiceImpl implements PromotionService {
     private static final ZoneId APP_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final Set<String> PROMOTION_TYPES = Set.of(
             "PROMO_CODE", "FLASH_SALE", "FIRST_BOOKING", "LOYALTY", "MEMBERSHIP", "SEASONAL", "BUNDLE",
-            "FREE_SERVICE");
-    private static final Set<String> ADMIN_TARGET_TYPES = Set.of("BOOKING", "SHIPPING", "MEMBERSHIP", "BOTH");
+            "FREE_SERVICE", "PARTNER_EXCLUSIVE");
+    private static final Set<String> ADMIN_TARGET_TYPES = Set.of("BOOKING", "MEMBERSHIP", "BOTH");
+    private static final Set<String> PARTNER_TARGET_TYPES = Set.of("BOOKING");
     private static final Set<String> DISCOUNT_TYPES = Set.of(
             "PERCENTAGE", "FIXED_AMOUNT", "FIXED_PRICE", "FREE_SERVICE", "BOGO");
     private static final Set<String> USER_SEGMENTS = Set.of(
@@ -59,12 +65,14 @@ public class PromotionServiceImpl implements PromotionService {
 
     private final PromoCodeRepository promoCodeRepository;
     private final PromoCodeRedemptionRepository promoCodeRedemptionRepository;
-    private final AreaRepository areaRepository;
+    private final ProviderProfileRepository providerProfileRepository;
+    private final ProviderServiceRepository providerServiceRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final MembershipPlanRepository membershipPlanRepository;
     private final AuthService authService;
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
+    private final PartnerAccessService partnerAccessService;
 
     @Override
     @Transactional(readOnly = true)
@@ -87,7 +95,7 @@ public class PromotionServiceImpl implements PromotionService {
         PromoCode promo = new PromoCode();
         promo.setCreatedByUser(admin);
         promo.setOwnerType("ADMIN");
-        applyMutableFields(promo, requestBody, true);
+        applyMutableFields(promo, requestBody, "ADMIN", null, true);
         return mapResponse(promoCodeRepository.save(promo));
     }
 
@@ -97,7 +105,11 @@ public class PromotionServiceImpl implements PromotionService {
         requireAdmin(request);
         PromoCode promo = promoCodeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ưu đãi."));
-        applyMutableFields(promo, requestBody, false);
+        if ("PARTNER".equals(normalizeOwnerType(promo))) {
+            throw new BadRequestException(
+                    "Admin chỉ có thể chỉnh trực tiếp ưu đãi do admin tạo; ưu đãi partner có thể bật/tắt để kiểm duyệt.");
+        }
+        applyMutableFields(promo, requestBody, "ADMIN", null, false);
         return mapResponse(promoCodeRepository.save(promo));
     }
 
@@ -112,26 +124,66 @@ public class PromotionServiceImpl implements PromotionService {
     }
 
     @Override
-    @Transactional
-    public void deleteAdminPromotion(HttpServletRequest request, Long id) {
+    @Transactional(readOnly = true)
+    public PromotionOptionsResponse getAdminOptions(HttpServletRequest request) {
         requireAdmin(request);
-        PromoCode promo = promoCodeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ưu đãi."));
-        long redemptionCount = promoCodeRedemptionRepository.countByPromoCode_Id(id);
-        if (redemptionCount > 0) {
-            throw new BadRequestException("Không thể xóa mã đã có lượt sử dụng. Hãy tắt mã thay vì xóa.");
-        }
-        promoCodeRepository.delete(promo);
+        return buildOptions(null);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PromotionOptionsResponse getAdminOptions(HttpServletRequest request) {
-        requireAdmin(request);
-        return buildOptions();
+    public List<PromotionResponse> listPartnerPromotions(HttpServletRequest request, String status, String targetType) {
+        ProviderProfile provider = partnerAccessService.requirePartnerContext(request).provider();
+        String statusFilter = normalizeOptionalEnum(status);
+        String targetFilter = normalizeOptionalEnum(targetType);
+        return promoCodeRepository.findByProvider_IdOrderByCreatedAtDescIdDesc(provider.getId()).stream()
+                .filter(promo -> targetFilter == null || targetFilter.equals(normalizeTargetTypeValue(promo)))
+                .filter(promo -> statusFilter == null || statusFilter.equals(resolveStatus(promo)))
+                .map(this::mapResponse)
+                .toList();
     }
 
-    private void applyMutableFields(PromoCode promo, PromotionRequest requestBody, boolean creating) {
+    @Override
+    @Transactional
+    public PromotionResponse createPartnerPromotion(HttpServletRequest request, PromotionRequest requestBody) {
+        PartnerAccessService.PartnerContext context = partnerAccessService.requirePartnerContext(request);
+        PromoCode promo = new PromoCode();
+        promo.setCreatedByUser(context.user());
+        promo.setOwnerType("PARTNER");
+        promo.setProvider(context.provider());
+        applyMutableFields(promo, requestBody, "PARTNER", context.provider(), true);
+        return mapResponse(promoCodeRepository.save(promo));
+    }
+
+    @Override
+    @Transactional
+    public PromotionResponse updatePartnerPromotion(HttpServletRequest request, Long id, PromotionRequest requestBody) {
+        ProviderProfile provider = partnerAccessService.requirePartnerContext(request).provider();
+        PromoCode promo = promoCodeRepository.findByIdAndProvider_Id(id, provider.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ưu đãi thuộc shop hiện tại."));
+        applyMutableFields(promo, requestBody, "PARTNER", provider, false);
+        return mapResponse(promoCodeRepository.save(promo));
+    }
+
+    @Override
+    @Transactional
+    public PromotionResponse updatePartnerPromotionStatus(HttpServletRequest request, Long id, Boolean active) {
+        ProviderProfile provider = partnerAccessService.requirePartnerContext(request).provider();
+        PromoCode promo = promoCodeRepository.findByIdAndProvider_Id(id, provider.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ưu đãi thuộc shop hiện tại."));
+        promo.setActive(Boolean.TRUE.equals(active));
+        return mapResponse(promoCodeRepository.save(promo));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PromotionOptionsResponse getPartnerOptions(HttpServletRequest request) {
+        ProviderProfile provider = partnerAccessService.requirePartnerContext(request).provider();
+        return buildOptions(provider);
+    }
+
+    private void applyMutableFields(PromoCode promo, PromotionRequest requestBody, String ownerType,
+            ProviderProfile ownerProvider, boolean creating) {
         if (requestBody == null) {
             throw new BadRequestException("Thiếu thông tin ưu đãi.");
         }
@@ -140,8 +192,11 @@ public class PromotionServiceImpl implements PromotionService {
 
         String promotionType = normalizeRequiredEnum(requestBody.promotionType(), "PROMO_CODE", PROMOTION_TYPES,
                 "Loại chương trình ưu đãi không hợp lệ.");
-        String targetType = normalizeRequiredEnum(requestBody.targetType(), "MEMBERSHIP", ADMIN_TARGET_TYPES,
-                "Phạm vi áp dụng ưu đãi không hợp lệ.");
+        String targetType = normalizeRequiredEnum(requestBody.targetType(),
+                ownerType.equals("PARTNER") ? "BOOKING" : "BOTH",
+                ownerType.equals("PARTNER") ? PARTNER_TARGET_TYPES : ADMIN_TARGET_TYPES,
+                ownerType.equals("PARTNER") ? "Partner chỉ được tạo ưu đãi cho booking dịch vụ."
+                        : "Phạm vi áp dụng ưu đãi không hợp lệ.");
         String discountType = normalizeRequiredEnum(requestBody.discountType(), "FIXED_AMOUNT", DISCOUNT_TYPES,
                 "Kiểu giảm giá không hợp lệ.");
         String userSegment = normalizeRequiredEnum(requestBody.userSegment(), "ALL", USER_SEGMENTS,
@@ -155,15 +210,23 @@ public class PromotionServiceImpl implements PromotionService {
         validateDates(requestBody.startsAt(), requestBody.endsAt(), promo, creating);
 
         List<String> days = normalizeDays(requestBody.applicableDaysOfWeek());
-        List<Long> areaIds = normalizeLongList(requestBody.areaIds());
+        List<Long> providerIds = ownerType.equals("PARTNER")
+                ? List.of(ownerProvider.getId())
+                : normalizeLongList(requestBody.providerIds());
+        List<Long> providerServiceIds = normalizeLongList(requestBody.providerServiceIds());
         List<Long> serviceCategoryIds = normalizeLongList(requestBody.serviceCategoryIds());
         List<Long> membershipPlanIds = normalizeLongList(requestBody.membershipPlanIds());
-        validateAreaIds(areaIds);
+
+        if ("PARTNER".equals(ownerType)) {
+            validatePartnerScope(ownerProvider, providerServiceIds);
+            membershipPlanIds = List.of();
+        }
 
         promo.setCode(code);
         promo.setName(normalizeRequiredText(requestBody.name(), "Tên ưu đãi không được để trống."));
         promo.setDescription(normalizeBlank(requestBody.description()));
-        promo.setOwnerType("ADMIN");
+        promo.setOwnerType(ownerType);
+        promo.setProvider(ownerProvider);
         promo.setPromotionType(promotionType);
         promo.setTargetType(targetType);
         promo.setDiscountType(discountType);
@@ -179,7 +242,8 @@ public class PromotionServiceImpl implements PromotionService {
         promo.setUserSegment(userSegment);
         promo.setMinCompletedBookings(normalizePositiveInteger(requestBody.minCompletedBookings()));
         promo.setApplicableDaysOfWeek(joinStrings(days));
-        promo.setAreaIds(joinLongs(areaIds));
+        promo.setProviderIds(joinLongs(providerIds));
+        promo.setProviderServiceIds(joinLongs(providerServiceIds));
         promo.setServiceCategoryIds(joinLongs(serviceCategoryIds));
         promo.setMembershipPlanIds(joinLongs(membershipPlanIds));
         promo.setBadgeText(normalizeBlank(requestBody.badgeText()));
@@ -191,7 +255,32 @@ public class PromotionServiceImpl implements PromotionService {
         promo.setActive(requestBody.active() == null || Boolean.TRUE.equals(requestBody.active()));
     }
 
-    private PromotionOptionsResponse buildOptions() {
+    private void validatePartnerScope(ProviderProfile ownerProvider, List<Long> providerServiceIds) {
+        if (ownerProvider == null || ownerProvider.getId() == null) {
+            throw new BadRequestException("Không tìm thấy nhà cung cấp để tạo ưu đãi partner.");
+        }
+        for (Long providerServiceId : providerServiceIds) {
+            providerServiceRepository.findDetailByProviderIdAndId(ownerProvider.getId(), providerServiceId)
+                    .orElseThrow(() -> new BadRequestException("Dịch vụ áp dụng không thuộc nhà cung cấp hiện tại."));
+        }
+    }
+
+    private void ensureUniqueCode(String code, Long currentId) {
+        Optional<PromoCode> existing = promoCodeRepository.findByCodeIgnoreCase(code);
+        if (existing.isPresent() && !Objects.equals(existing.get().getId(), currentId)) {
+            throw new BadRequestException("Mã ưu đãi đã tồn tại. Vui lòng chọn mã khác.");
+        }
+    }
+
+    private PromotionOptionsResponse buildOptions(ProviderProfile providerScope) {
+        List<ProviderProfile> providers = providerScope != null
+                ? List.of(providerScope)
+                : providerProfileRepository.findActiveProviders();
+        List<Long> providerIds = providers.stream().map(ProviderProfile::getId).filter(Objects::nonNull).toList();
+        List<ProviderService> providerServices = providerScope != null
+                ? providerServiceRepository.findAllDetailsByProviderId(providerScope.getId())
+                : providerIds.isEmpty() ? List.of() : providerServiceRepository.findActiveByProviderIds(providerIds);
+
         return PromotionOptionsResponse.builder()
                 .promotionTypes(List.of(
                         option("PROMO_CODE", "Mã ưu đãi", "Khách nhập mã khi checkout."),
@@ -201,10 +290,10 @@ public class PromotionServiceImpl implements PromotionService {
                         option("MEMBERSHIP", "Membership", "Ưu đãi gói hội viên hoặc hội viên hiện hữu."),
                         option("SEASONAL", "Theo mùa/sự kiện", "Ưu đãi dịp lễ, cuối tuần, chiến dịch."),
                         option("BUNDLE", "Combo/bundle", "Ưu đãi theo nhóm dịch vụ hoặc gói."),
-                        option("FREE_SERVICE", "Tặng dịch vụ", "Có thể cấu hình miễn phí/toàn phần.")))
+                        option("FREE_SERVICE", "Tặng dịch vụ", "Có thể cấu hình miễn phí/toàn phần."),
+                        option("PARTNER_EXCLUSIVE", "Riêng cho nhà cung cấp", "Ưu đãi riêng của từng partner.")))
                 .targetTypes(List.of(
-                        option("BOOKING", "Booking dịch vụ", "Áp dụng khi khách đặt dịch vụ vận chuyển."),
-                        option("SHIPPING", "Phí vận chuyển", "Áp dụng giảm trên phí vận chuyển."),
+                        option("BOOKING", "Booking dịch vụ", "Áp dụng khi khách thanh toán booking."),
                         option("MEMBERSHIP", "Membership", "Áp dụng khi khách mua gói hội viên."),
                         option("BOTH", "Cả hai", "Áp dụng cho booking và membership nếu thỏa điều kiện.")))
                 .discountTypes(List.of(
@@ -222,9 +311,12 @@ public class PromotionServiceImpl implements PromotionService {
                 .daysOfWeek(DAYS_OF_WEEK.stream()
                         .map(day -> option(day, dayLabel(day), "Áp dụng vào " + dayLabel(day).toLowerCase(Locale.ROOT)))
                         .toList())
-                .areas(areaRepository.findAllByOrderByNameAsc().stream()
-                        .map(this::mapAreaOption)
-                        .toList())
+                .providers(providers.stream().map(provider -> PromotionOptionsResponse.ProviderOption.builder()
+                        .id(provider.getId())
+                        .name(provider.getBusinessName())
+                        .providerCode(provider.getProviderCode())
+                        .build()).toList())
+                .providerServices(providerServices.stream().map(this::mapProviderServiceOption).toList())
                 .serviceCategories(serviceCategoryRepository.findByActiveTrueOrderByNameAscIdAsc().stream()
                         .map(this::mapCategoryOption)
                         .toList())
@@ -242,6 +334,7 @@ public class PromotionServiceImpl implements PromotionService {
     private PromotionResponse mapResponse(PromoCode promo) {
         int redemptionCount = (int) promoCodeRedemptionRepository.countByPromoCode_Id(promo.getId());
         int usageCount = Math.max(defaultInteger(promo.getUsageCount()), redemptionCount);
+        ProviderProfile provider = promo.getProvider();
         User createdBy = promo.getCreatedByUser();
         return PromotionResponse.builder()
                 .id(promo.getId())
@@ -249,6 +342,8 @@ public class PromotionServiceImpl implements PromotionService {
                 .name(firstNonBlank(promo.getName(), promo.getCode()))
                 .description(promo.getDescription())
                 .ownerType(normalizeOwnerType(promo))
+                .providerId(provider != null ? provider.getId() : null)
+                .providerName(provider != null ? provider.getBusinessName() : null)
                 .createdByUserId(createdBy != null ? createdBy.getId() : null)
                 .createdByName(createdBy != null ? createdBy.getFullName() : null)
                 .promotionType(normalizeEnum(promo.getPromotionType(), "PROMO_CODE"))
@@ -266,7 +361,8 @@ public class PromotionServiceImpl implements PromotionService {
                 .userSegment(normalizeEnum(promo.getUserSegment(), "ALL"))
                 .minCompletedBookings(promo.getMinCompletedBookings())
                 .applicableDaysOfWeek(parseStringCsv(promo.getApplicableDaysOfWeek()))
-                .areaIds(parseLongCsv(promo.getAreaIds()))
+                .providerIds(parseLongCsv(promo.getProviderIds()))
+                .providerServiceIds(parseLongCsv(promo.getProviderServiceIds()))
                 .serviceCategoryIds(parseLongCsv(promo.getServiceCategoryIds()))
                 .membershipPlanIds(parseLongCsv(promo.getMembershipPlanIds()))
                 .badgeText(promo.getBadgeText())
@@ -292,11 +388,18 @@ public class PromotionServiceImpl implements PromotionService {
                 .build();
     }
 
-    private PromotionOptionsResponse.AreaOption mapAreaOption(Area area) {
-        return PromotionOptionsResponse.AreaOption.builder()
-                .id(area.getId())
-                .name(area.getName())
-                .pickupAddress(area.getPickupAddress())
+    private PromotionOptionsResponse.ProviderServiceOption mapProviderServiceOption(ProviderService providerService) {
+        ProviderProfile provider = providerService.getProvider();
+        ServiceCategory category = providerService.getService() != null ? providerService.getService().getCategory()
+                : null;
+        return PromotionOptionsResponse.ProviderServiceOption.builder()
+                .id(providerService.getId())
+                .providerId(provider != null ? provider.getId() : null)
+                .providerName(provider != null ? provider.getBusinessName() : null)
+                .serviceName(firstNonBlank(providerService.getCustomName(),
+                        providerService.getService() != null ? providerService.getService().getName() : null,
+                        "Dịch vụ"))
+                .categoryName(category != null ? category.getName() : null)
                 .build();
     }
 
@@ -511,7 +614,7 @@ public class PromotionServiceImpl implements PromotionService {
     }
 
     private String normalizeOwnerType(PromoCode promo) {
-        return "ADMIN";
+        return normalizeEnum(promo.getOwnerType(), promo.getProvider() != null ? "PARTNER" : "ADMIN");
     }
 
     private String normalizeTargetTypeValue(PromoCode promo) {
@@ -552,7 +655,7 @@ public class PromotionServiceImpl implements PromotionService {
 
     private String buildScopeSummary(PromoCode promo) {
         List<String> parts = new ArrayList<>();
-        parts.add("Do admin đặt");
+        parts.add("ADMIN".equals(normalizeOwnerType(promo)) ? "Do admin đặt" : "Do partner đặt");
         parts.add("Target: " + normalizeTargetTypeValue(promo));
         if (promo.getMinOrderAmount() != null && promo.getMinOrderAmount().compareTo(BigDecimal.ZERO) > 0) {
             parts.add("Đơn tối thiểu " + formatMoney(promo.getMinOrderAmount()));
@@ -560,11 +663,11 @@ public class PromotionServiceImpl implements PromotionService {
         if (!parseStringCsv(promo.getApplicableDaysOfWeek()).isEmpty()) {
             parts.add("Theo ngày trong tuần");
         }
-        if (!parseLongCsv(promo.getAreaIds()).isEmpty()) {
-            parts.add("Giới hạn khu vực");
+        if (!parseLongCsv(promo.getProviderIds()).isEmpty() || promo.getProvider() != null) {
+            parts.add("Giới hạn nhà cung cấp");
         }
-        if (!parseLongCsv(promo.getServiceCategoryIds()).isEmpty()) {
-            parts.add("Giới hạn nhóm dịch vụ");
+        if (!parseLongCsv(promo.getProviderServiceIds()).isEmpty()) {
+            parts.add("Giới hạn dịch vụ");
         }
         if (!parseLongCsv(promo.getMembershipPlanIds()).isEmpty()) {
             parts.add("Giới hạn gói membership");
@@ -607,28 +710,5 @@ public class PromotionServiceImpl implements PromotionService {
             }
         }
         return null;
-    }
-
-    private void validateAreaIds(List<Long> areaIds) {
-        if (areaIds == null || areaIds.isEmpty()) {
-            return;
-        }
-        List<Area> areas = areaRepository.findAllById(areaIds);
-        if (areas.size() != areaIds.size()) {
-            throw new BadRequestException("Có khu vực không tồn tại trong danh sách giới hạn.");
-        }
-    }
-
-    private void ensureUniqueCode(String code, Long excludeId) {
-        if (code == null) return;
-        if (promoCodeRepository.existsByCodeIgnoreCase(code)) {
-            if (excludeId != null) {
-                promoCodeRepository.findByCodeIgnoreCase(code)
-                        .filter(existing -> !existing.getId().equals(excludeId))
-                        .ifPresent(existing -> { throw new BadRequestException("Mã ưu đãi đã tồn tại."); });
-            } else {
-                throw new BadRequestException("Mã ưu đãi đã tồn tại.");
-            }
-        }
     }
 }
