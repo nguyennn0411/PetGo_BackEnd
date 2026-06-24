@@ -1,16 +1,13 @@
 package com.example.petgo.service;
 
-import com.example.petgo.dto.CatalogServiceResponse;
-import jakarta.servlet.http.HttpServletRequest;
+import com.example.petgo.dto.FavoriteListResponse;
+import com.example.petgo.dto.FavoriteMutationResponse;
 
 import java.util.List;
-import java.util.Set;
 
 public interface FavoriteService {
-
-    boolean toggleFavorite(HttpServletRequest request, Long serviceId);
-
-    List<CatalogServiceResponse> getUserFavorites(HttpServletRequest request);
-
-    Set<Long> getUserFavoriteIds(HttpServletRequest request);
+    FavoriteListResponse getFavorites(Long ownerUserId, Double latitude, Double longitude);
+    List<Long> getFavoriteProviderIds(Long ownerUserId);
+    FavoriteMutationResponse addFavorite(Long ownerUserId, Long providerId);
+    FavoriteMutationResponse removeFavorite(Long ownerUserId, Long providerId);
 }

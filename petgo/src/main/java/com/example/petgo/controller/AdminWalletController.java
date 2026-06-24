@@ -31,12 +31,6 @@ public class AdminWalletController {
                                                 walletService.getFailedTopUpTransactions(request)));
         }
 
-        @GetMapping("/system-transactions")
-        public ResponseEntity<Map<String, Object>> systemTransactions(HttpServletRequest request) {
-                return ResponseEntity.ok(Map.of("message", "Lấy lịch sử giao dịch ví hệ thống thành công.", "result",
-                                walletService.getSystemWalletTransactions(request)));
-        }
-
         @PostMapping("/transactions/{transactionId}/review")
         public ResponseEntity<Map<String, Object>> review(HttpServletRequest request, @PathVariable Long transactionId,
                         @Valid @RequestBody WalletAdminReviewRequest reviewRequest) {

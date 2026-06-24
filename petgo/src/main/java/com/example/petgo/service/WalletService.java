@@ -22,8 +22,6 @@ public interface WalletService {
 
         List<WalletTransactionResponse> getFailedTopUpTransactions(HttpServletRequest request);
 
-        List<WalletTransactionResponse> getSystemWalletTransactions(HttpServletRequest request);
-
         WalletTransactionResponse reviewAdminTransaction(HttpServletRequest request, Long transactionId,
                         WalletAdminReviewRequest reviewRequest);
 

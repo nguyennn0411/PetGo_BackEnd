@@ -13,10 +13,5 @@ public interface WalletRepository extends JpaRepository<Wallet, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Wallet> findWithLockByUserId(Long userId);
 
-    Optional<Wallet> findByIsSystemTrue();
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Optional<Wallet> findWithLockByIsSystemTrue();
-
     void deleteByUser(com.example.petgo.entity.User user);
 }

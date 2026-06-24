@@ -1,9 +1,9 @@
 -- Reset toàn bộ dữ liệu cũ trong database PetGo.
 -- File này chỉ tạo query, KHÔNG tự chạy.
 -- CẢNH BÁO: Chạy file này sẽ xóa dữ liệu trong các bảng bên dưới.
--- Sau khi reset, chạy lại PetGo_BackEnd/database/2-base_roles.sql để seed role USER/ADMIN.
--- Nếu cần tài khoản demo, chạy tiếp 4-sample_accounts.sql (tạo user@petgo.local + admin@petgo.local).
--- Sau khi có user, chạy PetGo_BackEnd/database/5-base_wallets.sql để tạo ví và cấu hình ví mặc định.
+-- Sau khi reset, chạy lại PetGo_BackEnd/database/2-base_roles.sql để seed role USER/PROVIDER/ADMIN.
+-- Nếu cần dữ liệu demo, chạy tiếp các file sample trong thư mục PetGo_BackEnd/database theo thứ tự số prefix.
+-- Sau khi tạo user demo hoặc user thật, chạy PetGo_BackEnd/database/5-base_wallets.sql để tạo ví và cấu hình ví mặc định.
 -- Danh sách TRUNCATE bên dưới đã được đối chiếu với entity backend và các file SQL seed/sample hiện có.
 
 USE petgo_db;
@@ -20,6 +20,19 @@ TRUNCATE TABLE payments;
 TRUNCATE TABLE invoice_items;
 TRUNCATE TABLE invoices;
 
+TRUNCATE TABLE booking_cancellations;
+TRUNCATE TABLE booking_reschedules;
+TRUNCATE TABLE booking_status_history;
+TRUNCATE TABLE booking_locks;
+TRUNCATE TABLE bookings;
+
+TRUNCATE TABLE chat_messages;
+TRUNCATE TABLE chat_participants;
+TRUNCATE TABLE chat_conversations;
+
+TRUNCATE TABLE review_photos;
+TRUNCATE TABLE reviews;
+
 -- Shop/cart tables hiện chưa có dữ liệu seed, nhưng vẫn reset để dọn dữ liệu phát sinh khi test.
 TRUNCATE TABLE cart_items;
 TRUNCATE TABLE shop_order_status_history;
@@ -29,9 +42,18 @@ TRUNCATE TABLE shop_orders;
 TRUNCATE TABLE pet_photos;
 TRUNCATE TABLE pets;
 
+TRUNCATE TABLE provider_service_change_requests;
+TRUNCATE TABLE provider_services;
+TRUNCATE TABLE provider_availability_slots;
+TRUNCATE TABLE provider_schedule_exceptions;
+TRUNCATE TABLE provider_business_hours;
+TRUNCATE TABLE provider_booking_policies;
+TRUNCATE TABLE provider_photos;
+TRUNCATE TABLE favorites;
+TRUNCATE TABLE provider_profiles;
+
 TRUNCATE TABLE products;
 TRUNCATE TABLE product_categories;
-TRUNCATE TABLE service_category_mapping;
 TRUNCATE TABLE services;
 TRUNCATE TABLE service_categories;
 -- Bảng home_sliders hiện chưa có dữ liệu seed, nhưng là bảng nội dung trang chủ nên vẫn reset nếu đã test thủ công.
@@ -47,23 +69,9 @@ TRUNCATE TABLE wallets;
 TRUNCATE TABLE wallet_settings;
 
 TRUNCATE TABLE refresh_tokens;
+TRUNCATE TABLE registration_applications;
 TRUNCATE TABLE user_roles;
 TRUNCATE TABLE users;
 TRUNCATE TABLE roles;
-
-TRUNCATE TABLE messages;
-TRUNCATE TABLE conversations;
-TRUNCATE TABLE booking_status_histories;
-TRUNCATE TABLE shipping_fee_configs;
-TRUNCATE TABLE area_schedule_overrides;
-TRUNCATE TABLE area_schedules;
-TRUNCATE TABLE area_service_configs;
-TRUNCATE TABLE booking_disputes;
-TRUNCATE TABLE shipping_bookings;
-TRUNCATE TABLE areas;
-
--- Xóa column cũ category_id (single FK) nếu còn sót từ schema cũ trước khi chuyển sang ManyToMany
--- ALTER TABLE services DROP FOREIGN KEY IF EXISTS fk_services_category;
--- ALTER TABLE services DROP COLUMN IF EXISTS category_id;
 
 SET FOREIGN_KEY_CHECKS = 1;

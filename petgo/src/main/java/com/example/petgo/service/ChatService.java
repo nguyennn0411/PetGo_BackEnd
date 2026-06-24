@@ -1,25 +1,31 @@
 package com.example.petgo.service;
 
-import com.example.petgo.dto.*;
+import com.example.petgo.dto.ChatConversationResponse;
+import com.example.petgo.dto.ChatMessageRequest;
+import com.example.petgo.dto.ChatMessageResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 public interface ChatService {
+    ChatConversationResponse startProviderChat(HttpServletRequest request, Long providerId);
 
-    ConversationResponse createConversation(HttpServletRequest request, CreateConversationRequest req);
+    ChatConversationResponse startSupportChat(HttpServletRequest request);
 
-    List<ConversationResponse> getMyConversations(HttpServletRequest request);
+    ChatConversationResponse startBookingChat(HttpServletRequest request, Long bookingId);
 
-    List<ConversationResponse> getAdminConversations(HttpServletRequest request, String type);
+    ChatConversationResponse ensureAdminBookingDisputeChat(Long bookingId);
 
-    ConversationResponse getConversationDetail(HttpServletRequest request, Long conversationId);
+    List<ChatConversationResponse> listMyConversations(HttpServletRequest request);
 
-    List<MessageResponse> getMessages(HttpServletRequest request, Long conversationId);
+    List<ChatMessageResponse> listMessages(HttpServletRequest request, Long conversationId, int limit);
 
-    MessageResponse sendMessage(HttpServletRequest request, Long conversationId, SendMessageRequest req);
+    ChatMessageResponse sendMessage(HttpServletRequest request, Long conversationId, ChatMessageRequest requestBody);
 
-    ConversationResponse updateStatus(HttpServletRequest request, Long conversationId, UpdateConversationStatusRequest req);
+    ChatMessageResponse sendImageMessage(HttpServletRequest request, Long conversationId, MultipartFile file);
 
-    void deleteConversation(HttpServletRequest request, Long conversationId);
+    ChatMessageResponse deleteMessage(HttpServletRequest request, Long conversationId, Long messageId);
+
+    ChatConversationResponse markAsRead(HttpServletRequest request, Long conversationId);
 }

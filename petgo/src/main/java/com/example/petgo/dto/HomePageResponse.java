@@ -8,6 +8,9 @@ import java.util.List;
 public record HomePageResponse(
                 List<HomeSliderResponse> sliders,
                 List<HomeCategoryResponse> categories,
+                List<HomeProviderResponse> nearbyProviders,
+                List<HomeProviderResponse> featuredProviders,
                 List<HomeMembershipPlanResponse> membershipPlans,
+                List<HomeReviewResponse> reviews,
                 HomeStatsResponse stats) {
 }

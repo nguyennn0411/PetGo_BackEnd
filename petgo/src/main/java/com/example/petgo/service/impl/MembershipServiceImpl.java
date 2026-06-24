@@ -150,6 +150,7 @@ public class MembershipServiceImpl implements MembershipService {
         Invoice invoice = new Invoice();
         invoice.setInvoiceNumber(generateCode("INV"));
         invoice.setUser(user);
+        invoice.setBooking(null);
         invoice.setMembershipSubscription(subscription);
         invoice.setInvoiceType("MEMBERSHIP");
         invoice.setStatus("PAYOS".equals(paymentMethod) ? "ISSUED" : "PAID");

@@ -4,7 +4,6 @@ import com.example.petgo.dto.NotificationCreateRequest;
 import com.example.petgo.dto.NotificationRecipientResponse;
 import com.example.petgo.dto.NotificationResponse;
 import com.example.petgo.dto.NotificationSummaryResponse;
-import com.example.petgo.entity.User;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
@@ -21,8 +20,4 @@ public interface NotificationService {
     NotificationRecipientResponse markAsRead(HttpServletRequest request, Long notificationId);
 
     NotificationSummaryResponse markAllAsRead(HttpServletRequest request);
-
-    List<NotificationRecipientResponse> listNotificationsForUser(User user, String status);
-
-    NotificationSummaryResponse getSummaryForUser(Long userId);
 }

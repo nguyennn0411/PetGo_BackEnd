@@ -16,8 +16,15 @@ public interface PromotionService {
 
     PromotionResponse updateAdminPromotionStatus(HttpServletRequest request, Long id, Boolean active);
 
-    void deleteAdminPromotion(HttpServletRequest request, Long id);
-
     PromotionOptionsResponse getAdminOptions(HttpServletRequest request);
 
+    List<PromotionResponse> listPartnerPromotions(HttpServletRequest request, String status, String targetType);
+
+    PromotionResponse createPartnerPromotion(HttpServletRequest request, PromotionRequest requestBody);
+
+    PromotionResponse updatePartnerPromotion(HttpServletRequest request, Long id, PromotionRequest requestBody);
+
+    PromotionResponse updatePartnerPromotionStatus(HttpServletRequest request, Long id, Boolean active);
+
+    PromotionOptionsResponse getPartnerOptions(HttpServletRequest request);
 }
