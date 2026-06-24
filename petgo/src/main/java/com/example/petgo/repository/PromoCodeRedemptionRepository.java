@@ -9,4 +9,6 @@ public interface PromoCodeRedemptionRepository extends JpaRepository<PromoCodeRe
     long countByPromoCode_IdAndUser_Id(Long promoCodeId, Long userId);
 
     boolean existsByInvoice_IdAndPromoCode_Id(Long invoiceId, Long promoCodeId);
+
+    boolean existsByShippingBooking_IdAndPromoCode_Id(Long bookingId, Long promoCodeId);
 }

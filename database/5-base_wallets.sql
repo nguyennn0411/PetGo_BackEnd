@@ -12,8 +12,8 @@ WHERE NOT EXISTS (
     WHERE setting_key = 'WALLET_AUTO_CONFIRM_TOP_UP'
 );
 
-INSERT INTO wallets (user_id, balance, currency_code, status)
-SELECT u.id, 0.00, 'VND', 'ACTIVE'
+INSERT INTO wallets (user_id, balance, held_balance, currency_code, status, is_system)
+SELECT u.id, 0.00, 0.00, 'VND', 'ACTIVE', FALSE
 FROM users u
 WHERE NOT EXISTS (
     SELECT 1

@@ -1,0 +1,367 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="18445085-3f17-42b6-85ba-b8f9e1ce95b8" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/1-reset_database.sql" beforeDir="false" afterPath="$PROJECT_DIR$/database/1-reset_database.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/2-base_roles.sql" beforeDir="false" afterPath="$PROJECT_DIR$/database/2-base_roles.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/4-sample_accounts.sql" beforeDir="false" afterPath="$PROJECT_DIR$/database/4-sample_accounts.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/5-base_wallets.sql" beforeDir="false" afterPath="$PROJECT_DIR$/database/5-base_wallets.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/6-sample_rich_demo_data.sql" beforeDir="false" afterPath="$PROJECT_DIR$/database/6-sample_rich_demo_data.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/7-sample_admin_promo_codes.sql" beforeDir="false" afterPath="$PROJECT_DIR$/database/7-sample_admin_promo_codes.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/Dump20260609-Long-f1.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/petgo_full_product_service_dataseed_v4_many_providers_safe_update.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/AdminBookingDisputeController.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/AdminBookingDisputeController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/AdminController.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/AdminController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/AdminRegistrationController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/AdminReviewController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/AdminWalletController.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/AdminWalletController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/BookingController.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/BookingController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/BookingManagementController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/ChatController.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/ChatController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/FavoriteController.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/FavoriteController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/InvoiceController.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/InvoiceController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/PaymentController.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/PaymentController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/ProfileController.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/ProfileController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/PromotionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/PromotionController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/ProviderDetailController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/ProviderDiscoveryController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/RegistrationController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/ReviewController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/partner/AdminPartnerServiceChangeRequestController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/partner/PartnerBookingController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/partner/PartnerBookingPolicyController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/partner/PartnerCustomerController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/partner/PartnerDashboardController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/partner/PartnerProfileController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/partner/PartnerRevenueController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/partner/PartnerReviewController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/partner/PartnerScheduleController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/partner/PartnerServiceChangeRequestController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/controller/partner/PartnerServiceController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/AdminBookingDisputeResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/AdminBookingDisputeResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/AdminDisputeResolveRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/AdminDisputeResolveRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/AdminRegistrationReviewRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/AdminRegistrationSummaryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/AdminReviewListResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/AdminReviewModerationRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/AdminReviewResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingAvailabilityResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingCancelRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingCreateContextResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingCreateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingDetailResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingDisputeRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingListItemResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingListResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingLockRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingLockResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingMutationResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingPetOptionResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingProviderOptionResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingRescheduleConfirmRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingRescheduleContextResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingRescheduleRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingServiceOptionResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingSlotOptionResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingSummaryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/BookingTimelineItemResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ChatConversationResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ChatMessageRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ChatMessageResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ChatParticipantResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/FavoriteListResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/FavoriteMutationResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/FavoriteProviderResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/HomePageResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/HomePageResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/HomeProviderResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/HomeReviewResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/HomeStatsResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/HomeStatsResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/InvoiceDetailResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/InvoiceDetailResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/NotificationCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/NotificationCreateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/NotificationResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/NotificationResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/PaymentCheckoutContextResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/PaymentCheckoutRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/PaymentCheckoutResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderAppliedFiltersResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderBusinessHourDetailResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderCardResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderCategoryOptionResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderDetailResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderDetailServiceItemResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderDetailSummaryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderFilterOptionsResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderListResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderReviewResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderSearchCriteria.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderSlotResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ProviderVerificationRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/RegistrationAdditionalInfoRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/RegistrationResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/RegistrationServiceCategoryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/RegistrationSubmitRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/RegistrationUpsertRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ReviewContextResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ReviewCreateRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ReviewCreateResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/ReviewPhotoResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/UserReviewListResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/UserReviewResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/WalletResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/WalletResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/AdminPartnerServiceReviewRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerBookingActionRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerBookingDetailResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerBookingListResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerBookingPolicyRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerBookingPolicyResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerBookingSummaryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerBusinessHourRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerBusinessHourResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerCatalogServiceOptionResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerCustomerDetailResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerCustomerListResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerCustomerPetSummaryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerCustomerSummaryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerDashboardSummaryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerInternalNoteRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerInvoiceDetailResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerInvoiceListResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerInvoiceSummaryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerProfileResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerProfileUpdateRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerRevenueByServiceResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerRevenueSummaryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerReviewListResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerReviewSummaryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerScheduleExceptionRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerScheduleExceptionResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerScheduleResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerServiceCategoryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerServiceChangeItemResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerServiceChangeRequestResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerServiceChangeRequestUpsertRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerServiceRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerServiceResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerServiceStatusRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerSlotResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerTopServiceResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/partner/PartnerWeeklyScheduleRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/promotion/PromotionOptionsResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/promotion/PromotionOptionsResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/promotion/PromotionRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/promotion/PromotionRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/promotion/PromotionResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/dto/promotion/PromotionResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/Booking.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/BookingCancellation.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/BookingLock.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/BookingReschedule.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/BookingStatusHistory.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/BookingStatusHistory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/CatalogService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/CatalogService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/ChatConversation.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/ChatMessage.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/ChatParticipant.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/Favorite.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/Invoice.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/Invoice.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/NotificationCategory.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/NotificationCategory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/PromoCode.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/PromoCode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/PromoCodeRedemption.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/PromoCodeRedemption.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/ProviderAvailabilitySlot.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/ProviderBookingPolicy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/ProviderBusinessHour.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/ProviderPhoto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/ProviderProfile.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/ProviderScheduleException.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/ProviderService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/ProviderServiceChangeRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/RegistrationApplication.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/RegistrationStatus.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/RegistrationType.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/Review.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/ReviewPhoto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/RoleType.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/RoleType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/Wallet.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/Wallet.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/WalletTransaction.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/entity/WalletTransaction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/exception/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/exception/GlobalExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/BookingCancellationRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/BookingLockRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/BookingRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/BookingRescheduleRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/BookingStatusHistoryRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/BookingStatusHistoryRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/CatalogServiceRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/CatalogServiceRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ChatConversationRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ChatMessageRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ChatParticipantRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/FavoriteRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/InvoiceRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/InvoiceRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/PromoCodeRedemptionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/PromoCodeRedemptionRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/PromoCodeRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/PromoCodeRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ProviderAvailabilitySlotRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ProviderBookingPolicyRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ProviderBusinessHourRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ProviderPhotoRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ProviderProfileRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ProviderScheduleExceptionRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ProviderServiceChangeRequestRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ProviderServiceRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/RegistrationApplicationRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ReviewPhotoRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/ReviewRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/UserRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/WalletRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/WalletRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/WalletTransactionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/repository/WalletTransactionRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/AdminBookingDisputeService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/AdminBookingDisputeService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/AdminReviewService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/AdminService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/AdminService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/BookingAvailabilityService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/BookingManagementService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/BookingService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/BookingService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/ChatService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/ChatService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/CloudinaryStorageService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/CloudinaryStorageService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/FavoriteService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/FavoriteService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/InvoiceService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/InvoiceService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/MailService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/MailService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/NotificationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/NotificationService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/PaymentService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/PromotionPolicyService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/PromotionPolicyService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/PromotionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/PromotionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/ProviderDetailService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/ProviderDiscoveryService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/RegistrationReviewService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/RegistrationService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/ReviewService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/WalletService.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/WalletService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/AdminBookingDisputeServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/AdminBookingDisputeServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/AdminReviewServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/AdminServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/AdminServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/BookingAvailabilityServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/BookingManagementServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/BookingNotificationService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/BookingServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/BookingServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/BookingWorkflowJob.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/ChatServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/ChatServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/CloudinaryStorageServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/CloudinaryStorageServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/FavoriteServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/FavoriteServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/HomeServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/HomeServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/InvoiceServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/InvoiceServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/MailServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/MailServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/MembershipServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/MembershipServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/NotificationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/NotificationServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/PayOsServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/PayOsServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/PaymentServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/ProfileServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/ProfileServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/PromotionPolicyServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/PromotionPolicyServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/PromotionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/PromotionServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/ProviderDetailServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/ProviderDiscoveryServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/RegistrationMapperSupport.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/RegistrationNotificationService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/RegistrationReviewServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/RegistrationServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/ReviewServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/WalletServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/impl/WalletServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/PartnerAccessService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/PartnerBookingManagementService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/PartnerBookingPolicyService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/PartnerCustomerManagementService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/PartnerDashboardService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/PartnerMappingSupport.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/PartnerProfileService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/PartnerRevenueService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/PartnerReviewManagementService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/PartnerScheduleService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/PartnerServiceChangeRequestService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/PartnerServiceManagementService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/impl/PartnerBookingManagementServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/impl/PartnerBookingPolicyServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/impl/PartnerCustomerManagementServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/impl/PartnerDashboardServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/impl/PartnerProfileServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/impl/PartnerRevenueServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/impl/PartnerReviewManagementServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/impl/PartnerScheduleServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/impl/PartnerServiceChangeRequestServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/java/com/example/petgo/service/partner/impl/PartnerServiceManagementServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/petgo/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/petgo/src/main/resources/application.yaml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 7
+}</component>
+  <component name="ProjectId" id="3FImm9ixBFOXbeW25vsCuuG1dgN" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;Spring Boot.PetgoApplication.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;Long&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RunManager">
+    <configuration name="PetgoApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="petgo" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.petgo.PetgoApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.27397.103" />
+        <option value="bundled-js-predefined-d6986cc7102b-3aa1da707db6-JavaScript-IU-252.27397.103" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="18445085-3f17-42b6-85ba-b8f9e1ce95b8" name="Changes" comment="" />
+      <created>1781771115545</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1781771115545</updated>
+      <workItem from="1781771116938" duration="16425000" />
+      <workItem from="1781833356955" duration="17000" />
+      <workItem from="1781840158773" duration="1659000" />
+      <workItem from="1781847863239" duration="7368000" />
+      <workItem from="1781867968695" duration="5274000" />
+      <workItem from="1782108851989" duration="2539000" />
+      <workItem from="1782191502696" duration="8053000" />
+      <workItem from="1782225809114" duration="2617000" />
+      <workItem from="1782261776072" duration="765000" />
+      <workItem from="1782269695953" duration="8039000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

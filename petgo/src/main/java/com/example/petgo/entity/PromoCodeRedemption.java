@@ -38,12 +38,12 @@ public class PromoCodeRedemption extends BaseEntity {
     private Invoice invoice;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booking_id")
-    private Booking booking;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "membership_subscription_id")
     private MembershipSubscription membershipSubscription;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shipping_booking_id")
+    private ShippingBooking shippingBooking;
 
     @Column(name = "promo_code_snapshot", nullable = false, length = 50)
     private String promoCodeSnapshot;

@@ -1,48 +1,37 @@
 package com.example.petgo.controller;
 
-import com.example.petgo.dto.FavoriteListResponse;
-import com.example.petgo.dto.FavoriteMutationResponse;
 import com.example.petgo.service.FavoriteService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @RestController
-@RequestMapping("/api/v1/users/{ownerUserId}/favorites")
+@RequestMapping("/api/v1/favorites")
 @RequiredArgsConstructor
 public class FavoriteController {
 
     private final FavoriteService favoriteService;
 
+    @PostMapping("/toggle/{serviceId}")
+    public ResponseEntity<Map<String, Object>> toggleFavorite(HttpServletRequest request,
+                                                              @PathVariable Long serviceId) {
+        boolean favorited = favoriteService.toggleFavorite(request, serviceId);
+        return ResponseEntity.ok(Map.of(
+                "message", favorited ? "Đã thêm vào yêu thích." : "Đã bỏ yêu thích.",
+                "result", Map.of("favorited", favorited)));
+    }
+
     @GetMapping
-    public ResponseEntity<FavoriteListResponse> getFavorites(
-            @PathVariable Long ownerUserId,
-            @RequestParam(required = false) Double latitude,
-            @RequestParam(required = false) Double longitude
-    ) {
-        return ResponseEntity.ok(favoriteService.getFavorites(ownerUserId, latitude, longitude));
+    public ResponseEntity<?> getFavorites(HttpServletRequest request) {
+        return ResponseEntity.ok(favoriteService.getUserFavorites(request));
     }
 
-    @GetMapping("/provider-ids")
-    public ResponseEntity<List<Long>> getFavoriteProviderIds(@PathVariable Long ownerUserId) {
-        return ResponseEntity.ok(favoriteService.getFavoriteProviderIds(ownerUserId));
-    }
-
-    @PostMapping("/providers/{providerId}")
-    public ResponseEntity<FavoriteMutationResponse> addFavorite(
-            @PathVariable Long ownerUserId,
-            @PathVariable Long providerId
-    ) {
-        return ResponseEntity.ok(favoriteService.addFavorite(ownerUserId, providerId));
-    }
-
-    @DeleteMapping("/providers/{providerId}")
-    public ResponseEntity<FavoriteMutationResponse> removeFavorite(
-            @PathVariable Long ownerUserId,
-            @PathVariable Long providerId
-    ) {
-        return ResponseEntity.ok(favoriteService.removeFavorite(ownerUserId, providerId));
+    @GetMapping("/ids")
+    public ResponseEntity<Set<Long>> getFavoriteIds(HttpServletRequest request) {
+        return ResponseEntity.ok(favoriteService.getUserFavoriteIds(request));
     }
 }
