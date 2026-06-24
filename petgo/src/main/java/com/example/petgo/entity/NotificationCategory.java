@@ -6,6 +6,5 @@ public enum NotificationCategory {
     BOOKING,
     MEMBERSHIP,
     PAYMENT,
-    PARTNER,
     PROMOTION
 }

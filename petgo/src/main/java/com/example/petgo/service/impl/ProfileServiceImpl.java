@@ -7,9 +7,7 @@ import com.example.petgo.dto.ProfileUpdateRequest;
 import com.example.petgo.entity.User;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
-import com.example.petgo.repository.BookingRepository;
 import com.example.petgo.repository.PetRepository;
-import com.example.petgo.repository.ReviewRepository;
 import com.example.petgo.repository.UserRepository;
 import com.example.petgo.service.AuthService;
 import com.example.petgo.service.ProfileService;
@@ -25,8 +23,6 @@ public class ProfileServiceImpl implements ProfileService {
     private final AuthService authService;
     private final UserRepository userRepository;
     private final PetRepository petRepository;
-    private final BookingRepository bookingRepository;
-    private final ReviewRepository reviewRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -74,14 +70,10 @@ public class ProfileServiceImpl implements ProfileService {
     private ProfileResponse buildProfileResponse(User user, HttpServletRequest request) {
         AuthUserResponse authUserResponse = authService.getCurrentUserProfile(request);
         long totalPets = petRepository.countActiveByOwnerUserId(user.getId());
-        long totalBookings = bookingRepository.countByCustomerUser_Id(user.getId());
-        long totalReviews = reviewRepository.countByCustomerUser_IdAndDeletedAtIsNull(user.getId());
 
         return ProfileResponse.builder()
                 .user(authUserResponse)
                 .totalPets(totalPets)
-                .totalBookings(totalBookings)
-                .totalReviews(totalReviews)
                 .build();
     }
 

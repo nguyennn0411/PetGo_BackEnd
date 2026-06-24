@@ -11,8 +11,7 @@ public record PromotionOptionsResponse(
                 List<OptionItem> discountTypes,
                 List<OptionItem> userSegments,
                 List<OptionItem> daysOfWeek,
-                List<ProviderOption> providers,
-                List<ProviderServiceOption> providerServices,
+                List<AreaOption> areas,
                 List<ServiceCategoryOption> serviceCategories,
                 List<MembershipPlanOption> membershipPlans) {
 
@@ -21,16 +20,7 @@ public record PromotionOptionsResponse(
         }
 
         @Builder
-        public record ProviderOption(Long id, String name, String providerCode) {
-        }
-
-        @Builder
-        public record ProviderServiceOption(
-                        Long id,
-                        Long providerId,
-                        String providerName,
-                        String serviceName,
-                        String categoryName) {
+        public record AreaOption(Long id, String name, String pickupAddress) {
         }
 
         @Builder

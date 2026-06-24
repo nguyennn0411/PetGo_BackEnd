@@ -24,6 +24,9 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
     Optional<WalletTransaction> findDetailedById(Long id);
 
     @EntityGraph(attributePaths = { "user", "wallet", "counterpartyUser", "reviewedByAdmin" })
+    List<WalletTransaction> findByWalletIdOrderByCreatedAtDescIdDesc(Long walletId);
+
+    @EntityGraph(attributePaths = { "user", "wallet", "counterpartyUser", "reviewedByAdmin" })
     Optional<WalletTransaction> findByGatewayTransactionId(String gatewayTransactionId);
 
     @EntityGraph(attributePaths = { "user", "wallet", "counterpartyUser", "reviewedByAdmin" })

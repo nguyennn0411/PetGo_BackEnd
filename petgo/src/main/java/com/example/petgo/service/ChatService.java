@@ -1,31 +1,25 @@
 package com.example.petgo.service;
 
-import com.example.petgo.dto.ChatConversationResponse;
-import com.example.petgo.dto.ChatMessageRequest;
-import com.example.petgo.dto.ChatMessageResponse;
+import com.example.petgo.dto.*;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 public interface ChatService {
-    ChatConversationResponse startProviderChat(HttpServletRequest request, Long providerId);
 
-    ChatConversationResponse startSupportChat(HttpServletRequest request);
+    ConversationResponse createConversation(HttpServletRequest request, CreateConversationRequest req);
 
-    ChatConversationResponse startBookingChat(HttpServletRequest request, Long bookingId);
+    List<ConversationResponse> getMyConversations(HttpServletRequest request);
 
-    ChatConversationResponse ensureAdminBookingDisputeChat(Long bookingId);
+    List<ConversationResponse> getAdminConversations(HttpServletRequest request, String type);
 
-    List<ChatConversationResponse> listMyConversations(HttpServletRequest request);
+    ConversationResponse getConversationDetail(HttpServletRequest request, Long conversationId);
 
-    List<ChatMessageResponse> listMessages(HttpServletRequest request, Long conversationId, int limit);
+    List<MessageResponse> getMessages(HttpServletRequest request, Long conversationId);
 
-    ChatMessageResponse sendMessage(HttpServletRequest request, Long conversationId, ChatMessageRequest requestBody);
+    MessageResponse sendMessage(HttpServletRequest request, Long conversationId, SendMessageRequest req);
 
-    ChatMessageResponse sendImageMessage(HttpServletRequest request, Long conversationId, MultipartFile file);
+    ConversationResponse updateStatus(HttpServletRequest request, Long conversationId, UpdateConversationStatusRequest req);
 
-    ChatMessageResponse deleteMessage(HttpServletRequest request, Long conversationId, Long messageId);
-
-    ChatConversationResponse markAsRead(HttpServletRequest request, Long conversationId);
+    void deleteConversation(HttpServletRequest request, Long conversationId);
 }

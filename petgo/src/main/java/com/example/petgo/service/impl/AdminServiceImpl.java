@@ -20,120 +20,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class AdminServiceImpl implements AdminService {
 
-    private final ProviderProfileRepository providerProfileRepository;
-    private final ProviderServiceRepository providerServiceRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
+    private final CatalogServiceRepository catalogServiceRepository;
     private final HomeSliderRepository homeSliderRepository;
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ProviderResponse> getPendingProviders() {
-        return providerProfileRepository.findByVerificationStatus("PENDING").stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ProviderResponse> getVerifiedProviders() {
-        return providerProfileRepository.findByVerificationStatus("VERIFIED").stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ProviderDetailResponse getProviderDetail(Long providerId) {
-        ProviderProfile provider = providerProfileRepository.findById(providerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà cung cấp."));
-
-        List<ProviderService> services = providerServiceRepository.findByProvider_Id(providerId);
-
-        return ProviderDetailResponse.builder()
-                .id(provider.getId())
-                .slug(provider.getSlug())
-                .name(provider.getBusinessName())
-                .headline(provider.getHeadline())
-                .description(provider.getDescription())
-                .providerType(provider.getProviderType())
-                .verificationStatus(provider.getVerificationStatus())
-                .featured(provider.getFeatured())
-                .hot(provider.getHot())
-                .instantBooking(provider.getAcceptsInstantBooking())
-                .acceptsMembership(provider.getAcceptsMembership())
-                .yearsExperience(provider.getYearsExperience())
-                .rating(provider.getAverageRating())
-                .reviewsCount(provider.getTotalReviews())
-                .address(buildAddress(provider))
-                .city(provider.getCity())
-                .province(provider.getProvince())
-                .emergencyPhone(provider.getEmergencyPhone())
-                .mainImage(provider.getMainImageUrl())
-                .bannerImage(provider.getCoverImageUrl())
-                .services(services.stream().map(this::mapToServiceDetail).toList())
-                .build();
-    }
-
-    private ProviderDetailServiceItemResponse mapToServiceDetail(ProviderService s) {
-        return ProviderDetailServiceItemResponse.builder()
-                .id(s.getId())
-                .name(s.getService() != null ? s.getService().getName() : s.getCustomName())
-                .price(s.getPriceAmount())
-                .priceDisplay(s.getPriceAmount() != null ? s.getPriceAmount().toString() : "0")
-                .currencyCode(s.getCurrencyCode())
-                .build();
-    }
-
-    private String buildAddress(ProviderProfile p) {
-        List<String> parts = new ArrayList<>();
-        if (p.getPrimaryAddressLine1() != null)
-            parts.add(p.getPrimaryAddressLine1());
-        if (p.getWard() != null)
-            parts.add(p.getWard());
-        if (p.getDistrict() != null)
-            parts.add(p.getDistrict());
-        if (p.getCity() != null)
-            parts.add(p.getCity());
-        return String.join(", ", parts);
-    }
-
-    private ProviderResponse mapToResponse(ProviderProfile p) {
-        return ProviderResponse.builder()
-                .id(p.getId())
-                .providerCode(p.getProviderCode())
-                .businessName(p.getBusinessName())
-                .ownerName(p.getUser() != null ? p.getUser().getFullName() : null)
-                .email(p.getUser() != null ? p.getUser().getEmail() : null)
-                .phoneNumber(p.getUser() != null ? p.getUser().getPhoneNumber() : p.getEmergencyPhone())
-                .address(p.getPrimaryAddressLine1())
-                .verificationStatus(p.getVerificationStatus())
-                .status(p.getStatus())
-                .createdAt(p.getCreatedAt())
-                .build();
-    }
-
-    @Override
-    @Transactional
-    public void updateProviderStatus(ProviderVerificationRequest request) {
-        ProviderProfile provider = providerProfileRepository.findById(request.providerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu của nhà cung cấp."));
-
-        provider.setVerificationStatus(request.status());
-        if ("VERIFIED".equalsIgnoreCase(request.status())) {
-            provider.setStatus("ACTIVE");
-        }
-        providerProfileRepository.save(provider);
-    }
-
-    @Override
-    @Transactional
-    public void updateProviderAccountStatus(ProviderVerificationRequest request) {
-        ProviderProfile provider = providerProfileRepository.findById(request.providerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu của nhà cung cấp."));
-
-        provider.setStatus(request.status());
-        providerProfileRepository.save(provider);
-    }
 
     @Override
     @Transactional
@@ -164,11 +53,60 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void deleteCategory(Long id) {
+    public void deleteCategory(Long id, ServiceCategoryDeleteRequest request) {
         ServiceCategory category = serviceCategoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục."));
-        deactivateCategoryTree(category);
-        serviceCategoryRepository.saveAndFlush(category);
+
+        if (request != null && Boolean.TRUE.equals(request.hardDelete())) {
+            hardDeleteCategoryTree(category, request.moveServicesToCategoryId());
+        } else {
+            deactivateCategoryTree(category);
+            serviceCategoryRepository.saveAndFlush(category);
+        }
+    }
+
+    private void hardDeleteCategoryTree(ServiceCategory category, Long moveToCategoryId) {
+        List<Long> allIds = collectCategoryTreeIds(category);
+        allIds.add(category.getId());
+        List<ServiceCategory> categoriesToDelete = serviceCategoryRepository.findAllById(allIds);
+
+        for (ServiceCategory cat : categoriesToDelete) {
+            List<CatalogService> services = catalogServiceRepository.findByCategories_Id(cat.getId());
+            if (!services.isEmpty()) {
+                if (moveToCategoryId != null) {
+                    ServiceCategory target = serviceCategoryRepository.findById(moveToCategoryId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục đích để di chuyển dịch vụ."));
+                    for (CatalogService svc : services) {
+                        List<ServiceCategory> cats = new ArrayList<>(svc.getCategories());
+                        cats.remove(cat);
+                        cats.add(target);
+                        svc.setCategories(cats);
+                    }
+                    catalogServiceRepository.saveAll(services);
+                } else {
+                    throw new BadRequestException(
+                            "Danh mục \"" + cat.getName() + "\" có " + services.size()
+                            + " dịch vụ. Vui lòng chọn danh mục khác để di chuyển hoặc xoá các dịch vụ trước.");
+                }
+            }
+        }
+
+        for (ServiceCategory cat : categoriesToDelete) {
+            cat.setParent(null);
+        }
+        serviceCategoryRepository.saveAll(categoriesToDelete);
+        serviceCategoryRepository.flush();
+
+        serviceCategoryRepository.deleteAll(categoriesToDelete);
+    }
+
+    private List<Long> collectCategoryTreeIds(ServiceCategory category) {
+        List<Long> ids = new ArrayList<>();
+        for (ServiceCategory child : category.getChildren()) {
+            ids.addAll(collectCategoryTreeIds(child));
+            ids.add(child.getId());
+        }
+        return ids;
     }
 
     private void mapCategoryRequestToEntity(ServiceCategoryRequest request, ServiceCategory category) {
@@ -360,4 +298,5 @@ public class AdminServiceImpl implements AdminService {
                 .active(slider.getActive())
                 .build();
     }
+
 }

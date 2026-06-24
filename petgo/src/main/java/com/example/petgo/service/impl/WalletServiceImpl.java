@@ -75,6 +75,16 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<WalletTransactionResponse> getSystemWalletTransactions(HttpServletRequest request) {
+        requireAdmin(request);
+        Wallet systemWallet = walletRepository.findByIsSystemTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ví hệ thống."));
+        return transactionRepository.findByWalletIdOrderByCreatedAtDescIdDesc(systemWallet.getId()).stream()
+                .map(this::mapTransaction).toList();
+    }
+
+    @Override
     @Transactional
     public WalletTransactionResponse createTopUp(HttpServletRequest request, WalletTopUpRequest topUpRequest) {
         AuthenticatedUser current = authService.requireAccessUser(request);
@@ -325,6 +335,9 @@ public class WalletServiceImpl implements WalletService {
     }
 
     private void approveTransaction(WalletTransaction tx) {
+        if (tx.getUser() == null) {
+            throw new BadRequestException("Không thể duyệt giao dịch ví hệ thống.");
+        }
         Wallet wallet = walletRepository.findWithLockByUserId(tx.getUser().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Ví chưa được khởi tạo."));
         BigDecimal before = wallet.getBalance();
@@ -580,15 +593,25 @@ public class WalletServiceImpl implements WalletService {
 
     private WalletResponse mapWallet(Wallet wallet) {
         User user = wallet.getUser();
-        return WalletResponse.builder().walletId(wallet.getId()).userId(user.getId()).userCode(user.getUserCode())
-                .fullName(user.getFullName()).balance(wallet.getBalance()).currencyCode(wallet.getCurrencyCode())
-                .status(wallet.getStatus()).build();
+        String label = wallet.isSystem() ? "SYSTEM_WALLET" : (user != null ? user.getUserCode() : null);
+        return WalletResponse.builder()
+                .walletId(wallet.getId())
+                .userId(user != null ? user.getId() : null)
+                .userCode(label)
+                .fullName(user != null ? user.getFullName() : "Hệ thống")
+                .balance(wallet.getBalance())
+                .currencyCode(wallet.getCurrencyCode())
+                .status(wallet.getStatus())
+                .isSystem(wallet.isSystem())
+                .build();
     }
 
     private WalletTransactionResponse mapTransaction(WalletTransaction tx) {
         return WalletTransactionResponse.builder()
-                .id(tx.getId()).transactionCode(tx.getTransactionCode()).userId(tx.getUser().getId())
-                .userCode(tx.getUser().getUserCode()).userName(tx.getUser().getFullName())
+                .id(tx.getId()).transactionCode(tx.getTransactionCode())
+                .userId(tx.getUser() != null ? tx.getUser().getId() : null)
+                .userCode(tx.getUser() != null ? tx.getUser().getUserCode() : "SYSTEM")
+                .userName(tx.getUser() != null ? tx.getUser().getFullName() : "Hệ thống")
                 .counterpartyUserId(tx.getCounterpartyUser() != null ? tx.getCounterpartyUser().getId() : null)
                 .counterpartyUserCode(tx.getCounterpartyUser() != null ? tx.getCounterpartyUser().getUserCode() : null)
                 .counterpartyUserName(tx.getCounterpartyUser() != null ? tx.getCounterpartyUser().getFullName() : null)

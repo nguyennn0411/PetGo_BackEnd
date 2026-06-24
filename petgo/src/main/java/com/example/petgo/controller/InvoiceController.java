@@ -20,9 +20,4 @@ public class InvoiceController {
     public ResponseEntity<InvoiceDetailResponse> getInvoiceById(@PathVariable Long invoiceId) {
         return ResponseEntity.ok(invoiceService.getInvoiceById(invoiceId));
     }
-
-    @GetMapping("/by-booking/{bookingId}")
-    public ResponseEntity<InvoiceDetailResponse> getInvoiceByBookingId(@PathVariable Long bookingId) {
-        return ResponseEntity.ok(invoiceService.getInvoiceByBookingId(bookingId));
-    }
 }

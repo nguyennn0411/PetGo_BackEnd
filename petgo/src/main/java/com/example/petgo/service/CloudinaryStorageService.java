@@ -6,11 +6,13 @@ public interface CloudinaryStorageService {
 
     String uploadPetAvatar(MultipartFile file);
 
-    String uploadPartnerLocationImage(MultipartFile file);
-
-    String uploadPartnerServiceImage(MultipartFile file);
-
     String uploadChatImage(MultipartFile file);
 
     String uploadStoreImage(MultipartFile file);
+
+    String uploadPlatformServiceImage(MultipartFile file);
+
+    String uploadUserAvatar(MultipartFile file);
+
+    String uploadUserCover(MultipartFile file);
 }

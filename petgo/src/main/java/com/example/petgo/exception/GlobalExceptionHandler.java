@@ -127,7 +127,7 @@ public class GlobalExceptionHandler {
                 && ex.getMessage() != null
                 && ex.getMessage().contains("already registered a copy")) {
             return build(HttpStatus.BAD_REQUEST,
-                    "Dữ liệu lịch của provider đang bị trùng/cấu hình chưa hợp lệ, vui lòng kiểm tra lịch và dịch vụ.");
+                    "Dữ liệu lịch của khu vực đang bị trùng/cấu hình chưa hợp lệ, vui lòng kiểm tra lịch và dịch vụ.");
         }
         Throwable root = ex.getMostSpecificCause();
         String message = root != null && root.getMessage() != null ? root.getMessage() : ex.getMessage();
