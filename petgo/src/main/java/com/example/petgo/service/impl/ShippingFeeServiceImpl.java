@@ -8,6 +8,7 @@ import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.repository.AreaRepository;
 import com.example.petgo.repository.ShippingFeeConfigRepository;
+import com.example.petgo.service.RoutingService;
 import com.example.petgo.service.ShippingFeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
 
     private final AreaRepository areaRepository;
     private final ShippingFeeConfigRepository shippingFeeConfigRepository;
+    private final RoutingService routingService;
 
     @Override
     public ShippingFeeResponse calculateShippingFee(ShippingFeeRequest request) {
@@ -32,7 +34,7 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
             throw new BadRequestException("Khu vực chưa cấu hình điểm đón.");
         }
 
-        double distance = haversine(
+        double distance = routingService.getDrivingDistanceKm(
                 area.getPickupLatitude().doubleValue(),
                 area.getPickupLongitude().doubleValue(),
                 request.getPickupLatitude().doubleValue(),
@@ -80,14 +82,4 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
         throw new BadRequestException("Khoảng cách " + distanceKm + "km vượt quá phạm vi vận chuyển.");
     }
 
-    private double haversine(double lat1, double lon1, double lat2, double lon2) {
-        double R = 6371;
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
 }

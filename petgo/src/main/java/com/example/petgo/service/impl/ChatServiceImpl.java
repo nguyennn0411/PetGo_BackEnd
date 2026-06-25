@@ -38,6 +38,16 @@ public class ChatServiceImpl implements ChatService {
         User user = requireUser(request);
         ConversationType type = parseType(req.type());
 
+        List<Conversation> active = conversationRepository.findActiveByUserIdAndType(user.getId(), type);
+        if (!active.isEmpty()) {
+            Conversation existing = active.get(0);
+            if (existing.getStatus().equals("PROCESSING"))
+                existing.setStatus("OPEN");
+            existing.setUpdatedAt(LocalDateTime.now(APP_ZONE));
+            conversationRepository.save(existing);
+            return mapConversation(existing);
+        }
+
         Conversation conv = new Conversation();
         conv.setUser(user);
         conv.setType(type);
@@ -124,6 +134,7 @@ public class ChatServiceImpl implements ChatService {
         if (req.errorCode() != null && !req.errorCode().isBlank())
             msg.setErrorCode(req.errorCode().trim());
         msg.setIsSystemMessage(false);
+        msg.setCreatedAt(LocalDateTime.now(APP_ZONE));
         messageRepository.save(msg);
 
         conv.setUpdatedAt(LocalDateTime.now(APP_ZONE));
@@ -153,6 +164,7 @@ public class ChatServiceImpl implements ChatService {
         systemMsg.setSender(admin);
         systemMsg.setIsSystemMessage(true);
         systemMsg.setContent("Trạng thái hội thoại đã chuyển từ " + statusLabel(oldStatus) + " sang " + statusLabel(status));
+        systemMsg.setCreatedAt(LocalDateTime.now(APP_ZONE));
         messageRepository.save(systemMsg);
 
         return mapConversation(conv);

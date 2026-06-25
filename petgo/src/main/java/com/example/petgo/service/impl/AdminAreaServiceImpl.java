@@ -241,8 +241,8 @@ public class AdminAreaServiceImpl implements AdminAreaService {
         if (request.getToKm() != null && request.getToKm().compareTo(request.getFromKm()) <= 0) {
             throw new BadRequestException("Số km kết thúc phải lớn hơn số km bắt đầu.");
         }
-        if (request.getFee().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new BadRequestException("Phí vận chuyển phải lớn hơn 0.");
+        if (request.getFee().compareTo(java.math.BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Phí vận chuyển không được âm.");
         }
 
         ShippingFeeConfig config = new ShippingFeeConfig();
@@ -264,16 +264,22 @@ public class AdminAreaServiceImpl implements AdminAreaService {
             throw new BadRequestException("Cấu hình không thuộc khu vực này.");
         }
 
+        java.math.BigDecimal newFromKm = config.getFromKm();
         if (request.getFromKm() != null) {
             if (request.getFromKm().compareTo(java.math.BigDecimal.ZERO) < 0) {
                 throw new BadRequestException("Số km bắt đầu không được âm.");
             }
-            config.setFromKm(request.getFromKm());
+            newFromKm = request.getFromKm();
         }
+        java.math.BigDecimal newToKm = request.getToKm() != null ? request.getToKm() : config.getToKm();
+        if (newToKm != null && newToKm.compareTo(newFromKm) <= 0) {
+            throw new BadRequestException("Số km kết thúc phải lớn hơn số km bắt đầu.");
+        }
+        if (request.getFromKm() != null) config.setFromKm(request.getFromKm());
         if (request.getToKm() != null) config.setToKm(request.getToKm());
         if (request.getFee() != null) {
-            if (request.getFee().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-                throw new BadRequestException("Phí vận chuyển phải lớn hơn 0.");
+            if (request.getFee().compareTo(java.math.BigDecimal.ZERO) < 0) {
+                throw new BadRequestException("Phí vận chuyển không được âm.");
             }
             config.setFee(request.getFee());
         }

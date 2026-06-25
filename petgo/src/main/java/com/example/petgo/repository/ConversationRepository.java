@@ -26,6 +26,9 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     @Query("SELECT c FROM Conversation c JOIN FETCH c.user WHERE c.id = :id AND c.deletedAt IS NULL AND c.user.id = :userId")
     Optional<Conversation> findActiveOwnedById(@Param("id") Long id, @Param("userId") Long userId);
 
+    @Query("SELECT c FROM Conversation c JOIN FETCH c.user WHERE c.deletedAt IS NULL AND c.user.id = :userId AND c.type = :type AND c.status IN ('OPEN', 'PROCESSING') ORDER BY c.updatedAt DESC")
+    List<Conversation> findActiveByUserIdAndType(@Param("userId") Long userId, @Param("type") ConversationType type);
+
     @Query("SELECT COUNT(c) FROM Conversation c WHERE c.deletedAt IS NULL AND c.status = :status")
     long countByStatusAndDeletedAtIsNull(@Param("status") String status);
 

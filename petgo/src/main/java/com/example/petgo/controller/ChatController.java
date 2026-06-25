@@ -2,11 +2,13 @@ package com.example.petgo.controller;
 
 import com.example.petgo.dto.*;
 import com.example.petgo.service.ChatService;
+import com.example.petgo.service.CloudinaryStorageService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -16,6 +18,13 @@ import java.util.Map;
 public class ChatController {
 
     private final ChatService chatService;
+    private final CloudinaryStorageService cloudinaryStorageService;
+
+    @PostMapping("/upload-image")
+    public ResponseEntity<Map<String, Object>> uploadImage(@RequestParam("file") MultipartFile file) {
+        String imageUrl = cloudinaryStorageService.uploadChatImage(file);
+        return ResponseEntity.ok(Map.of("message", "Upload ảnh thành công.", "result", imageUrl));
+    }
 
     @PostMapping("/conversations")
     public ResponseEntity<Map<String, Object>> createConversation(HttpServletRequest request,

@@ -9,6 +9,7 @@ import com.example.petgo.repository.*;
 import com.example.petgo.service.AuthService;
 import com.example.petgo.service.BookingService;
 import com.example.petgo.service.PromotionPolicyService;
+import com.example.petgo.service.RoutingService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,7 @@ public class BookingServiceImpl implements BookingService {
     private final WalletTransactionRepository walletTransactionRepository;
     private final ShippingFeeConfigRepository shippingFeeConfigRepository;
     private final PromotionPolicyService promotionPolicyService;
+    private final RoutingService routingService;
 
     private static final int MINIMUM_LEAD_TIME_MINUTES = 60;
     private static final List<String> ACTIVE_STATUSES = List.of("PENDING", "CONFIRMED", "IN_PROGRESS");
@@ -319,7 +321,7 @@ public class BookingServiceImpl implements BookingService {
         if (pickupLat == null || pickupLng == null) return BigDecimal.ZERO;
         if (area.getPickupLatitude() == null || area.getPickupLongitude() == null) return BigDecimal.ZERO;
 
-        double distance = haversine(
+        double distance = routingService.getDrivingDistanceKm(
                 area.getPickupLatitude().doubleValue(),
                 area.getPickupLongitude().doubleValue(),
                 pickupLat.doubleValue(),
@@ -389,17 +391,6 @@ public class BookingServiceImpl implements BookingService {
         history.setChangedByName(changedByName);
         history.setNote(note);
         bookingStatusHistoryRepository.save(history);
-    }
-
-    private double haversine(double lat1, double lon1, double lat2, double lon2) {
-        double R = 6371;
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
     }
 
     private CreateContextResponse.AreaInfo toAreaInfo(Area area) {
