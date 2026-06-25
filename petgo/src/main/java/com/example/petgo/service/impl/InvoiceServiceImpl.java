@@ -20,14 +20,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
+
 @Service
 @RequiredArgsConstructor
 public class InvoiceServiceImpl implements InvoiceService {
 
     private static final ZoneId APP_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final DateTimeFormatter DATE_TIME_VIEW = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    private static final DateTimeFormatter DATE_VIEW = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final DateTimeFormatter TIME_VIEW = DateTimeFormatter.ofPattern("HH:mm");
+
 
     private final InvoiceRepository invoiceRepository;
     private final InvoiceItemRepository invoiceItemRepository;
@@ -38,14 +38,6 @@ public class InvoiceServiceImpl implements InvoiceService {
     public InvoiceDetailResponse getInvoiceById(Long invoiceId) {
         Invoice invoice = invoiceRepository.findDetailedById(invoiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy invoice"));
-        return mapInvoiceDetail(invoice);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public InvoiceDetailResponse getInvoiceByBookingId(Long bookingId) {
-        Invoice invoice = invoiceRepository.findByBookingId(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking này chưa có invoice"));
         return mapInvoiceDetail(invoice);
     }
 
@@ -62,19 +54,10 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .invoiceType(invoice.getInvoiceType())
                 .issuedAt(invoice.getIssuedAt() != null ? invoice.getIssuedAt().atZone(APP_ZONE).format(DATE_TIME_VIEW) : null)
                 .paidAt(invoice.getPaidAt() != null ? invoice.getPaidAt().atZone(APP_ZONE).format(DATE_TIME_VIEW) : null)
-                .bookingId(invoice.getBooking() != null ? invoice.getBooking().getId() : null)
-                .bookingCode(invoice.getBooking() != null ? invoice.getBooking().getBookingCode() : null)
                 .paymentId(payment != null ? payment.getId() : null)
                 .paymentCode(payment != null ? payment.getPaymentCode() : null)
                 .paymentMethod(payment != null ? payment.getPaymentMethod() : null)
                 .paymentStatus(payment != null ? payment.getStatus() : null)
-                .providerName(invoice.getBooking() != null ? invoice.getBooking().getProviderNameSnapshot() : null)
-                .providerPhone(invoice.getBooking() != null ? invoice.getBooking().getProviderPhoneSnapshot() : null)
-                .providerAddress(invoice.getBooking() != null ? invoice.getBooking().getProviderAddressSnapshot() : null)
-                .serviceName(invoice.getBooking() != null ? invoice.getBooking().getServiceNameSnapshot() : null)
-                .petName(invoice.getBooking() != null ? invoice.getBooking().getPetNameSnapshot() : null)
-                .appointmentDate(invoice.getBooking() != null && invoice.getBooking().getAppointmentDate() != null ? invoice.getBooking().getAppointmentDate().format(DATE_VIEW) : null)
-                .appointmentTime(invoice.getBooking() != null && invoice.getBooking().getStartTime() != null ? formatAppointmentTime(invoice) : null)
                 .subtotalAmount(defaultMoney(invoice.getSubtotalAmount()))
                 .discountAmount(defaultMoney(invoice.getDiscountAmount()))
                 .taxAmount(defaultMoney(invoice.getTaxAmount()))
@@ -83,13 +66,6 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .totalAmountDisplay(formatMoney(invoice.getTotalAmount()))
                 .items(items)
                 .build();
-    }
-
-    private String formatAppointmentTime(Invoice invoice) {
-        if (invoice.getBooking() == null || invoice.getBooking().getStartTime() == null) return null;
-        String start = invoice.getBooking().getStartTime().format(TIME_VIEW);
-        if (invoice.getBooking().getEndTime() == null) return start;
-        return start + " - " + invoice.getBooking().getEndTime().format(TIME_VIEW);
     }
 
     private InvoiceItemResponse mapItem(InvoiceItem item) {

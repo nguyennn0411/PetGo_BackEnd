@@ -34,8 +34,7 @@ public record PromotionRequest(
         String userSegment,
         Integer minCompletedBookings,
         List<String> applicableDaysOfWeek,
-        List<Long> providerIds,
-        List<Long> providerServiceIds,
+        List<Long> areaIds,
         List<Long> serviceCategoryIds,
         List<Long> membershipPlanIds,
 

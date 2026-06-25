@@ -3,7 +3,6 @@ package com.example.petgo.dto;
 import com.example.petgo.entity.NotificationAudienceType;
 import com.example.petgo.entity.NotificationCategory;
 import com.example.petgo.entity.NotificationPriority;
-import com.example.petgo.entity.RoleType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -17,7 +16,6 @@ public record NotificationCreateRequest(
 
         NotificationAudienceType audienceType,
         List<Long> recipientUserIds,
-        List<RoleType> targetRoles,
         NotificationCategory category,
         NotificationPriority priority,
 

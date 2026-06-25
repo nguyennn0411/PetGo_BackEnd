@@ -16,8 +16,8 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowedOrigins(List.of(
-                "https://petgo.website",
-                "https://www.petgo.website",
+                "https://petgo.io.vn",
+                "https://www.petgo.io.vn",
                 "http://localhost:5173"
         ));
 
