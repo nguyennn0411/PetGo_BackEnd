@@ -35,7 +35,7 @@ public class WalletController {
                         @Valid @RequestBody WalletTopUpRequest topUpRequest) {
                 return ResponseEntity.status(HttpStatus.CREATED)
                                 .body(Map.of("message",
-                                                "Tạo yêu cầu nạp ví PayOS thành công. Sau khi thanh toán, admin cần duyệt để cộng tiền vào ví.",
+                                                "Tạo yêu cầu nạp ví PayOS thành công. Tiền sẽ tự động được cộng vào ví sau khi PayOS xác nhận thanh toán.",
                                                 "result", walletService.createTopUp(request, topUpRequest)));
         }
 
