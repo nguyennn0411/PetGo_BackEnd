@@ -3,14 +3,17 @@ package com.example.petgo.service.impl;
 import com.example.petgo.dto.AdminServiceCreateRequest;
 import com.example.petgo.dto.AdminServiceUpdateRequest;
 import com.example.petgo.dto.CatalogServiceResponse;
+import com.example.petgo.dto.PriceTierDTO;
 import com.example.petgo.entity.AreaServiceConfig;
 import com.example.petgo.entity.CatalogService;
 import com.example.petgo.entity.ServiceCategory;
+import com.example.petgo.entity.ServicePriceTier;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
 import com.example.petgo.repository.AreaServiceConfigRepository;
 import com.example.petgo.repository.CatalogServiceRepository;
 import com.example.petgo.repository.ServiceCategoryRepository;
+import com.example.petgo.repository.ServicePriceTierRepository;
 import com.example.petgo.repository.ShippingBookingRepository;
 import com.example.petgo.service.AdminCatalogService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +31,7 @@ public class AdminCatalogServiceImpl implements AdminCatalogService {
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final AreaServiceConfigRepository areaServiceConfigRepository;
     private final ShippingBookingRepository shippingBookingRepository;
+    private final ServicePriceTierRepository servicePriceTierRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -85,7 +90,9 @@ public class AdminCatalogServiceImpl implements AdminCatalogService {
         service.setActive(request.getActive() != null ? request.getActive() : true);
         service.setBookingType(request.getBookingType() != null ? request.getBookingType().toUpperCase() : "SHORT");
 
-        return toResponse(catalogServiceRepository.save(service));
+        CatalogService saved = catalogServiceRepository.save(service);
+        savePriceTiers(saved, request.getPriceTiers());
+        return toResponse(catalogServiceRepository.findById(saved.getId()).orElse(saved));
     }
 
     @Override
@@ -99,6 +106,7 @@ public class AdminCatalogServiceImpl implements AdminCatalogService {
         }
 
         areaServiceConfigRepository.deleteByServiceId(id);
+        servicePriceTierRepository.deleteByServiceId(id);
         catalogServiceRepository.delete(service);
     }
 
@@ -132,7 +140,11 @@ public class AdminCatalogServiceImpl implements AdminCatalogService {
             service.setCategories(categories);
         }
 
-        return toResponse(catalogServiceRepository.save(service));
+        CatalogService saved = catalogServiceRepository.save(service);
+        if (request.getPriceTiers() != null) {
+            savePriceTiers(saved, request.getPriceTiers());
+        }
+        return toResponse(catalogServiceRepository.findById(saved.getId()).orElse(saved));
     }
 
     private CatalogServiceResponse toResponse(CatalogService s) {
@@ -146,6 +158,11 @@ public class AdminCatalogServiceImpl implements AdminCatalogService {
                     .toList()
                 : List.of();
         CatalogServiceResponse.CategoryInfo first = categoryInfos.isEmpty() ? null : categoryInfos.get(0);
+
+        List<PriceTierDTO> tiers = servicePriceTierRepository.findByServiceIdOrderBySpeciesAscWeightFromAsc(s.getId())
+                .stream().map(t -> new PriceTierDTO(t.getId(), t.getSpecies(), t.getWeightFrom(), t.getWeightTo(), t.getPriceAmount()))
+                .toList();
+
         return CatalogServiceResponse.builder()
                 .id(s.getId())
                 .serviceCode(s.getServiceCode())
@@ -165,6 +182,23 @@ public class AdminCatalogServiceImpl implements AdminCatalogService {
                 .categoryId(first != null ? first.id() : null)
                 .categoryName(first != null ? first.name() : null)
                 .categories(categoryInfos)
+                .priceTiers(tiers)
+                .averageRating(s.getAverageRating())
+                .totalReviews(s.getTotalReviews())
                 .build();
+    }
+
+    private void savePriceTiers(CatalogService service, List<PriceTierDTO> tiers) {
+        if (tiers == null) return;
+        servicePriceTierRepository.deleteByServiceId(service.getId());
+        for (PriceTierDTO dto : tiers) {
+            ServicePriceTier tier = new ServicePriceTier();
+            tier.setService(service);
+            tier.setSpecies(dto.species());
+            tier.setWeightFrom(dto.weightFrom());
+            tier.setWeightTo(dto.weightTo());
+            tier.setPriceAmount(dto.priceAmount());
+            servicePriceTierRepository.save(tier);
+        }
     }
 }

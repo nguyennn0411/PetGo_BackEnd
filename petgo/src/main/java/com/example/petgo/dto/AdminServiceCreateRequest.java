@@ -49,4 +49,6 @@ public class AdminServiceCreateRequest {
     Boolean active;
 
     String bookingType;
+
+    List<PriceTierDTO> priceTiers;
 }

@@ -33,6 +33,10 @@ public interface WalletService {
         WalletResponse updateWalletStatus(HttpServletRequest request, Long userId,
                         WalletStatusUpdateRequest statusRequest);
 
+        WalletTransactionResponse systemWithdraw(HttpServletRequest request, WalletWithdrawRequest withdrawRequest);
+
+        WalletResponse getSystemWallet(HttpServletRequest request);
+
         WalletAutoConfirmSettingResponse getAutoConfirmSetting(HttpServletRequest request);
 
         WalletAutoConfirmSettingResponse updateAutoConfirmSetting(HttpServletRequest request,

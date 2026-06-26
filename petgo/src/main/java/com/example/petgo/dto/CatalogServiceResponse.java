@@ -24,7 +24,10 @@ public record CatalogServiceResponse(
         List<Long> areaIds,
         Long categoryId,
         String categoryName,
-        List<CategoryInfo> categories) {
+        List<CategoryInfo> categories,
+        List<PriceTierDTO> priceTiers,
+        BigDecimal averageRating,
+        Integer totalReviews) {
 
     @Builder
     public record CategoryInfo(Long id, String name) {}
