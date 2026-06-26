@@ -4,7 +4,6 @@ import com.example.petgo.config.AuthenticatedUser;
 import com.example.petgo.dto.*;
 import com.example.petgo.entity.User;
 import com.example.petgo.entity.Wallet;
-import com.example.petgo.entity.WalletSetting;
 import com.example.petgo.entity.WalletTransaction;
 import com.example.petgo.exception.BadRequestException;
 import com.example.petgo.exception.ResourceNotFoundException;
@@ -47,10 +46,7 @@ public class WalletServiceImpl implements WalletService {
     private static final String WALLET_INBOUND_LOCKED = "INBOUND_LOCKED";
     private static final String WALLET_OUTBOUND_LOCKED = "OUTBOUND_LOCKED";
     private static final String WALLET_LOCKED = "LOCKED";
-    private static final String AUTO_CONFIRM_TOP_UP_KEY = "WALLET_AUTO_CONFIRM_TOP_UP";
-
     private final WalletRepository walletRepository;
-    private final WalletSettingRepository walletSettingRepository;
     private final WalletTransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
@@ -232,6 +228,7 @@ public class WalletServiceImpl implements WalletService {
 
         BigDecimal before = wallet.getBalance();
         wallet.setBalance(before.subtract(amount));
+        wallet.setHeldBalance(wallet.getHeldBalance().add(amount));
         walletRepository.save(wallet);
 
         WalletTransaction tx = new WalletTransaction();
@@ -264,29 +261,6 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public WalletAutoConfirmSettingResponse getAutoConfirmSetting(HttpServletRequest request) {
-        requireAdmin(request);
-        return WalletAutoConfirmSettingResponse.builder().enabled(isAutoConfirmTopUpEnabled()).build();
-    }
-
-    @Override
-    @Transactional
-    public WalletAutoConfirmSettingResponse updateAutoConfirmSetting(HttpServletRequest request,
-            WalletAutoConfirmSettingRequest settingRequest) {
-        requireAdmin(request);
-        WalletSetting setting = walletSettingRepository.findBySettingKey(AUTO_CONFIRM_TOP_UP_KEY).orElseGet(() -> {
-            WalletSetting next = new WalletSetting();
-            next.setSettingKey(AUTO_CONFIRM_TOP_UP_KEY);
-            return next;
-        });
-        setting.setSettingValue(Boolean.TRUE.equals(settingRequest.enabled()) ? "true" : "false");
-        walletSettingRepository.save(setting);
-        return WalletAutoConfirmSettingResponse.builder().enabled(Boolean.TRUE.equals(settingRequest.enabled()))
-                .build();
-    }
-
-    @Override
     @Transactional
     public void handlePayOsWebhookOrderCode(Long orderCode) {
         if (orderCode == null)
@@ -316,14 +290,6 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<WalletTransactionResponse> getFailedTopUpTransactions(HttpServletRequest request) {
-        requireAdmin(request);
-        return transactionRepository.findByTypeAndStatusOrderByCreatedAtDescIdDesc("TOP_UP", "FAILED").stream()
-                .map(this::mapTransaction).toList();
-    }
-
-    @Override
     @Transactional
     public WalletTransactionResponse reviewAdminTransaction(HttpServletRequest request, Long transactionId,
             WalletAdminReviewRequest reviewRequest) {
@@ -348,30 +314,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public WalletTransactionResponse resolveFailedTopUp(HttpServletRequest request, Long transactionId,
-            WalletAdminReviewRequest reviewRequest) {
-        User admin = requireAdmin(request);
-        WalletTransaction tx = transactionRepository.findDetailedById(transactionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giao dịch ví."));
-        if (!"TOP_UP".equalsIgnoreCase(tx.getType()) || !"FAILED".equalsIgnoreCase(tx.getStatus()))
-            throw new BadRequestException("Chỉ có thể xử lý giao dịch nạp ví thất bại.");
-        String action = reviewRequest.action().trim().toUpperCase();
-        if ("APPROVE".equals(action)) {
-            approveTransaction(tx);
-        } else if ("REJECT".equals(action)) {
-            tx.setStatus("REJECTED");
-        } else {
-            throw new BadRequestException("action phải là APPROVE hoặc REJECT.");
-        }
-        tx.setReviewedByAdmin(admin);
-        tx.setReviewNote(reviewRequest.reviewNote());
-        tx.setReviewedAt(LocalDateTime.now(APP_ZONE));
-        transactionRepository.save(tx);
-        return mapTransaction(tx);
-    }
-
-    @Override
-    @Transactional
     public void ensureWalletForUser(Long userId) {
         getOrCreateWallet(userId);
     }
@@ -387,6 +329,8 @@ public class WalletServiceImpl implements WalletService {
             ensureCanReceive(wallet);
             wallet.setBalance(before.add(tx.getAmount()));
         } else if ("WITHDRAW".equalsIgnoreCase(tx.getType())) {
+            wallet.setHeldBalance(wallet.getHeldBalance().subtract(tx.getAmount()));
+            walletRepository.save(wallet);
             tx.setBalanceBefore(tx.getBalanceBefore() != null ? tx.getBalanceBefore() : before.add(tx.getAmount()));
             tx.setBalanceAfter(tx.getBalanceAfter() != null ? tx.getBalanceAfter() : before);
             tx.setStatus("COMPLETED");
@@ -405,6 +349,7 @@ public class WalletServiceImpl implements WalletService {
                     .orElseThrow(() -> new ResourceNotFoundException("Ví chưa được khởi tạo."));
             BigDecimal before = wallet.getBalance();
             wallet.setBalance(before.add(tx.getAmount()));
+            wallet.setHeldBalance(wallet.getHeldBalance().subtract(tx.getAmount()));
             walletRepository.save(wallet);
             tx.setBalanceBefore(before);
             tx.setBalanceAfter(wallet.getBalance());
@@ -413,20 +358,9 @@ public class WalletServiceImpl implements WalletService {
     }
 
     private void markTopUpPaid(WalletTransaction tx) {
-        if (isAutoConfirmTopUpEnabled()) {
-            approveTransaction(tx);
-            tx.setReviewNote("Tự động cộng tiền vào ví sau khi PayOS xác nhận thanh toán thành công.");
-            tx.setReviewedAt(LocalDateTime.now(APP_ZONE));
-        } else {
-            tx.setStatus("PENDING_ADMIN_APPROVAL");
-        }
-    }
-
-    private boolean isAutoConfirmTopUpEnabled() {
-        return walletSettingRepository.findBySettingKey(AUTO_CONFIRM_TOP_UP_KEY)
-                .map(WalletSetting::getSettingValue)
-                .map(Boolean::parseBoolean)
-                .orElse(true);
+        approveTransaction(tx);
+        tx.setReviewNote("Tự động cộng tiền vào ví sau khi PayOS xác nhận thanh toán thành công.");
+        tx.setReviewedAt(LocalDateTime.now(APP_ZONE));
     }
 
     private boolean isTopUpPaymentExpired(WalletTransaction tx) {
@@ -642,6 +576,7 @@ public class WalletServiceImpl implements WalletService {
                 .userCode(label)
                 .fullName(user != null ? user.getFullName() : "Hệ thống")
                 .balance(wallet.getBalance())
+                .heldBalance(wallet.getHeldBalance())
                 .currencyCode(wallet.getCurrencyCode())
                 .status(wallet.getStatus())
                 .isSystem(wallet.isSystem())

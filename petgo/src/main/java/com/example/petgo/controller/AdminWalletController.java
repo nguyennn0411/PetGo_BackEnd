@@ -1,7 +1,6 @@
 package com.example.petgo.controller;
 
 import com.example.petgo.dto.WalletAdminReviewRequest;
-import com.example.petgo.dto.WalletAutoConfirmSettingRequest;
 import com.example.petgo.dto.WalletStatusUpdateRequest;
 import com.example.petgo.dto.WalletWithdrawRequest;
 import com.example.petgo.service.WalletService;
@@ -23,13 +22,6 @@ public class AdminWalletController {
         public ResponseEntity<Map<String, Object>> pending(HttpServletRequest request) {
                 return ResponseEntity.ok(Map.of("message", "Lấy danh sách giao dịch ví chờ duyệt thành công.", "result",
                                 walletService.getPendingAdminTransactions(request)));
-        }
-
-        @GetMapping("/failed-top-ups")
-        public ResponseEntity<Map<String, Object>> failedTopUps(HttpServletRequest request) {
-                return ResponseEntity
-                                .ok(Map.of("message", "Lấy danh sách giao dịch nạp ví thất bại thành công.", "result",
-                                                walletService.getFailedTopUpTransactions(request)));
         }
 
         @GetMapping("/system-wallet")
@@ -58,14 +50,6 @@ public class AdminWalletController {
                                 walletService.reviewAdminTransaction(request, transactionId, reviewRequest)));
         }
 
-        @PostMapping("/failed-top-ups/{transactionId}/resolve")
-        public ResponseEntity<Map<String, Object>> resolveFailedTopUp(HttpServletRequest request,
-                        @PathVariable Long transactionId,
-                        @Valid @RequestBody WalletAdminReviewRequest reviewRequest) {
-                return ResponseEntity.ok(Map.of("message", "Xử lý giao dịch nạp ví thất bại thành công.", "result",
-                                walletService.resolveFailedTopUp(request, transactionId, reviewRequest)));
-        }
-
         @PatchMapping("/users/{userId}/status")
         public ResponseEntity<Map<String, Object>> updateWalletStatus(HttpServletRequest request,
                         @PathVariable Long userId,
@@ -74,17 +58,4 @@ public class AdminWalletController {
                                 walletService.updateWalletStatus(request, userId, statusRequest)));
         }
 
-        @GetMapping("/settings/auto-confirm-top-up")
-        public ResponseEntity<Map<String, Object>> getAutoConfirmTopUp(HttpServletRequest request) {
-                return ResponseEntity.ok(Map.of("message", "Lấy cấu hình tự động cộng tiền ví thành công.", "result",
-                                walletService.getAutoConfirmSetting(request)));
-        }
-
-        @PatchMapping("/settings/auto-confirm-top-up")
-        public ResponseEntity<Map<String, Object>> updateAutoConfirmTopUp(HttpServletRequest request,
-                        @Valid @RequestBody WalletAutoConfirmSettingRequest settingRequest) {
-                return ResponseEntity
-                                .ok(Map.of("message", "Cập nhật cấu hình tự động cộng tiền ví thành công.", "result",
-                                                walletService.updateAutoConfirmSetting(request, settingRequest)));
-        }
 }

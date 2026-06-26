@@ -20,14 +20,9 @@ public interface WalletService {
 
         List<WalletTransactionResponse> getPendingAdminTransactions(HttpServletRequest request);
 
-        List<WalletTransactionResponse> getFailedTopUpTransactions(HttpServletRequest request);
-
         List<WalletTransactionResponse> getSystemWalletTransactions(HttpServletRequest request);
 
         WalletTransactionResponse reviewAdminTransaction(HttpServletRequest request, Long transactionId,
-                        WalletAdminReviewRequest reviewRequest);
-
-        WalletTransactionResponse resolveFailedTopUp(HttpServletRequest request, Long transactionId,
                         WalletAdminReviewRequest reviewRequest);
 
         WalletResponse updateWalletStatus(HttpServletRequest request, Long userId,
@@ -36,11 +31,6 @@ public interface WalletService {
         WalletTransactionResponse systemWithdraw(HttpServletRequest request, WalletWithdrawRequest withdrawRequest);
 
         WalletResponse getSystemWallet(HttpServletRequest request);
-
-        WalletAutoConfirmSettingResponse getAutoConfirmSetting(HttpServletRequest request);
-
-        WalletAutoConfirmSettingResponse updateAutoConfirmSetting(HttpServletRequest request,
-                        WalletAutoConfirmSettingRequest settingRequest);
 
         void handlePayOsWebhookOrderCode(Long orderCode);
 
