@@ -3,6 +3,7 @@ package com.example.petgo.controller;
 import com.example.petgo.dto.WalletAdminReviewRequest;
 import com.example.petgo.dto.WalletAutoConfirmSettingRequest;
 import com.example.petgo.dto.WalletStatusUpdateRequest;
+import com.example.petgo.dto.WalletWithdrawRequest;
 import com.example.petgo.service.WalletService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -31,10 +32,23 @@ public class AdminWalletController {
                                                 walletService.getFailedTopUpTransactions(request)));
         }
 
+        @GetMapping("/system-wallet")
+        public ResponseEntity<Map<String, Object>> systemWallet(HttpServletRequest request) {
+                return ResponseEntity.ok(Map.of("message", "Lấy thông tin ví hệ thống thành công.", "result",
+                                walletService.getSystemWallet(request)));
+        }
+
         @GetMapping("/system-transactions")
         public ResponseEntity<Map<String, Object>> systemTransactions(HttpServletRequest request) {
                 return ResponseEntity.ok(Map.of("message", "Lấy lịch sử giao dịch ví hệ thống thành công.", "result",
                                 walletService.getSystemWalletTransactions(request)));
+        }
+
+        @PostMapping("/system-withdraw")
+        public ResponseEntity<Map<String, Object>> systemWithdraw(HttpServletRequest request,
+                        @Valid @RequestBody WalletWithdrawRequest withdrawRequest) {
+                return ResponseEntity.ok(Map.of("message", "Rút tiền từ ví hệ thống thành công.", "result",
+                                walletService.systemWithdraw(request, withdrawRequest)));
         }
 
         @PostMapping("/transactions/{transactionId}/review")

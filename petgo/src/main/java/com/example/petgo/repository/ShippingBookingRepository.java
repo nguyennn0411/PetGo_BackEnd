@@ -50,4 +50,19 @@ public interface ShippingBookingRepository extends JpaRepository<ShippingBooking
     List<ShippingBooking> findByStatusWithDetails(@Param("status") String status);
 
     boolean existsByService_Id(Long serviceId);
+
+    @Query("SELECT COALESCE(SUM(sb.totalAmount), 0) FROM ShippingBooking sb WHERE sb.status = 'COMPLETED'")
+    java.math.BigDecimal sumTotalAmountByStatusCompleted();
+
+    @Query("SELECT COALESCE(SUM(sb.shippingFee), 0) FROM ShippingBooking sb WHERE sb.status = 'COMPLETED'")
+    java.math.BigDecimal sumShippingFeeByStatusCompleted();
+
+    @Query("SELECT COUNT(sb) FROM ShippingBooking sb WHERE sb.status = 'COMPLETED'")
+    long countCompleted();
+
+    @Query(value = "SELECT CAST(sb.created_at AS DATE) AS day, COALESCE(SUM(sb.total_amount), 0) AS total FROM shipping_bookings sb WHERE sb.status = 'COMPLETED' AND sb.created_at >= :since GROUP BY CAST(sb.created_at AS DATE) ORDER BY day", nativeQuery = true)
+    List<Object[]> dailyServiceRevenueSince(@Param("since") java.time.LocalDateTime since);
+
+    @Query(value = "SELECT COALESCE(SUM(sb.total_amount), 0) FROM shipping_bookings sb WHERE sb.status = 'COMPLETED' AND sb.created_at BETWEEN :from AND :to", nativeQuery = true)
+    java.math.BigDecimal serviceRevenueBetween(@Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
 }

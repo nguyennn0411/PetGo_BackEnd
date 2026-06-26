@@ -43,6 +43,7 @@ public class BookingServiceImpl implements BookingService {
     private final ShippingFeeConfigRepository shippingFeeConfigRepository;
     private final PromotionPolicyService promotionPolicyService;
     private final RoutingService routingService;
+    private final ServicePriceTierRepository servicePriceTierRepository;
 
     private static final int MINIMUM_LEAD_TIME_MINUTES = 60;
     private static final List<String> ACTIVE_STATUSES = List.of("PENDING", "CONFIRMED", "IN_PROGRESS");
@@ -83,7 +84,7 @@ public class BookingServiceImpl implements BookingService {
         return CreateContextResponse.builder()
                 .pets(pets.stream().map(p -> CreateContextResponse.PetInfo.builder()
                         .id(p.getId()).name(p.getName()).breed(p.getBreed())
-                        .avatarUrl(p.getAvatarUrl()).build()).toList())
+                        .avatarUrl(p.getAvatarUrl()).species(p.getSpecies()).weightKg(p.getWeightKg()).build()).toList())
                 .areas(areaInfos)
                 .services(serviceInfos)
                 .walletBalance(walletBalance)
@@ -118,7 +119,7 @@ public class BookingServiceImpl implements BookingService {
         validateSchedule(area, req.getAppointmentDate(), req.getStartTime(), endTime);
         validateCapacity(area, service, config, bookingType, req.getAppointmentDate(), req.getStartTime(), endTime);
 
-        BigDecimal priceAmount = service.getBasePriceAmount() != null ? service.getBasePriceAmount() : BigDecimal.ZERO;
+        BigDecimal priceAmount = resolvePriceAmount(service, pet);
         BigDecimal shippingFee = calculateShippingFee(area, req.getPickupLatitude(), req.getPickupLongitude());
 
         PromotionPolicyService.PromoPreview promoPreview = promotionPolicyService
@@ -412,6 +413,9 @@ public class BookingServiceImpl implements BookingService {
             catId = first.getId();
             catName = first.getName();
         }
+        List<PriceTierDTO> tiers = servicePriceTierRepository.findByServiceIdOrderBySpeciesAscWeightFromAsc(s.getId())
+                .stream().map(t -> new PriceTierDTO(t.getId(), t.getSpecies(), t.getWeightFrom(), t.getWeightTo(), t.getPriceAmount()))
+                .toList();
         return CreateContextResponse.ServiceInfo.builder()
                 .id(s.getId()).name(s.getName())
                 .bookingType(s.getBookingType())
@@ -421,7 +425,30 @@ public class BookingServiceImpl implements BookingService {
                 .priceUnit(s.getPriceUnit())
                 .categoryId(catId)
                 .categoryName(catName)
+                .priceTiers(tiers.isEmpty() ? null : tiers)
                 .build();
+    }
+
+    private BigDecimal resolvePriceAmount(CatalogService service, Pet pet) {
+        List<ServicePriceTier> tiers = servicePriceTierRepository.findByServiceIdOrderBySpeciesAscWeightFromAsc(service.getId());
+        if (!tiers.isEmpty()) {
+            String species = pet.getSpecies();
+            BigDecimal weight = pet.getWeightKg() != null ? pet.getWeightKg() : BigDecimal.ZERO;
+
+            for (ServicePriceTier tier : tiers) {
+                if (!"ALL".equals(tier.getSpecies()) && !tier.getSpecies().equalsIgnoreCase(species)) continue;
+                if (weight.compareTo(tier.getWeightFrom()) >= 0 && weight.compareTo(tier.getWeightTo()) <= 0) {
+                    return tier.getPriceAmount();
+                }
+                if (tier.getWeightTo().compareTo(new BigDecimal("200")) >= 0 && weight.compareTo(tier.getWeightFrom()) >= 0) {
+                    return tier.getPriceAmount();
+                }
+            }
+
+            ServicePriceTier last = tiers.get(tiers.size() - 1);
+            return last.getPriceAmount();
+        }
+        return service.getBasePriceAmount() != null ? service.getBasePriceAmount() : BigDecimal.ZERO;
     }
 
     private BookingResponse toResponse(ShippingBooking b) {

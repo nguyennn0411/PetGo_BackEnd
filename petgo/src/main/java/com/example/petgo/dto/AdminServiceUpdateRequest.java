@@ -28,4 +28,6 @@ public class AdminServiceUpdateRequest {
     Boolean active;
     String bookingType;
     List<Long> categoryIds;
+
+    List<PriceTierDTO> priceTiers;
 }

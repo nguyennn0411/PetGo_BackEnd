@@ -59,4 +59,10 @@ public class CatalogService extends BaseEntity {
 
     @Column(name = "booking_type", nullable = false, length = 20)
     private String bookingType = "SHORT";
+
+    @Column(name = "average_rating", precision = 3, scale = 2)
+    private java.math.BigDecimal averageRating;
+
+    @Column(name = "total_reviews")
+    private Integer totalReviews = 0;
 }

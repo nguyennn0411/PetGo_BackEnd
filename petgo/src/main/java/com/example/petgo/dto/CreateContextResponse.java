@@ -14,7 +14,7 @@ public record CreateContextResponse(
         String currencyCode) {
 
     @Builder
-    public record PetInfo(Long id, String name, String breed, String avatarUrl) {}
+    public record PetInfo(Long id, String name, String breed, String avatarUrl, String species, BigDecimal weightKg) {}
 
     @Builder
     public record AreaInfo(
@@ -27,5 +27,6 @@ public record CreateContextResponse(
             Long id, String name, String bookingType,
             Integer defaultDurationMinutes, BigDecimal basePriceAmount,
             String currencyCode, String priceUnit,
-            Long categoryId, String categoryName) {}
+            Long categoryId, String categoryName,
+            List<PriceTierDTO> priceTiers) {}
 }

@@ -85,6 +85,48 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public WalletResponse getSystemWallet(HttpServletRequest request) {
+        requireAdmin(request);
+        Wallet systemWallet = walletRepository.findByIsSystemTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ví hệ thống."));
+        return mapWallet(systemWallet);
+    }
+
+    @Override
+    @Transactional
+    public WalletTransactionResponse systemWithdraw(HttpServletRequest request, WalletWithdrawRequest withdrawRequest) {
+        requireAdmin(request);
+        BigDecimal amount = normalizeAmount(withdrawRequest.amount());
+        if (amount.compareTo(MIN_WITHDRAW_AMOUNT) < 0)
+            throw new BadRequestException("Số tiền rút tối thiểu là 50.000.");
+        Wallet systemWallet = walletRepository.findWithLockByIsSystemTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ví hệ thống."));
+        if (systemWallet.getBalance().compareTo(amount) < 0)
+            throw new BadRequestException("Số dư ví hệ thống không đủ.");
+
+        BigDecimal before = systemWallet.getBalance();
+        systemWallet.setBalance(before.subtract(amount));
+        walletRepository.save(systemWallet);
+
+        WalletTransaction tx = new WalletTransaction();
+        tx.setTransactionCode(generateCode("SYSWITHDRAW"));
+        tx.setWallet(systemWallet);
+        tx.setUser(null);
+        tx.setType("SYSTEM_WITHDRAW");
+        tx.setStatus("COMPLETED");
+        tx.setAmount(amount);
+        tx.setBalanceBefore(before);
+        tx.setBalanceAfter(systemWallet.getBalance());
+        tx.setBankName(withdrawRequest.bankName().trim());
+        tx.setBankAccountNumber(withdrawRequest.bankAccountNumber().trim());
+        tx.setBankAccountHolder(withdrawRequest.bankAccountHolder().trim());
+        tx.setNote(withdrawRequest.note());
+        transactionRepository.save(tx);
+        return mapTransaction(tx);
+    }
+
+    @Override
     @Transactional
     public WalletTransactionResponse createTopUp(HttpServletRequest request, WalletTopUpRequest topUpRequest) {
         AuthenticatedUser current = authService.requireAccessUser(request);
